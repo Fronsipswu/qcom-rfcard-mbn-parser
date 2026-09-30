@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 RFCARD_PATTERN = re.compile(
     r"^(?:"
     r"rf_config_[0-9A-Fa-f]{3,6}_[0-9A-Fa-f]{1,4}_[0-9A-Fa-f]{1,4}"
+    r"(?:_(?P<rev>\d+))?"
     r"|[0-9A-Fa-f]+_[0-9A-Fa-f]+(?:_[0-9A-Fa-f]+)?"
     r")\.mbn$",
     re.IGNORECASE,

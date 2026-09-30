@@ -41,7 +41,8 @@ ParseError = legacy.ParseError
 
 VERSION = "1.8.0"
 MODERN_RE = re.compile(
-    r"^rf_config_(?P<hwid>\d+)_(?P<fsid>\d+)_(?P<bid>\d+)\.mbn$",
+    r"^rf_config_(?P<hwid>\d+)_(?P<fsid>\d+)_(?P<bid>\d+)"
+    r"(?:_(?P<rev>\d+))?\.mbn$",
     re.IGNORECASE,
 )
 LEGACY_RE = re.compile(
