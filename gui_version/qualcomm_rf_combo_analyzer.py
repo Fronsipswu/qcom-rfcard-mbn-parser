@@ -1247,12 +1247,14 @@ def _format_ul_tx_switch(switch_type: Any) -> str:
     try:
         t = int(switch_type)
         if t == 1:
-            return "Switched UL (option 1)"
+            return "option 1"
         elif t == 2:
-            return "Dual Tx (option 2)"
+            return "option 2"
+        elif t == 3:
+            return "option 1,2"
     except Exception:
         pass
-    return ""
+    return "-"
 
 
 def _format_mimo(ant_str: str) -> str:
@@ -1352,18 +1354,18 @@ def generate_web_tables(
             )
 
             row: dict[str, Any] = {
-                "LTE DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in lte_comps),
+                "LTE DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in lte_comps),
                 "LTE MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in lte_comps),
                 "LTE DL (QAM)": "256",
-                "NR DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in nr_comps),
+                "NR DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in nr_comps),
                 "NR MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in nr_comps),
                 "NR DL (QAM)": "256",
                 "NR SCS DL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=False) for x in nr_comps),
                 "NR BW DL (MHz)": " + ".join(_format_bw(x.get("dl_bandwidth", "")) for x in nr_comps),
-                "LTE UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in lte_ul),
+                "LTE UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in lte_ul),
                 "LTE MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in lte_ul),
                 "LTE UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in lte_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in lte_ul) if lte_ul else ""),
-                "NR UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in nr_ul),
+                "NR UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in nr_ul),
                 "NR MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in nr_ul),
                 "NR UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in nr_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in nr_ul) if nr_ul else ""),
                 "NR SCS UL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=True) for x in nr_ul),
@@ -1387,12 +1389,12 @@ def generate_web_tables(
                 reverse=True,
             )
             row = {
-                "NR DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in nr_dl),
+                "NR DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in nr_dl),
                 "MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in nr_dl),
                 "DL (QAM)": "256",
                 "SCS DL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=False) for x in nr_dl),
                 "BW DL (MHz)": " + ".join(_format_bw(x.get("dl_bandwidth", "")) for x in nr_dl),
-                "NR UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in nr_ul),
+                "NR UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in nr_ul),
                 "MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in nr_ul),
                 "UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in nr_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in nr_ul) if nr_ul else ""),
                 "SCS UL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=True) for x in nr_ul),
@@ -1415,10 +1417,10 @@ def generate_web_tables(
                 reverse=True,
             )
             row = {
-                "LTE DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in lte_dl),
+                "LTE DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in lte_dl),
                 "MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in lte_dl),
                 "DL (QAM)": "256",
-                "LTE UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in lte_ul),
+                "LTE UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in lte_ul),
                 "MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in lte_ul),
                 "UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in lte_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in lte_ul) if lte_ul else ""),
             }
@@ -1448,22 +1450,22 @@ def generate_web_tables(
                 reverse=True,
             )
             row = {
-                "FR1 DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in fr1_dl),
+                "FR1 DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in fr1_dl),
                 "FR1 MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in fr1_dl),
                 "FR1 DL (QAM)": "256" if fr1_dl else "",
                 "FR1 SCS DL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=False) for x in fr1_dl),
                 "FR1 BW DL (MHz)": " + ".join(_format_bw(x.get("dl_bandwidth", "")) for x in fr1_dl),
-                "FR2 DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in fr2_dl),
+                "FR2 DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in fr2_dl),
                 "FR2 MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in fr2_dl),
                 "FR2 DL (QAM)": "256" if fr2_dl else "",
                 "FR2 SCS DL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=False) for x in fr2_dl),
                 "FR2 BW DL (MHz)": " + ".join(_format_bw(x.get("dl_bandwidth", "")) for x in fr2_dl),
-                "FR1 UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in fr1_ul),
+                "FR1 UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in fr1_ul),
                 "FR1 MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in fr1_ul),
                 "FR1 UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in fr1_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in fr1_ul) if fr1_ul else ""),
                 "FR1 SCS UL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=True) for x in fr1_ul),
                 "FR1 BW UL (MHz)": " + ".join(_format_bw(x.get("ul_bandwidth", "")) for x in fr1_ul),
-                "FR2 UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in fr2_ul),
+                "FR2 UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in fr2_ul),
                 "FR2 MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in fr2_ul),
                 "FR2 UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in fr2_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in fr2_ul) if fr2_ul else ""),
                 "FR2 SCS UL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=True) for x in fr2_ul),

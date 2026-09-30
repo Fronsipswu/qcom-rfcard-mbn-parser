@@ -122,6 +122,15 @@ class ComboViewerWindow(tk.Toplevel):
         )
         clear_btn.pack(side="left", padx=(0, self.s(12)))
 
+        self.show_scs_var = tk.BooleanVar(value=False)
+        self.show_scs_check = ttk.Checkbutton(
+            search_frame,
+            text="Show SCS",
+            variable=self.show_scs_var,
+            command=self._on_scs_toggle,
+        )
+        self.show_scs_check.pack(side="left", padx=(0, self.s(14)))
+
         self.count_label = ttk.Label(
             search_frame,
             textvariable=self.count_var,
@@ -136,6 +145,26 @@ class ComboViewerWindow(tk.Toplevel):
         self.notebook = ttk.Notebook(outer)
         self.notebook.pack(fill="both", expand=True)
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+
+    def _update_visible_columns(self, tbl_key: str) -> None:
+        """Update visible columns for a tab based on SCS toggle."""
+        info = self.tabs_data.get(tbl_key)
+        if not info:
+            return
+        tree: ttk.Treeview = info["tree"]
+        columns = info["columns"]
+        show_scs = self.show_scs_var.get()
+
+        if show_scs:
+            tree.configure(displaycolumns="#all")
+        else:
+            display_cols = [c for c in columns if "SCS" not in c]
+            tree.configure(displaycolumns=display_cols)
+
+    def _on_scs_toggle(self) -> None:
+        """Handle Show SCS toggle across all tabs."""
+        for tbl_key in self.tabs_data:
+            self._update_visible_columns(tbl_key)
 
     def _populate_tabs(self) -> None:
         """Create tabs for available tables and populate them with combination data."""
@@ -219,6 +248,9 @@ class ComboViewerWindow(tk.Toplevel):
                 "sort_col": None,
                 "sort_reverse": False,
             }
+
+            # Apply initial column visibility (hide SCS by default)
+            self._update_visible_columns(tbl_key)
 
             self.notebook.add(tab_frame, text=f"{tab_label} ({len(rows)})")
             created_tabs += 1
