@@ -146,6 +146,8 @@ class ExtractorGUI:
         x_scroll = ttk.Scrollbar(tree_frame, orient="horizontal", command=self.tree.xview)
         self.tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
         self.tree.bind("<Button-1>", self.toggle_checkbox)
+        self.tree.bind("<Double-1>", self.on_double_click)
+        self.tree.bind("<Return>", lambda _: self.open_selected_viewer())
         self.tree.bind("<space>", self.toggle_selected_row)
         self.tree.grid(row=0, column=0, sticky="nsew")
         y_scroll.grid(row=0, column=1, sticky="ns")
@@ -203,6 +205,13 @@ class ExtractorGUI:
         )
         self.export_button.pack(side="right", padx=(self.s(8), 0))
 
+        self.view_button = ttk.Button(
+            selection_frame,
+            text="View combos",
+            command=self.open_selected_viewer,
+        )
+        self.view_button.pack(side="right", padx=(self.s(8), 0))
+
         ttk.Label(outer, textvariable=self.status_var).pack(fill="x")
         self.log = tk.Text(outer, height=7, wrap="word", state="disabled")
         self.log.pack(fill="x", pady=(self.s(5), 0))
@@ -217,6 +226,7 @@ class ExtractorGUI:
         self.busy = value
         state = "disabled" if value else "normal"
         self.import_button.configure(state=state)
+        self.view_button.configure(state=state)
         self.export_button.configure(state=state)
         self.compare_button.configure(state=state)
         self.clear_imports_button.configure(
@@ -495,6 +505,42 @@ class ExtractorGUI:
         if selection:
             self._toggle_iid(selection[0])
         return "break"
+
+    def on_double_click(self, event: Any) -> str | None:
+        region = self.tree.identify_region(event.x, event.y)
+        column = self.tree.identify_column(event.x)
+        if region not in ("cell", "tree") or column == "#1":
+            return None
+        iid = self.tree.identify_row(event.y)
+        if not iid:
+            return None
+        record = self.visible_by_iid.get(iid)
+        if record is None:
+            return None
+        self.open_viewer_for_record(record)
+        return "break"
+
+    def open_selected_viewer(self) -> None:
+        from tkinter import messagebox
+
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showinfo("View Combos", "Please select an RF card to view.")
+            return
+        record = self.visible_by_iid.get(selection[0])
+        if record is None:
+            return
+        self.open_viewer_for_record(record)
+
+    def open_viewer_for_record(self, record: ModuleRecord) -> None:
+        import viewer
+
+        viewer.open_viewer(
+            self.root,
+            record=record,
+            source=self.source,
+            scale=self.scale,
+        )
 
     def select_all(self) -> None:
         self.checked_keys = {self._record_key(record) for record in self.records}
