@@ -1194,7 +1194,9 @@ def _cell(value: Any) -> Any:
     return value
 
 
-def _write_csv(path: Path, rows: Sequence[dict[str, Any]]) -> None:
+def _write_csv(path: Path, rows: Sequence[dict[str, Any]]) -> Path:
+    if not rows:
+        return path
     fields: list[str] = []
     seen: set[str] = set()
     for row in rows:
@@ -1202,11 +1204,21 @@ def _write_csv(path: Path, rows: Sequence[dict[str, Any]]) -> None:
             if key not in seen:
                 seen.add(key)
                 fields.append(key)
-    with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({key: _cell(value) for key, value in row.items()})
+    try:
+        with path.open("w", encoding="utf-8-sig", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow({key: _cell(value) for key, value in row.items()})
+        return path
+    except PermissionError:
+        fallback = path.with_name(f"{path.stem}_new{path.suffix}")
+        with fallback.open("w", encoding="utf-8-sig", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow({key: _cell(value) for key, value in row.items()})
+        return fallback
 
 
 def _format_scs_val(scs_code: Any) -> str:
@@ -1255,10 +1267,10 @@ def _format_bw(bw_str: str) -> str:
     return bw_str.replace("_", " + ")
 
 
-def _format_scs_for_comp(comp: dict[str, Any]) -> str:
+def _format_scs_for_comp(comp: dict[str, Any], is_ul: bool = False) -> str:
     base_scs = _format_scs_val(comp.get("max_scs"))
-    bw = comp.get("dl_bandwidth", "")
-    bw_class = comp.get("dl_bw_class", "A")
+    bw = comp.get("ul_bandwidth" if is_ul else "dl_bandwidth", "")
+    bw_class = comp.get("ul_bw_class" if is_ul else "dl_bw_class", "A")
     if "_" in bw:
         ccs = len(bw.split("_"))
     elif bw_class in ("B", "C"):
@@ -1274,6 +1286,23 @@ def _format_scs_for_comp(comp: dict[str, Any]) -> str:
     return " + ".join([base_scs] * ccs)
 
 
+def _component_sort_key(comp: dict[str, Any], is_ul: bool = False) -> tuple[int, str]:
+    try:
+        band = int(comp.get("band", 0))
+    except (ValueError, TypeError):
+        band = 0
+    bw_class = str(comp.get("ul_bw_class" if is_ul else "dl_bw_class", "") or "")
+    return (band, bw_class)
+
+
+def _has_real_bcs(combos: Sequence[dict[str, Any]]) -> bool:
+    for c in combos:
+        val = c.get("bcs_num")
+        if val is not None and str(val).strip() not in ("", "0", "None", "-1"):
+            return True
+    return False
+
+
 def _write_web_csvs(
     destination: Path,
     stem: str,
@@ -1287,6 +1316,10 @@ def _write_web_csvs(
         idx = int(comp["combo_index"])
         comps_by_tbl_idx[tbl][idx].append(comp)
 
+    has_endc_bcs = _has_real_bcs([c for c in combinations if c.get("table") == "endc"])
+    has_nrca_bcs = _has_real_bcs([c for c in combinations if c.get("table") == "nr_ca"])
+    has_lteca_bcs = _has_real_bcs([c for c in combinations if c.get("table") == "lte_ca"])
+
     endc_rows: list[dict[str, Any]] = []
     nrca_rows: list[dict[str, Any]] = []
     lteca_rows: list[dict[str, Any]] = []
@@ -1298,77 +1331,111 @@ def _write_web_csvs(
         bcs = _format_bcs(c.get("bcs_num", "0"))
 
         if tbl == "endc":
-            lte_comps = [x for x in comp_list if x["technology"] == "LTE"]
-            nr_comps = [x for x in comp_list if x["technology"] == "NR"]
-            lte_ul = [x for x in lte_comps if x["ul_bw_class"] not in ("-", "0", "", "None")]
-            nr_ul = [x for x in nr_comps if x["ul_bw_class"] not in ("-", "0", "", "None")]
+            lte_comps = sorted(
+                [x for x in comp_list if x.get("technology") == "LTE" and x.get("dl_bw_class") not in ("-", "0", "", "None", None)],
+                key=lambda x: _component_sort_key(x, is_ul=False),
+                reverse=True,
+            )
+            nr_comps = sorted(
+                [x for x in comp_list if x.get("technology") == "NR" and x.get("dl_bw_class") not in ("-", "0", "", "None", None)],
+                key=lambda x: _component_sort_key(x, is_ul=False),
+                reverse=True,
+            )
+            lte_ul = sorted(
+                [x for x in comp_list if x.get("technology") == "LTE" and x.get("ul_bw_class") not in ("-", "0", "", "None", None)],
+                key=lambda x: _component_sort_key(x, is_ul=True),
+                reverse=True,
+            )
+            nr_ul = sorted(
+                [x for x in comp_list if x.get("technology") == "NR" and x.get("ul_bw_class") not in ("-", "0", "", "None", None)],
+                key=lambda x: _component_sort_key(x, is_ul=True),
+                reverse=True,
+            )
 
-            row = {
-                "LTE DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in lte_comps),
+            row: dict[str, Any] = {
+                "LTE DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in lte_comps),
                 "LTE MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in lte_comps),
                 "LTE MOD DL (QAM)": "256",
-                "NR DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in nr_comps),
+                "NR DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in nr_comps),
                 "NR MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in nr_comps),
                 "NR MOD DL (QAM)": "256",
-                "NR SCS DL (kHz)": " + ".join(_format_scs_for_comp(x) for x in nr_comps),
+                "NR SCS DL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=False) for x in nr_comps),
                 "NR BW DL (MHz)": " + ".join(_format_bw(x.get("dl_bandwidth", "")) for x in nr_comps),
-                "LTE UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in lte_ul),
+                "LTE UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in lte_ul),
                 "LTE MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in lte_ul),
                 "LTE Mod UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in lte_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in lte_ul) if lte_ul else ""),
-                "NR UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in nr_ul),
+                "NR UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in nr_ul),
                 "NR MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in nr_ul),
                 "NR MOD UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in nr_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in nr_ul) if nr_ul else ""),
-                "NR SCS UL (kHz)": " + ".join(_format_scs_for_comp(x) for x in nr_ul),
+                "NR SCS UL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=True) for x in nr_ul),
                 "NR BW UL (MHz)": " + ".join(_format_bw(x.get("ul_bandwidth", "")) for x in nr_ul),
-                "BCS LTE": bcs,
-                "BCS NR": bcs,
-                "BCS INTRA ENDC": "",
             }
+            if has_endc_bcs:
+                row["BCS LTE"] = bcs
+                row["BCS NR"] = bcs
+                row["BCS INTRA ENDC"] = ""
             endc_rows.append(row)
 
         elif tbl == "nr_ca":
-            nr_ul = [x for x in comp_list if x["ul_bw_class"] not in ("-", "0", "", "None")]
+            nr_dl = sorted(
+                [x for x in comp_list if x.get("dl_bw_class") not in ("-", "0", "", "None", None)],
+                key=lambda x: _component_sort_key(x, is_ul=False),
+                reverse=True,
+            )
+            nr_ul = sorted(
+                [x for x in comp_list if x.get("ul_bw_class") not in ("-", "0", "", "None", None)],
+                key=lambda x: _component_sort_key(x, is_ul=True),
+                reverse=True,
+            )
             row = {
-                "NR DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in comp_list),
-                "MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in comp_list),
+                "NR DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in nr_dl),
+                "MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in nr_dl),
                 "MOD DL (QAM)": "256",
-                "SCS DL (kHz)": " + ".join(_format_scs_for_comp(x) for x in comp_list),
-                "BW DL (MHz)": " + ".join(_format_bw(x.get("dl_bandwidth", "")) for x in comp_list),
-                "NR UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in nr_ul),
+                "SCS DL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=False) for x in nr_dl),
+                "BW DL (MHz)": " + ".join(_format_bw(x.get("dl_bandwidth", "")) for x in nr_dl),
+                "NR UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in nr_ul),
                 "MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in nr_ul),
                 "MOD UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in nr_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in nr_ul) if nr_ul else ""),
-                "SCS UL (kHz)": " + ".join(_format_scs_for_comp(x) for x in nr_ul),
+                "SCS UL (kHz)": " + ".join(_format_scs_for_comp(x, is_ul=True) for x in nr_ul),
                 "BW UL (MHz)": " + ".join(_format_bw(x.get("ul_bandwidth", "")) for x in nr_ul),
                 "UL TX Switch": _format_ul_tx_switch(c.get("ul_tx_switch_type")),
-                "BCS": bcs,
             }
+            if has_nrca_bcs:
+                row["BCS"] = bcs
             nrca_rows.append(row)
 
         elif tbl == "lte_ca":
-            lte_ul = [x for x in comp_list if x["ul_bw_class"] not in ("-", "0", "", "None")]
+            lte_dl = sorted(
+                [x for x in comp_list if x.get("dl_bw_class") not in ("-", "0", "", "None", None)],
+                key=lambda x: _component_sort_key(x, is_ul=False),
+                reverse=True,
+            )
+            lte_ul = sorted(
+                [x for x in comp_list if x.get("ul_bw_class") not in ("-", "0", "", "None", None)],
+                key=lambda x: _component_sort_key(x, is_ul=True),
+                reverse=True,
+            )
             row = {
-                "LTE DL": " + ".join(f"{x['band']}{x['dl_bw_class']}" for x in comp_list),
-                "MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in comp_list),
+                "LTE DL": "+".join(f"{x['band']}{x['dl_bw_class']}" for x in lte_dl),
+                "MIMO DL": " + ".join(_format_mimo(x["dl_antenna"]) for x in lte_dl),
                 "Mod DL (QAM)": "256",
-                "LTE UL": " + ".join(f"{x['band']}{x['ul_bw_class']}" for x in lte_ul),
+                "LTE UL": "+".join(f"{x['band']}{x['ul_bw_class']}" for x in lte_ul),
                 "MIMO UL": " + ".join(_format_mimo(x["ul_antenna"]) for x in lte_ul),
                 "Mod UL (QAM)": "256" if all(_format_qam_val(x.get("ul_qam_cap_index")) == "256" for x in lte_ul) else (" + ".join(_format_qam_val(x.get("ul_qam_cap_index")) for x in lte_ul) if lte_ul else ""),
-                "BCS": bcs,
             }
+            if has_lteca_bcs:
+                row["BCS"] = bcs
             lteca_rows.append(row)
 
     if lteca_rows:
         p = destination / f"{stem}_lteca.csv"
-        _write_csv(p, lteca_rows)
-        written.append(p)
+        written.append(_write_csv(p, lteca_rows))
     if nrca_rows:
         p = destination / f"{stem}_nrca.csv"
-        _write_csv(p, nrca_rows)
-        written.append(p)
+        written.append(_write_csv(p, nrca_rows))
     if endc_rows:
         p = destination / f"{stem}_endc.csv"
-        _write_csv(p, endc_rows)
-        written.append(p)
+        written.append(_write_csv(p, endc_rows))
 
     return written
 
