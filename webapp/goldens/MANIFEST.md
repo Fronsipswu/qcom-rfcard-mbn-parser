@@ -10,8 +10,14 @@ review the diff before committing.
 
 Contents:
 
-- `corpus.json` — per-image `ModuleRecord` summaries (`record_json` in the generator).
-- `parse/<image>__<record>.json` — `parse_module` output; combination rows sampled
-  per table (first 5 + every 20th, see `SAMPLES_PER_TABLE`/`PARSE_SAMPLE_RATE`),
-  components in full, `*raw_hex` strings truncated to 64 chars.
+- `corpus.json` — per-image `ModuleRecord` summaries (`record_json` in the generator);
+  `inner_path` is normalized by replacing a leading extracted-container scratch
+  directory (`fat_<rand>`, `sparse_<rand>`, …) with the bare tag (`fat/…`, `sparse/…`)
+  so goldens are byte-identical across regeneration runs.
+- `parse/<image>__<record>.json` — a transform of `parse_module` output: the flat
+  `combinations` list is grouped by each row's `table` key (first-appearance order)
+  into `{table: [rows]}`, then rows are sampled per table (first 5 + every 20th,
+  see `SAMPLES_PER_TABLE`/`PARSE_SAMPLE_RATE` — positional, not RNG-seeded);
+  `metadata`/`diag` sections are dropped; components kept in full;
+  `*raw_hex` strings truncated to 64 chars (recursive).
 - `tables/<image>__<record>.json` — full `generate_web_tables` output.

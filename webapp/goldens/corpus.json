@@ -738,7 +738,7 @@
  "CP_F976BXXU1AZFW_CP35078515_MQB111318003_REV00_user_low_ship_MULTI_CERT.tar.md5": [
   {
    "name": "rf_config_1181_0_306.mbn",
-   "inner_path": "fat_gg6rsuom/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_306.mbn",
+   "inner_path": "fat/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_306.mbn",
    "generation": "DAT/protobuf",
    "identity": "1181_0_306",
    "size": 138012,
@@ -750,7 +750,7 @@
   },
   {
    "name": "rf_config_1181_0_308.mbn",
-   "inner_path": "fat_gg6rsuom/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_308.mbn",
+   "inner_path": "fat/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_308.mbn",
    "generation": "DAT/protobuf",
    "identity": "1181_0_308",
    "size": 137960,
@@ -762,7 +762,7 @@
   },
   {
    "name": "rf_config_1181_0_309.mbn",
-   "inner_path": "fat_gg6rsuom/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_309.mbn",
+   "inner_path": "fat/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_309.mbn",
    "generation": "DAT/protobuf",
    "identity": "1181_0_309",
    "size": 138076,
@@ -774,7 +774,7 @@
   },
   {
    "name": "rf_config_1181_0_606.mbn",
-   "inner_path": "fat_gg6rsuom/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_606.mbn",
+   "inner_path": "fat/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_606.mbn",
    "generation": "DAT/protobuf",
    "identity": "1181_0_606",
    "size": 157448,
@@ -786,7 +786,7 @@
   },
   {
    "name": "rf_config_1181_0_608.mbn",
-   "inner_path": "fat_gg6rsuom/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_608.mbn",
+   "inner_path": "fat/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_608.mbn",
    "generation": "DAT/protobuf",
    "identity": "1181_0_608",
    "size": 157404,
@@ -798,7 +798,7 @@
   },
   {
    "name": "rf_config_1181_0_609.mbn",
-   "inner_path": "fat_gg6rsuom/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_609.mbn",
+   "inner_path": "fat/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_1181_0_609.mbn",
    "generation": "DAT/protobuf",
    "identity": "1181_0_609",
    "size": 159060,
@@ -4150,7 +4150,7 @@
  "radio.img": [
   {
    "name": "rf_config_0610_0_0.mbn",
-   "inner_path": "sparse_g8vc5k7k/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_0610_0_0.mbn",
+   "inner_path": "sparse/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_0610_0_0.mbn",
    "generation": "DAT/protobuf",
    "identity": "0610_0_0",
    "size": 166396,
@@ -4162,7 +4162,7 @@
   },
   {
    "name": "rf_config_0700_0_0.mbn",
-   "inner_path": "sparse_g8vc5k7k/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_0700_0_0.mbn",
+   "inner_path": "sparse/image/modem_pr/mcfg/configs/mcfg_ddr/rf/rf_config_0700_0_0.mbn",
    "generation": "DAT/protobuf",
    "identity": "0700_0_0",
    "size": 113832,
