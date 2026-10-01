@@ -66,6 +66,23 @@ def _band_spans(cell: str, header: str) -> list[tuple[int, int, str]]:
     return spans
 
 
+def _band_sort_key(cell: str) -> tuple[int, Any]:
+    """Sort key for band columns: numeric per band, so 8A sorts before 11A.
+
+    Fully band-parsable cells map to (0, ((number, letter), ...)) so tuple
+    comparison orders positionally by band number with the letter as final
+    tie-break. Cells with any unparsable token fall back to (1, cell) so they
+    group after bands and order among themselves by string.
+    """
+    pairs: list[tuple[int, str]] = []
+    for token in cell.split(" + "):
+        match = _PLAIN_BAND_RE.match(token)
+        if not match:
+            return (1, cell)
+        pairs.append((int(match.group(1)), match.group(2) or ""))
+    return (0, tuple(pairs))
+
+
 def _band_color(canonical: str) -> str:
     """Deterministically map a canonical band (e.g. B3, n78) to a palette color."""
     digest = int.from_bytes(hashlib.md5(canonical.encode("utf-8")).digest(), "big")
@@ -482,9 +499,13 @@ class ComboViewerWindow(tk.Toplevel):
         reverse = info["sort_reverse"]
 
         filtered = info["filtered_rows"]
-        # Numeric or natural sort if possible
+        # Numeric or natural sort if possible; band columns sort per band numerically
+        band_col = col in BAND_COLUMN_HEADERS
+
         def _sort_val(r: dict[str, Any]) -> Any:
             v = str(r.get(col, ""))
+            if band_col:
+                return _band_sort_key(v)
             try:
                 return (0, int(v))
             except ValueError:
