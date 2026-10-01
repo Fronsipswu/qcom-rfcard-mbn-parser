@@ -9,7 +9,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
-from typing import Any
+from typing import Any, Callable
 
 try:
     import qualcomm_rf_combo_analyzer as analyzer
@@ -81,6 +81,22 @@ def _band_sort_key(cell: str) -> tuple[int, Any]:
             return (1, cell)
         pairs.append((int(match.group(1)), match.group(2) or ""))
     return (0, tuple(pairs))
+
+
+def _column_sort_key(col: str) -> Callable[[dict[str, Any]], Any]:
+    """Row sort key for a column: band-aware for band columns, numeric-else-string otherwise."""
+    band_col = col in BAND_COLUMN_HEADERS
+
+    def _key(r: dict[str, Any]) -> Any:
+        v = str(r.get(col, ""))
+        if band_col:
+            return _band_sort_key(v)
+        try:
+            return (0, int(v))
+        except ValueError:
+            return (1, v)
+
+    return _key
 
 
 def _band_color(canonical: str) -> str:
@@ -473,7 +489,7 @@ class ComboViewerWindow(tk.Toplevel):
         sort_col = info["sort_col"]
         if sort_col:
             reverse = info["sort_reverse"]
-            filtered.sort(key=lambda r: str(r.get(sort_col, "")), reverse=reverse)
+            filtered.sort(key=_column_sort_key(sort_col), reverse=reverse)
 
         self._render_table(self.active_tab_key)
 
@@ -499,19 +515,7 @@ class ComboViewerWindow(tk.Toplevel):
         reverse = info["sort_reverse"]
 
         filtered = info["filtered_rows"]
-        # Numeric or natural sort if possible; band columns sort per band numerically
-        band_col = col in BAND_COLUMN_HEADERS
-
-        def _sort_val(r: dict[str, Any]) -> Any:
-            v = str(r.get(col, ""))
-            if band_col:
-                return _band_sort_key(v)
-            try:
-                return (0, int(v))
-            except ValueError:
-                return (1, v)
-
-        filtered.sort(key=_sort_val, reverse=reverse)
+        filtered.sort(key=_column_sort_key(col), reverse=reverse)
         self._render_table(tbl_key)
 
     def _header_column_at(self, info: dict[str, Any], char: int) -> int | None:
