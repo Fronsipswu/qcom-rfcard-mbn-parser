@@ -1305,10 +1305,27 @@ def _has_real_bcs(combos: Sequence[dict[str, Any]]) -> bool:
     return False
 
 
+def _normalize_legacy_component(comp: dict[str, Any]) -> dict[str, Any]:
+    """Map legacy parser sentinel values onto the modern component schema."""
+    out = dict(comp)
+    for key in ("dl_bw_class", "ul_bw_class"):
+        if out.get(key) == "NONE":
+            out[key] = "-"
+    for key in ("dl_antenna", "ul_antenna"):
+        ant = out.get(key)
+        if isinstance(ant, str):
+            if ant == "NONE":
+                out[key] = "INDEX_0"
+            elif ant.startswith("ANTENNA_"):
+                out[key] = ant[len("ANTENNA_"):]
+    return out
+
+
 def generate_web_tables(
     combinations: Sequence[dict[str, Any]],
     components: Sequence[dict[str, Any]],
 ) -> dict[str, list[dict[str, Any]]]:
+    components = [_normalize_legacy_component(c) for c in components]
     comps_by_tbl_idx: dict[str, dict[int, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
     for comp in components:
         tbl = comp["table"]
