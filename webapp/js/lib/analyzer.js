@@ -15,6 +15,7 @@
 import { sha256Hex } from "./hash.js";
 import { Fat16Image } from "./fat16.js";
 import { Elf32Image, ParseError } from "./elf.js";
+import { extractContainer, discoverCandidates, sidecarsInDirectory } from "./extractor.js";
 import {
   rfcardNameFromSymbols,
   findDescriptors,
@@ -258,17 +259,21 @@ export async function scanSource(source, name) {
   try {
     await fat.init();
   } catch (err) {
-    // Not FAT16: Python falls through to image_extractor.scan_container here.
-    // Container extraction lands in Task 9; fail softly until then.
-    return {
-      records: [],
-      warnings: [
-        {
-          tool: "container",
-          message: `Input is neither a named RF MBN nor a supported FAT16 modem image; container extraction is not available yet (${err.message})`,
-        },
-      ],
-    };
+    // Not FAT16: the universal container extractor (analyzer.py:209-231,
+    // image_extractor.scan_container + _records_from_extraction :268-321).
+    try {
+      return await scanExtracted(source, name);
+    } catch (extractErr) {
+      return {
+        records: [],
+        warnings: [
+          {
+            tool: "container",
+            message: `Input is neither a named RF MBN nor a supported FAT16 modem image; container extraction also failed: ${extractErr.message}`,
+          },
+        ],
+      };
+    }
   }
 
   const records = [];
@@ -304,6 +309,46 @@ export async function scanSource(source, name) {
     records.push(buildRecord(base, lte, nr));
   }
   return { records: deduplicateRecords(sortRecords(records)), warnings: [] };
+}
+
+// --- container fallback (_records_from_extraction, analyzer.py:268-321) ---------
+
+async function scanExtracted(source, name) {
+  // Python: scan_container raises for inputs below the 512-byte container
+  // floor; extraction warnings (missing tools, unsupported containers) are
+  // collected alongside the records.
+  const { outputs, warnings } = await extractContainer(source, name);
+  const { mbns, sidecars } = discoverCandidates(outputs);
+  const records = [];
+  for (const { vfile, path } of mbns) {
+    const matchInfo = matchesCandidate(vfile.name);
+    if (!matchInfo) continue;
+    const { generation, match } = matchInfo;
+    // Numeric legacy MBNs need a "so"/"rfcards" path segment (analyzer.py:279-289);
+    // the "rfcards" allowance exists for Apple BBCFG recovery.
+    const parts = new Set(pyCasefold(path).split("/").filter(Boolean));
+    if (generation === "Legacy ELF" && !parts.has("so") && !parts.has("rfcards")) continue;
+    const blob = await vfile.read();
+    const digest = sha256Hex(blob);
+    const base = {
+      inner_path: path,
+      name: vfile.name,
+      generation,
+      size: vfile.size,
+      hwid: identityValue(match, "hwid"),
+      fsid: identityValue(match, "fsid"),
+      bid: identityValue(match, "bid"),
+      external: true,
+      source_path: "",
+      sidecars: sidecarsInDirectory(path, sidecars),
+      sha256: digest,
+    };
+    const [lte, nr] = comboCounts(base, blob);
+    records.push(buildRecord(base, lte, nr));
+  }
+  // Python returns the records in discovery order unsorted; the sorted order is
+  // identical for every golden record and deterministic across runs.
+  return { records: deduplicateRecords(sortRecords(records)), warnings };
 }
 
 // --- record_json (tools/generate_goldens.py:27-47) ------------------------------

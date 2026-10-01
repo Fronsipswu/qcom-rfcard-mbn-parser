@@ -70,13 +70,15 @@ function adler32(u8) {
   return (b * 65536 + a) >>> 0;
 }
 
-function inflateZlibStrict(data) {
-  // Python zlib.decompress parity on top of fflate: unzlibSync skips the
-  // adler32 trailer and assumes it sits in the final four bytes, while Python
-  // verifies the trailer at the exact end of the deflate stream and ignores
-  // any trailing bytes. The streaming Inflate tracks the consumed bit
-  // position (after push() inf.p holds the unconsumed tail), so the trailer
-  // can be located and verified exactly.
+// Python zlib.decompress parity on top of fflate: unzlibSync skips the
+// adler32 trailer and assumes it sits in the final four bytes, while Python
+// verifies the trailer at the exact end of the deflate stream and ignores
+// any trailing bytes. The streaming Inflate tracks the consumed bit
+// position (after push() inf.p holds the unconsumed tail), so the trailer
+// can be located and verified exactly. Returns the raw bytes plus the number
+// of consumed input bytes (header + deflate + verified adler trailer) so
+// callers can reproduce decompressobj.unused_data accounting.
+export function inflateZlibChecked(data) {
   if (data.length < 2) throw new Error("incomplete or truncated stream");
   if ((data[0] & 15) !== 8 || (data[0] >> 4) > 7 || ((data[0] << 8) | data[1]) % 31 !== 0) {
     throw new Error("incorrect header check");
@@ -94,7 +96,11 @@ function inflateZlibStrict(data) {
   if (trailerOff + 4 > data.length) throw new Error("incomplete or truncated stream");
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   if (adler32(concatBytes(outs)) !== dv.getUint32(trailerOff)) throw new Error("incorrect data check");
-  return concatBytes(outs);
+  return { raw: concatBytes(outs), consumed: trailerOff + 4 };
+}
+
+function inflateZlibStrict(data) {
+  return inflateZlibChecked(data).raw;
 }
 
 // ASCII-only case-insensitive byte compare (the regex IGNORECASE behaviour).

@@ -22,3 +22,16 @@ export function deepEqualOrdered(a, b, path = "$") {
     assert.equal(a, b, `${path}`);
   }
 }
+
+// Container-extraction blob lookup for the golden tests: extraction candidates
+// keyed by the record_json-normalized inner_path (Task 9 flow).
+export async function containerBlobs(src, img) {
+  const { extractContainer, discoverCandidates } = await import("../js/lib/extractor.js");
+  const { normalizeInnerPath } = await import("../js/lib/analyzer.js");
+  const { outputs } = await extractContainer(src, img);
+  const map = new Map();
+  for (const { vfile, path } of discoverCandidates(outputs).mbns) {
+    map.set(normalizeInnerPath(path), vfile);
+  }
+  return map;
+}

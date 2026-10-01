@@ -325,6 +325,60 @@ test("scanSource returns a structured warning result for non-FAT16 input", async
   assert.equal(typeof result.warnings[0].message, "string");
 });
 
+// --- unit: container fallback (Task 9) ------------------------------------------
+
+test("scanSource container fallback: unsupported container warns with the missing tool", async () => {
+  const erofs = new Uint8Array(4096);
+  erofs.set([0xe2, 0xe1, 0xf5, 0xe0], 0x400);
+  const result = await scanSource(new BrowserFileSource(new Blob([erofs])), "system.img");
+  assert.deepEqual(result.records, []);
+  assert.equal(result.warnings.length, 1);
+  assert.equal(result.warnings[0].tool, "fsck.erofs");
+});
+
+test("scanSource container fallback: Motorola wrapper -> sparse -> ext4 yields records", async () => {
+  // Minimal wrapper + sparse(ext4) with one modern card and a legacy MBN
+  // outside the /so tree (which must be dropped by the analyzer filter).
+  const card = new Uint8Array(64).fill(0x0a);
+  const mod = await import("./ext4.test.mjs");
+  const ext4 = mod.buildExt4Tree({
+    "/image/modem_pr/rf_config_650_0_0.mbn": card,
+    "/image/other/700_0_0.mbn": new Uint8Array(16), // legacy outside /so: dropped
+    "/image/modem_pr/so/615_0_0.mbn": new Uint8Array(16).fill(1), // legacy in /so: kept
+  });
+  const sparse = new Uint8Array(28 + 12 + ext4.length);
+  const dv = new DataView(sparse.buffer);
+  dv.setUint32(0, 0xed26ff3a, true);
+  dv.setUint16(4, 1, true);
+  dv.setUint16(8, 28, true);
+  dv.setUint16(10, 12, true);
+  dv.setUint32(12, 1024, true);
+  const blocks = Math.ceil(ext4.length / 1024);
+  dv.setUint32(16, blocks, true);
+  dv.setUint32(20, 1, true);
+  dv.setUint16(28, 0xcac1, true);
+  dv.setUint32(32, blocks, true);
+  dv.setUint32(36, 12 + ext4.length, true);
+  sparse.set(ext4, 40);
+  const wrapped = new Uint8Array(13568 + sparse.length);
+  wrapped.set([0x53, 0x49, 0x4e, 0x47, 0x4c, 0x45, 0x5f, 0x4e, 0x5f, 0x4c, 0x4f, 0x4e, 0x45, 0x4c, 0x59, 0x00]);
+  wrapped.set(sparse, 13568);
+  const result = await scanSource(new BrowserFileSource(new Blob([wrapped])), "radio.img");
+  assert.deepEqual(result.warnings, []);
+  const json = result.records.map(recordJson);
+  assert.deepEqual(
+    json.map((r) => r.inner_path).sort(),
+    ["sparse/image/modem_pr/rf_config_650_0_0.mbn", "sparse/image/modem_pr/so/615_0_0.mbn"],
+  );
+  const modern = json.find((r) => r.name === "rf_config_650_0_0.mbn");
+  assert.equal(modern.generation, "DAT/protobuf");
+  assert.equal(modern.external, true);
+  assert.equal(modern.identity, "650_0_0");
+  assert.equal(modern.size, 64);
+  const legacy = json.find((r) => r.name === "615_0_0.mbn");
+  assert.equal(legacy.generation, "Legacy ELF");
+});
+
 // --- unit: parseModule dispatch ------------------------------------------------
 
 test("parseModule dispatches on generation and rejects unknown", () => {

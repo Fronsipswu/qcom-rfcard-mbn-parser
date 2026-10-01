@@ -20,7 +20,7 @@ import { hex, hexToBytes } from "../js/lib/bytes.js";
 import { zlibSync } from "../lib/vendor/fflate.js";
 import { Fat16Image } from "../js/lib/fat16.js";
 import { sourceFor } from "../js/lib/source.js";
-import { CORPUS_DIR, corpusAvailable, deepEqualOrdered } from "./helpers.mjs";
+import { CORPUS_DIR, corpusAvailable, deepEqualOrdered, containerBlobs } from "./helpers.mjs";
 import { truncateParse } from "./golden_transform.mjs";
 import {
   readVarint,
@@ -395,32 +395,40 @@ test("NR band group text decode matches Python", () => {
 test("modern DAT/protobuf records match Python goldens", { skip: !corpusAvailable() }, async () => {
   const corpus = JSON.parse(await readFile(new URL("../goldens/corpus.json", import.meta.url)));
   let checked = 0;
-  let skipped = 0;
   for (const [img, recs] of Object.entries(corpus)) {
-    // sparse/... and fat/... records live in containers that are not ported
-    // yet (Task 9); only plain direct-FAT16 inner paths are resolvable here.
-    const resolvable = recs.filter((r) => r.generation === "DAT/protobuf" && r.inner_path.startsWith("/"));
-    skipped += recs.filter((r) => r.generation === "DAT/protobuf" && !r.inner_path.startsWith("/")).length;
+    const resolvable = recs.filter((r) => r.generation === "DAT/protobuf");
     if (resolvable.length === 0) continue;
     const src = await sourceFor(join(CORPUS_DIR, img));
-    const fat = new Fat16Image(src);
-    await fat.init();
-    const byPath = new Map((await fat.walk()).map((e) => [e.path, e]));
-    const imgTag = img.replace(/\.[^.]+$/, "").slice(0, 40).replaceAll(" ", "_");
-    for (const rec of resolvable) {
-      const entry = byPath.get(rec.inner_path);
-      assert.ok(entry, `${img}: missing ${rec.inner_path}`);
-      const blob = await fat.readFile(entry);
-      const parsed = parseModernModule({ name: rec.name, inner_path: rec.inner_path }, blob);
-      const goldenPath = `../goldens/parse/${imgTag}__${rec.name.replaceAll("/", "_")}.json`;
-      const expected = JSON.parse(await readFile(new URL(goldenPath, import.meta.url)));
-      deepEqualOrdered(truncateParse(parsed), expected, `${img}/${rec.name}`);
-      checked++;
+    try {
+      // container images (sparse/... and fat/... inner paths) resolve through
+      // the Task 9 extraction layer keyed by the normalized inner_path
+      const byPath = recs.some((r) => !r.inner_path.startsWith("/"))
+        ? await containerBlobs(src, img)
+        : await (async () => {
+            const fat = new Fat16Image(src);
+            await fat.init();
+            const map = new Map();
+            for (const entry of await fat.walk()) {
+              map.set(entry.path, { read: () => fat.readFile(entry) });
+            }
+            return map;
+          })();
+      const imgTag = img.replace(/\.[^.]+$/, "").slice(0, 40).replaceAll(" ", "_");
+      for (const rec of resolvable) {
+        const vfile = byPath.get(rec.inner_path);
+        assert.ok(vfile, `${img}: missing ${rec.inner_path}`);
+        const blob = await vfile.read();
+        const parsed = parseModernModule({ name: rec.name, inner_path: rec.inner_path }, blob);
+        const goldenPath = `../goldens/parse/${imgTag}__${rec.name.replaceAll("/", "_")}.json`;
+        const expected = JSON.parse(await readFile(new URL(goldenPath, import.meta.url)));
+        deepEqualOrdered(truncateParse(parsed), expected, `${img}/${rec.name}`);
+        checked++;
+      }
+    } finally {
+      await src.close();
     }
-    await src.close();
   }
-  assert.equal(checked, 328);
-  assert.equal(skipped, 8);
+  assert.equal(checked, 336);
 });
 
 // --- F1: exact varint arithmetic past 2**53 (Python arbitrary-precision int) ---

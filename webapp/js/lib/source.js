@@ -46,6 +46,22 @@ export class BrowserFileSource {
   async close() {}
 }
 
+// Window onto a region of a base source (sliced containers, file members).
+// Closing a slice never closes the base: the outer owner owns it.
+export class SlicedSource {
+  constructor(base, offset, size) {
+    this.base = base;
+    this.offset = offset;
+    this.size = size;
+  }
+
+  async read(offset, length) {
+    return this.base.read(this.offset + offset, length);
+  }
+
+  async close() {}
+}
+
 export async function sourceFor(target) {
   // string/path-like -> Node fs handle source; File/Blob (slice + size) -> browser slice source
   if (typeof target === "string" || target instanceof URL) {
