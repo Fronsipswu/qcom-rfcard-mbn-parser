@@ -39,7 +39,14 @@ import {
   enumAssignments,
   reverseEnum,
   parseModernModule,
+  readRfcardInfo,
+  b0cdV41Packets,
+  b826V22Packets,
+  b826V22Component,
+  pyCasefold,
 } from "../js/lib/modern_parser.js";
+import { sha256Hex } from "../js/lib/hash.js";
+import { ToolError } from "../js/lib/legacy_parser.js";
 
 const enc = new TextEncoder();
 const bytes = (s) => enc.encode(s);
@@ -102,14 +109,15 @@ test("varint uses multiplication (no 32-bit shift overflow)", () => {
 
 test("varint round-trips Python-encoded values", () => {
   // Byte sequences produced by the Python reference encoder for
-  // 2**28-1, 2**28, 2**32, 2**35, 2**56 and 2**62.
+  // 2**28-1, 2**28, 2**32, 2**35, 2**56 and 2**62. Values above 2**53 come
+  // back as exact BigInts (Python arbitrary-precision parity).
   const cases = [
     ["ffffff7f", 268435455],
     ["8080808001", 268435456],
     ["8080808010", 4294967296],
     ["808080808001", 34359738368],
-    ["808080808080808001", 72057594037927936],
-    ["808080808080808040", 4611686018427387904],
+    ["808080808080808001", 72057594037927936n],
+    ["808080808080808040", 4611686018427387904n],
   ];
   for (const [h, expected] of cases) {
     assert.equal(readVarint(hexToBytes(h), 0).value, expected);
@@ -413,4 +421,291 @@ test("modern DAT/protobuf records match Python goldens", { skip: !corpusAvailabl
   }
   assert.equal(checked, 328);
   assert.equal(skipped, 8);
+});
+
+// --- F1: exact varint arithmetic past 2**53 (Python arbitrary-precision int) ---
+
+// Minimal protobuf varint encoder (mirrors the Python reference encoder).
+function encVarint(n) {
+  n = BigInt(n);
+  const out = [];
+  for (;;) {
+    const group = Number(n & 0x7fn);
+    n >>= 7n;
+    if (n) out.push(group | 0x80);
+    else { out.push(group); break; }
+  }
+  return Uint8Array.of(...out);
+}
+
+test("readVarint is exact past 2**53 (Python arbitrary-precision parity)", () => {
+  // Ground truth from Python read_varint: every value below decodes exactly.
+  // 2**53+1 would round to 2**53 in a double accumulator.
+  const twoPow53Plus1 = readVarint(hexToBytes("8180808080808010"), 0);
+  assert.equal(typeof twoPow53Plus1.value, "bigint");
+  assert.equal(twoPow53Plus1.value, 9007199254740993n);
+  assert.equal(twoPow53Plus1.pos, 8);
+  // 2**63-1 (Python 9223372036854775807; a double gives ...776000).
+  assert.equal(readVarint(hexToBytes("ffffffffffffffff7f"), 0).value, 9223372036854775807n);
+  // 127 * 2**56, the exact value of the reviewer's 80808080808080807f payload.
+  assert.equal(readVarint(hexToBytes("80808080808080807f"), 0).value, 9151314442816847872n);
+  // A full 10-byte varint: 2**70-1, exact.
+  assert.equal(readVarint(hexToBytes("ffffffffffffffffff7f"), 0).value, 1180591620717411303423n);
+
+  // Values within the safe range stay plain Numbers (2**49-1, the largest
+  // value the double fast path can produce, and the 2**53 boundary itself).
+  const maxFast = readVarint(hexToBytes("ffffffffffff7f"), 0);
+  assert.equal(typeof maxFast.value, "number");
+  assert.equal(maxFast.value, 562949953421311);
+  assert.equal(readVarint(encVarint(9007199254740991n), 0).value, 9007199254740991);
+  assert.equal(readVarint(encVarint(9007199254740992n), 0).value, 9007199254740992n);
+});
+
+test("protobufFields derives field number and wire type from the exact key", () => {
+  // Key 2**53+7: exact key % 8 == 7 -> Python raises
+  // "Unsupported protobuf wire type 7". A rounded key (2**53) has wire 0 and
+  // would keep parsing (previously: a bogus truncation error instead).
+  assert.throws(
+    () => protobufFields(hexToBytes("8780808080808010")),
+    /Unsupported protobuf wire type 7/,
+  );
+  // The reviewer's fuzz payload: 10-byte key with wire type 7.
+  assert.throws(
+    () => protobufFields(hexToBytes("87808080808080808002003a07ca04044556494c")),
+    /Unsupported protobuf wire type 7/,
+  );
+  // Key 2**53+5 -> wire 5, field number (2**53+5)>>3 == 2**50 (exact Number).
+  const fixed32 = protobufFields(concatBytes([encVarint((1n << 53n) + 5n), Uint8Array.of(1, 2, 3, 4)]));
+  assert.deepEqual(fixed32.get(2 ** 50), [[5, Uint8Array.of(1, 2, 3, 4)]]);
+
+  // Field numbers above 2**53 stay exact BigInt map keys:
+  // key 2**56+2 -> wire 2, number (2**56+2)>>3 == 2**53.
+  const big = protobufFields(concatBytes([hexToBytes("828080808080808001"), Uint8Array.of(0)]));
+  assert.ok(big.has(9007199254740992n));
+  assert.deepEqual([...big.get(9007199254740992n)].map(([w]) => w), [2]);
+  // Small keys keep Number map keys, and field zero is still rejected.
+  assert.throws(() => protobufFields(new Uint8Array([0x00])), /Invalid protobuf field zero/);
+});
+
+test("protoUint/protoRepeatedUint return exact values past 2**53", () => {
+  const exact = protobufFields(concatBytes([encVarint(8), encVarint((1n << 53n) + 1n)]));
+  assert.equal(protoUint(exact, 1), 9007199254740993n);
+  const huge = protobufFields(concatBytes([encVarint(8), hexToBytes("ffffffffffffffff7f")]));
+  assert.deepEqual(protoRepeatedUint(huge, 1), [9223372036854775807n]);
+  // In-range values remain Numbers.
+  const small = protobufFields(concatBytes([encVarint(8), encVarint(300n)]));
+  assert.equal(typeof protoUint(small, 1), "number");
+  assert.equal(protoUint(small, 1), 300);
+});
+
+// --- F2/F3/F4: Unicode parity helpers exercised through readRfcardInfo ---
+
+const emptyRrc = { env_name_high: "", env_name_low: "" };
+
+test("readRfcardInfo strips Python whitespace, keeping U+FEFF", () => {
+  // Python str.strip() set: NBSP and C0 1C-1F / U+0085 are stripped...
+  const nbsp = readRfcardInfo("/rfc/1_2_res.dat", "y.mbn", { env_name_high: "\u00a0NB\u00a0", env_name_low: "" });
+  assert.equal(nbsp.environment_name_high, "NB");
+  assert.equal(nbsp.name, "NB");
+  // ...and a lone NBSP strips to "" which flips name_source to derived.
+  const lone = readRfcardInfo("/rfc/1_2_res.dat", "y.mbn", { env_name_high: "\u00a0", env_name_low: "" });
+  assert.equal(lone.environment_name_high, null);
+  assert.equal(lone.name, "RFCARD_HWID1_FSID2");
+  assert.equal(lone.name_source, "derived_from_hwid_fsid");
+  const c0 = readRfcardInfo("/rfc/1_2_res.dat", "y.mbn", { env_name_high: "\x1cNB\x1d", env_name_low: "" });
+  assert.equal(c0.environment_name_high, "NB");
+  const nel = readRfcardInfo("/rfc/1_2_res.dat", "y.mbn", { env_name_high: "\u0085NB\u0085", env_name_low: "" });
+  assert.equal(nel.environment_name_high, "NB");
+  // Python keeps U+FEFF (JS \s would strip it).
+  const bom = readRfcardInfo("/rfc/1_2_res.dat", "y.mbn", { env_name_high: "\ufeffX\ufeff", env_name_low: "" });
+  assert.equal(bom.environment_name_high, "\ufeffX\ufeff");
+  assert.equal(bom.name, "\ufeffX\ufeff");
+  // ASCII whitespace still strips.
+  const ascii = readRfcardInfo("/rfc/1_2_res.dat", "y.mbn", { env_name_high: "  NB\t", env_name_low: "" });
+  assert.equal(ascii.environment_name_high, "NB");
+});
+
+test("readRfcardInfo matches Python \\d (Unicode Nd) and int() semantics", () => {
+  // Python \d matches Nd and int() evaluates Arabic-Indic digits as 123/45.
+  const ar = readRfcardInfo("/rfc/١٢٣_٤٥_res.dat", "x.mbn", emptyRrc);
+  assert.equal(ar.hwid, 123);
+  assert.equal(ar.fsid, 45);
+  assert.equal(ar.key, "123_45");
+  assert.equal(ar.name, "RFCARD_HWID123_FSID45");
+  const mbn = readRfcardInfo("/rfc/x.dat", "rf_config_١٢٣_٤٥_٦٧٨.mbn", emptyRrc);
+  assert.equal(mbn.hwid, 123);
+  assert.equal(mbn.fsid, 45);
+  assert.equal(mbn.bid, 678);
+  const mixed = readRfcardInfo("/rfc/x.dat", "rf_config_1_٢_3.mbn", emptyRrc);
+  assert.deepEqual([mixed.hwid, mixed.fsid, mixed.bid], [1, 2, 3]);
+  // Superscript two is No, not Nd: Python \\d does not match it.
+  const sup = readRfcardInfo("/rfc/²_3_res.dat", "x.mbn", emptyRrc);
+  assert.equal(sup.hwid, null);
+  assert.equal(sup.fsid, null);
+});
+
+test("readRfcardInfo replicates Python re.IGNORECASE folding", () => {
+  // Python re.I simple-folds U+017F (long s) onto "s".
+  const longS = readRfcardInfo("/rfc/1_2_reſ.dat", "x.mbn", emptyRrc);
+  assert.equal(longS.hwid, 1);
+  assert.equal(longS.fsid, 2);
+  // U+0130/U+0131 fold onto "i" for the rf_config_ literal.
+  for (const name of ["rf_confİg_1_2_3.mbn", "rf_confıg_1_2_3.mbn"]) {
+    const m = readRfcardInfo("/rfc/x.dat", name, emptyRrc);
+    assert.deepEqual([m.hwid, m.fsid, m.bid], [1, 2, 3], name);
+  }
+  // Negatives: ligatures do not fold under re.I, and long s is not "r".
+  for (const name of ["rf_conﬁg_1_2_3.mbn", "rf_conﬂg_1_2_3.mbn"]) {
+    assert.equal(readRfcardInfo("/rfc/x.dat", name, emptyRrc).bid, null, name);
+  }
+  assert.equal(readRfcardInfo("/rfc/1_2_ſes.dat", "x.mbn", emptyRrc).hwid, null);
+  // ASCII case folding still works, and .mbn/.dat are case-insensitive.
+  const upper = readRfcardInfo("/rfc/1_2_RES.DAT", "rf_config_1_2_3.MBN", emptyRrc);
+  assert.equal(upper.bid, 3);
+});
+
+test("extractRfcDats compares the TLV path length in bytes", () => {
+  // "/rfc/café.dat" is 13 UTF-16 units but 14 UTF-8 bytes (15 with the NUL).
+  // Python validates len(path_with_nul) == 15, so the byte framing accepts...
+  const found = extractRfcDats(framedItem("/rfc/café.dat", bytes("ZZ")));
+  assert.deepEqual(found.map((d) => d.name), ["/rfc/café.dat"]);
+  assert.deepEqual([...found[0].data], [0x5a, 0x5a]);
+  // ...and a UTF-16-unit length (14) must be rejected. (A name.length + 1
+  // comparison would wrongly accept this framing.)
+  const p = bytes("/rfc/café.dat");
+  const short = new Uint8Array(4 + p.length + 1 + 6 + 2);
+  const dv = new DataView(short.buffer);
+  dv.setUint16(0, 1, true);
+  dv.setUint16(2, 14, true); // wrong: UTF-16 units + NUL, not byte length
+  short.set(p, 4);
+  short[4 + p.length] = 0;
+  dv.setUint16(4 + p.length + 1, 2, true);
+  dv.setUint32(4 + p.length + 3, 2, true);
+  short.set(bytes("ZZ"), 4 + p.length + 1 + 6);
+  assert.deepEqual(namesOf(short), []);
+});
+
+// --- F4d: Python casefold parity for the *_res.dat filter ---
+
+test("pyCasefold matches Python str.casefold on probe chars", () => {
+  // Python ground truth: "ſΣςﬁİẞß".casefold() == "sσσfii\u0307ssss".
+  assert.equal(pyCasefold("\u017f\u03a3\u03c2\ufb01\u0130\u1e9e\u00df"), "s\u03c3\u03c3fii\u0307ssss");
+  assert.equal(pyCasefold("X_RES.DAT"), "x_res.dat");
+  assert.equal(pyCasefold("\u13a0"), "\u13a0"); // Cherokee upper keeps itself
+  assert.ok(pyCasefold("x_reſ.dat").endsWith("_res.dat"));
+  assert.ok(pyCasefold("x_ﬁ_res.dat").endsWith("_res.dat"));
+  assert.ok(!pyCasefold("x_reẞ.dat").endsWith("_res.dat"));
+});
+
+// Valid res DAT payload: field 7 (rrc) containing field 1 (two bytes "te").
+function makeResDat() {
+  const payload = bytes("\x3a\x04\x0a\x02te");
+  const stream = zlibSync(payload);
+  const dat = new Uint8Array(5 + 4 + stream.length);
+  dat.fill(0x22, 0, 5);
+  new DataView(dat.buffer).setUint32(5, payload.length, true);
+  dat.set(stream, 9);
+  return dat;
+}
+
+test("parseModernModule accepts res names only Python casefold() matches", () => {
+  const record = { name: "rf_config_1_2_3.mbn", inner_path: "/rf_config_1_2_3.mbn" };
+  // "ſ" casefolds to "s": Python name.casefold().endswith("_res.dat") accepts.
+  const longS = parseModernModule(record, framedItem("/rfc/x_reſ.dat", makeResDat()));
+  assert.equal(longS.metadata.res_dat_path, "/rfc/x_reſ.dat");
+  // The "fi" ligature casefolds to "fi".
+  const lig = parseModernModule(record, framedItem("/rfc/x_ﬁ_res.dat", makeResDat()));
+  assert.equal(lig.metadata.res_dat_path, "/rfc/x_ﬁ_res.dat");
+  // Without a casefold match the Python ToolError is raised.
+  assert.throws(() => parseModernModule(record, framedItem("/rfc/x_reſ2.dat", makeResDat())), ToolError);
+});
+
+// --- F5: candidate-loop rejection on a corrupt adler32 trailer ---
+
+test("datPayloadCandidates rejects zlib streams with a corrupt adler trailer", () => {
+  const payload = bytes("protobuf-ish bytes".repeat(10));
+  const stream = zlibSync(payload);
+  const bad = stream.slice();
+  bad[bad.length - 1] ^= 0xff; // Python: zlib.error "incorrect data check"
+  const dat = concatBytes([new Uint8Array(15).fill(0x11), Uint8Array.of(...u32le(payload.length)), bad]);
+  assert.deepEqual(datPayloadCandidates(dat).map(([e]) => e), ["raw"]);
+  // Control: the intact stream is accepted at base 14.
+  const good = concatBytes([new Uint8Array(15).fill(0x11), Uint8Array.of(...u32le(payload.length)), stream]);
+  assert.deepEqual(datPayloadCandidates(good).map(([e]) => e), ["14-byte-metadata+hash+size+zlib", "raw"]);
+});
+
+function u32le(n) {
+  return [n & 0xff, (n >>> 8) & 0xff, (n >>> 16) & 0xff, (n >>> 24) & 0xff];
+}
+
+// --- F5: DIAG encoder fixtures pinned against Python ---
+
+// 50-byte LTE record: <HBBBBB> components at offsets 2, 10, ... (1 pad byte).
+function lteRecord(...comps) {
+  const out = new Uint8Array(50);
+  comps.forEach((c, i) => {
+    const dv = new DataView(out.buffer);
+    dv.setUint16(2 + i * 8, c[0], true);
+    for (let k = 0; k < 5; k++) out[2 + i * 8 + 2 + k] = c[k + 1];
+  });
+  return out;
+}
+
+test("b0cdV41Packets match Python-generated fixtures", () => {
+  // Python fixture: rrc with two high combos (B66A[3];A[1]+B12A[2] and
+  // B41C[4];C[2]) and one low combo, encoded by new_rfcard_parser.
+  const rrc = {
+    lte_info_per_band_sub_cap_high: concatBytes([
+      lteRecord([66, 1, 3, 1, 1, 2], [12, 1, 2, 0, 0, 0]),
+      lteRecord([41, 3, 4, 2, 2, 1]),
+    ]),
+    lte_info_per_band_sub_cap_high_num: 2,
+    lte_info_per_band_sub_cap_low: lteRecord([7, 2, 1, 1, 2, 1]),
+    lte_info_per_band_sub_cap_low_num: 1,
+  };
+  const high = b0cdV41Packets(rrc, "high");
+  assert.deepEqual(high.map((p) => hex(p)), ["290202420001010301020c0001000200000129000302040201"]);
+  const low = b0cdV41Packets(rrc, "low");
+  assert.deepEqual(low.map((p) => hex(p)), ["29010107000201010201"]);
+  assert.equal(sha256Hex(concatBytes([...high, ...low])),
+    "845d769a9b095fded0af042e6bbe87a314c6d19df43b443aa0de4a46027a87d9");
+});
+
+test("b826V22 encoder matches Python-generated fixtures", () => {
+  // Python: NRBandGroup(tech=2, band=41, dl_bw_class=3, dl_bw_per_cc=21,
+  // ul_bw_class=2, ul_bw_per_cc=4, dl_max_antennas_index=3,
+  // ul_max_antennas_index=2, max_scs=5, ul_qam_cap_index=2,
+  // srs_tx_switch_type=9, tx_switch_impact_to_rx=3, ...).
+  const bg1 = {
+    tech: 2, band: 41, dl_bw_class: 3, dl_bw_per_cc: 21, ul_bw_class: 2,
+    ul_bw_per_cc: 4, dl_max_antennas_index: 3, ul_max_antennas_index: 2,
+    ul_qam_cap_index: 2,
+  };
+  // NRBandGroup(tech=1, band=3, dl_bw_class=1, dl_bw_per_cc=4,
+  // ul_bw_class=2, ul_bw_per_cc=21, dl_max_antennas_index=2,
+  // ul_max_antennas_index=1, ul_qam_cap_index=1, ...).
+  const bg2 = {
+    tech: 1, band: 3, dl_bw_class: 1, dl_bw_per_cc: 4, ul_bw_class: 2,
+    ul_bw_per_cc: 21, dl_max_antennas_index: 2, ul_max_antennas_index: 1,
+    ul_qam_cap_index: 1,
+  };
+  assert.equal(hex(b826V22Component(bg1)), "298e8110820a01000000");
+  assert.equal(hex(b826V22Component(bg2)), "03048108044205000000");
+
+  // Three records packed into one packet by b826_v22_packets(records, 4).
+  const prop = { ul_tx_switch_type: 1 };
+  const packets = b826V22Packets([[[bg1, bg2], prop], [[bg2], prop], [[bg1, bg2, bg1], prop]], 4);
+  assert.equal(packets.length, 1);
+  assert.equal(hex(packets[0]),
+    "1600000003000000030004802000000000000000000000000000298e8110820a010000000304810804420500000040200000000000000000000000000003048108044205000000c02000000000000000000000000000298e8110820a0100000003048108044205000000298e8110820a01000000");
+  assert.equal(sha256Hex(packets[0]),
+    "ef499d82c0f65124456103d059ff0998cf2ecc13bd5999ea22c3ba7b05d57287");
+
+  // Python raises on out-of-range encodings.
+  assert.throws(() => b826V22Packets([[Array.from({ length: 16 }, () => bg1), prop]], 4),
+    /0xB826 v22 supports 1..15 components, got 16/);
+  assert.throws(() => b826V22Component({ ...bg1, band: 0x200 }),
+    /0xB826 v22 band exceeds 9 bits: 512/);
+  assert.throws(() => b826V22Component({ ...bg1, dl_max_antennas_index: 0x80 }),
+    /0xB826 v22 component field exceeds its bit width/);
 });

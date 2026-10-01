@@ -18,6 +18,23 @@ export { ToolError };
 
 const VERSION = "1.8.0";
 
+// Python ints are arbitrary precision; JS doubles round every integer past
+// 2**53. Varints that large stay exact as BigInt, everything at or below
+// Number.MAX_SAFE_INTEGER stays a plain Number.
+const MAX_SAFE_BIG = BigInt(Number.MAX_SAFE_INTEGER);
+
+function toExactNumber(value) {
+  return value <= MAX_SAFE_BIG ? Number(value) : value;
+}
+
+// Counts and offsets only index or slice byte arrays. An exact value >= 2**53
+// exceeds every real buffer length in Python too, where the slice comes back
+// empty; converting it to Number (still >= 2**53 after rounding) produces the
+// same empty-slice outcome, so Number is parity-safe on these paths.
+function asCount(value) {
+  return typeof value === "bigint" ? Number(value) : value;
+}
+
 export { TABLE_DISPLAY };
 
 export function chunks(data, size) {
@@ -111,7 +128,10 @@ export function extractRfcDats(blob) {
     const name = utf8(blob, i, j);
     if (i >= 4) {
       const tlv = new StructReader(blob);
-      if (tlv.u16(i - 4) === 1 && tlv.u16(i - 2) === name.length + 1) {
+      // Python validates len(path_with_nul): the path's BYTE length plus the
+      // NUL terminator (j - i bytes of path + 1). The decoded string's .length
+      // counts UTF-16 units and undercounts multi-byte paths.
+      if (tlv.u16(i - 4) === 1 && tlv.u16(i - 2) === j - i + 1) {
         const dataHdr = j + 1;
         if (dataHdr + 6 <= blob.length) {
           const dataType = tlv.u16(dataHdr);
@@ -213,13 +233,26 @@ export function datPayloadCandidates(dat) {
 }
 
 export function readVarint(u8, pos) {
+  // Fast path: up to seven payload groups (shift < 49) keep every partial
+  // sum below 2**49, so the double accumulator stays exact. Longer varints
+  // (Python allows shift < 70, i.e. ten bytes) switch to BigInt, which is
+  // exact for the remaining shifts. Values above 2**53 come back as BigInt,
+  // matching Python's arbitrary-precision int.
   let value = 0;
   let shift = 0;
-  while (pos < u8.length && shift < 70) {
+  while (pos < u8.length && shift < 49) {
     const byte = u8[pos++];
     // Multiplication, not <<: protobuf varints exceed 32 bits.
     value += (byte & 0x7f) * 2 ** shift;
     if (!(byte & 0x80)) return { value, pos };
+    shift += 7;
+  }
+  if (pos >= u8.length) throw new Error("Truncated protobuf varint");
+  let exact = BigInt(value);
+  while (pos < u8.length && shift < 70) {
+    const byte = u8[pos++];
+    exact |= BigInt(byte & 0x7f) << BigInt(shift);
+    if (!(byte & 0x80)) return { value: toExactNumber(exact), pos };
     shift += 7;
   }
   throw new Error("Truncated protobuf varint");
@@ -231,8 +264,15 @@ export function protobufFields(data) {
   while (pos < data.length) {
     let key;
     ({ value: key, pos } = readVarint(data, pos));
-    const number = Math.floor(key / 8);
-    const wire = key % 8;
+    // Python derives number = key >> 3 and wire = key & 7 from the exact
+    // arbitrary-precision key. A rounded key would misread the wire type
+    // (2**53+7 rounds to 2**53, wire 0, instead of raising for wire 7), so
+    // the split happens on the exact integer and only the resulting field
+    // number is narrowed to a Number map key when it fits.
+    const exactKey = typeof key === "bigint" ? key : BigInt(key);
+    const numberBig = exactKey >> 3n;
+    const wire = Number(exactKey & 7n);
+    const number = toExactNumber(numberBig);
     if (number === 0) throw new Error("Invalid protobuf field zero");
     let value;
     if (wire === 0) {
@@ -244,9 +284,11 @@ export function protobufFields(data) {
     } else if (wire === 2) {
       let size;
       ({ value: size, pos } = readVarint(data, pos));
-      if (pos + size > data.length) throw new Error("Truncated protobuf length-delimited field");
-      value = data.subarray(pos, pos + size);
-      pos += size;
+      // Sizes >= 2**53 exceed any real buffer, exactly as in Python.
+      const length = asCount(size);
+      if (pos + length > data.length) throw new Error("Truncated protobuf length-delimited field");
+      value = data.subarray(pos, pos + length);
+      pos += length;
     } else if (wire === 5) {
       if (pos + 4 > data.length) throw new Error("Truncated protobuf fixed32");
       value = data.subarray(pos, pos + 4);
@@ -481,7 +523,7 @@ export function nrSectionRecords(rrc, prefix, suffix) {
   const indexRaw = rrc[`${prefix}_band_group_indices_table_sub_cap_${suffix}`];
   const offsets = rrc[`${prefix}_band_group_indices_offset_table_sub_cap_${suffix}`];
   const propRaw = rrc[`${prefix}_combo_properties_table_sub_cap_${suffix}`];
-  const refCount = rrc[`${prefix}_info_per_band_sub_cap_${suffix}_num`];
+  const refCount = asCount(rrc[`${prefix}_info_per_band_sub_cap_${suffix}_num`]);
 
   const refs = chunks(refRaw, 4)
     .map((item) => new StructReader(item).unpack("<HH", 0))
@@ -497,7 +539,7 @@ export function nrSectionRecords(rrc, prefix, suffix) {
     if (count <= 0 || count > offsets.length) continue;
     // The flattened table contains uint16 band-group indices; offsets count
     // entries rather than bytes.
-    const startEntry = offsets[count - 1] + bgTableIndex * count;
+    const startEntry = asCount(offsets[count - 1]) + bgTableIndex * count;
     const start = startEntry * 2;
     const rawIndices = indexRaw.subarray(start, start + count * 2);
     if (rawIndices.length !== count * 2) continue;
@@ -522,7 +564,7 @@ export function nrSectionRecords(rrc, prefix, suffix) {
 export function b0cdV41Packets(rrc, suffix, packetCombos = 100) {
   // Build headerless Qualcomm 0xB0CD v41 payloads.
   const field = `lte_info_per_band_sub_cap_${suffix}`;
-  const rawCombos = chunks(rrc[field], 50).slice(0, rrc[`${field}_num`]);
+  const rawCombos = chunks(rrc[field], 50).slice(0, asCount(rrc[`${field}_num`]));
   const encoded = [];
   for (const raw of rawCombos) {
     const r = new StructReader(raw);
@@ -610,7 +652,7 @@ function safeClass(value) {
 
 function modernLteRows(rrc, suffix, antennaNames) {
   const field = `lte_info_per_band_sub_cap_${suffix}`;
-  const rawRecords = chunks(rrc[field], 50).slice(0, rrc[`${field}_num`]);
+  const rawRecords = chunks(rrc[field], 50).slice(0, asCount(rrc[`${field}_num`]));
   const combos = [];
   const components = [];
   rawRecords.forEach((raw, comboIndex) => {
@@ -727,20 +769,166 @@ function modernNrRows(rrc, suffix, prefix, table, bwNames, antennaNames) {
   return [combos, components, records];
 }
 
+// Python str.strip() removes exactly the str.isspace() set: U+0009-000D,
+// U+001C-001F, U+0020, U+0085, U+00A0, U+1680, U+2000-200A, U+2028, U+2029,
+// U+202F, U+205F, U+3000. JS \s additionally strips U+FEFF (Python keeps it)
+// and misses U+0085 and U+001C-001F, hence the explicit class.
+const PY_STRIP_RE = /^[\t\n\x0b\x0c\r\x1c-\x1f \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\t\n\x0b\x0c\r\x1c-\x1f \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/gu;
+
 function pyStrip(text) {
-  return text.replace(/^[\t\n\x0b\x0c\r ]+|[\t\n\x0b\x0c\r ]+$/g, "");
+  return text.replace(PY_STRIP_RE, "");
 }
+
+// Python str.casefold() minus str.lower(): for every code point not listed
+// here casefold == lower, which String#toLowerCase replicates. Generated
+// from Python over the full code point range (casefold(chr(cp)) !=
+// chr(cp).lower()); includes the Greek final sigma, the long s, ligature
+// expansions, the Turkic dotted/dotless I, sharp s, and Cherokee.
+const PY_CASEFOLD_DIFF = new Map([
+  [0xb5, "\u03bc"], [0xdf, "ss"], [0x149, "\u02bcn"], [0x17f, "s"], [0x1f0, "j\u030c"],
+  [0x345, "\u03b9"], [0x390, "\u03b9\u0308\u0301"], [0x3b0, "\u03c5\u0308\u0301"],
+  [0x3c2, "\u03c3"], [0x3d0, "\u03b2"], [0x3d1, "\u03b8"], [0x3d5, "\u03c6"], [0x3d6, "\u03c0"],
+  [0x3f0, "\u03ba"], [0x3f1, "\u03c1"], [0x3f5, "\u03b5"], [0x587, "\u0565\u0582"],
+  [0x13a0, "\u13a0"], [0x13a1, "\u13a1"], [0x13a2, "\u13a2"], [0x13a3, "\u13a3"],
+  [0x13a4, "\u13a4"], [0x13a5, "\u13a5"], [0x13a6, "\u13a6"], [0x13a7, "\u13a7"],
+  [0x13a8, "\u13a8"], [0x13a9, "\u13a9"], [0x13aa, "\u13aa"], [0x13ab, "\u13ab"],
+  [0x13ac, "\u13ac"], [0x13ad, "\u13ad"], [0x13ae, "\u13ae"], [0x13af, "\u13af"],
+  [0x13b0, "\u13b0"], [0x13b1, "\u13b1"], [0x13b2, "\u13b2"], [0x13b3, "\u13b3"],
+  [0x13b4, "\u13b4"], [0x13b5, "\u13b5"], [0x13b6, "\u13b6"], [0x13b7, "\u13b7"],
+  [0x13b8, "\u13b8"], [0x13b9, "\u13b9"], [0x13ba, "\u13ba"], [0x13bb, "\u13bb"],
+  [0x13bc, "\u13bc"], [0x13bd, "\u13bd"], [0x13be, "\u13be"], [0x13bf, "\u13bf"],
+  [0x13c0, "\u13c0"], [0x13c1, "\u13c1"], [0x13c2, "\u13c2"], [0x13c3, "\u13c3"],
+  [0x13c4, "\u13c4"], [0x13c5, "\u13c5"], [0x13c6, "\u13c6"], [0x13c7, "\u13c7"],
+  [0x13c8, "\u13c8"], [0x13c9, "\u13c9"], [0x13ca, "\u13ca"], [0x13cb, "\u13cb"],
+  [0x13cc, "\u13cc"], [0x13cd, "\u13cd"], [0x13ce, "\u13ce"], [0x13cf, "\u13cf"],
+  [0x13d0, "\u13d0"], [0x13d1, "\u13d1"], [0x13d2, "\u13d2"], [0x13d3, "\u13d3"],
+  [0x13d4, "\u13d4"], [0x13d5, "\u13d5"], [0x13d6, "\u13d6"], [0x13d7, "\u13d7"],
+  [0x13d8, "\u13d8"], [0x13d9, "\u13d9"], [0x13da, "\u13da"], [0x13db, "\u13db"],
+  [0x13dc, "\u13dc"], [0x13dd, "\u13dd"], [0x13de, "\u13de"], [0x13df, "\u13df"],
+  [0x13e0, "\u13e0"], [0x13e1, "\u13e1"], [0x13e2, "\u13e2"], [0x13e3, "\u13e3"],
+  [0x13e4, "\u13e4"], [0x13e5, "\u13e5"], [0x13e6, "\u13e6"], [0x13e7, "\u13e7"],
+  [0x13e8, "\u13e8"], [0x13e9, "\u13e9"], [0x13ea, "\u13ea"], [0x13eb, "\u13eb"],
+  [0x13ec, "\u13ec"], [0x13ed, "\u13ed"], [0x13ee, "\u13ee"], [0x13ef, "\u13ef"],
+  [0x13f0, "\u13f0"], [0x13f1, "\u13f1"], [0x13f2, "\u13f2"], [0x13f3, "\u13f3"],
+  [0x13f4, "\u13f4"], [0x13f5, "\u13f5"], [0x13f8, "\u13f0"], [0x13f9, "\u13f1"],
+  [0x13fa, "\u13f2"], [0x13fb, "\u13f3"], [0x13fc, "\u13f4"], [0x13fd, "\u13f5"],
+  [0x1c80, "\u0432"], [0x1c81, "\u0434"], [0x1c82, "\u043e"], [0x1c83, "\u0441"],
+  [0x1c84, "\u0442"], [0x1c85, "\u0442"], [0x1c86, "\u044a"], [0x1c87, "\u0463"],
+  [0x1c88, "\ua64b"], [0x1e96, "h\u0331"], [0x1e97, "t\u0308"], [0x1e98, "w\u030a"],
+  [0x1e99, "y\u030a"], [0x1e9a, "a\u02be"], [0x1e9b, "\u1e61"], [0x1e9e, "ss"],
+  [0x1f50, "\u03c5\u0313"], [0x1f52, "\u03c5\u0313\u0300"], [0x1f54, "\u03c5\u0313\u0301"],
+  [0x1f56, "\u03c5\u0313\u0342"], [0x1f80, "\u1f00\u03b9"], [0x1f81, "\u1f01\u03b9"],
+  [0x1f82, "\u1f02\u03b9"], [0x1f83, "\u1f03\u03b9"], [0x1f84, "\u1f04\u03b9"],
+  [0x1f85, "\u1f05\u03b9"], [0x1f86, "\u1f06\u03b9"], [0x1f87, "\u1f07\u03b9"],
+  [0x1f88, "\u1f00\u03b9"], [0x1f89, "\u1f01\u03b9"], [0x1f8a, "\u1f02\u03b9"],
+  [0x1f8b, "\u1f03\u03b9"], [0x1f8c, "\u1f04\u03b9"], [0x1f8d, "\u1f05\u03b9"],
+  [0x1f8e, "\u1f06\u03b9"], [0x1f8f, "\u1f07\u03b9"], [0x1f90, "\u1f20\u03b9"],
+  [0x1f91, "\u1f21\u03b9"], [0x1f92, "\u1f22\u03b9"], [0x1f93, "\u1f23\u03b9"],
+  [0x1f94, "\u1f24\u03b9"], [0x1f95, "\u1f25\u03b9"], [0x1f96, "\u1f26\u03b9"],
+  [0x1f97, "\u1f27\u03b9"], [0x1f98, "\u1f20\u03b9"], [0x1f99, "\u1f21\u03b9"],
+  [0x1f9a, "\u1f22\u03b9"], [0x1f9b, "\u1f23\u03b9"], [0x1f9c, "\u1f24\u03b9"],
+  [0x1f9d, "\u1f25\u03b9"], [0x1f9e, "\u1f26\u03b9"], [0x1f9f, "\u1f27\u03b9"],
+  [0x1fa0, "\u1f60\u03b9"], [0x1fa1, "\u1f61\u03b9"], [0x1fa2, "\u1f62\u03b9"],
+  [0x1fa3, "\u1f63\u03b9"], [0x1fa4, "\u1f64\u03b9"], [0x1fa5, "\u1f65\u03b9"],
+  [0x1fa6, "\u1f66\u03b9"], [0x1fa7, "\u1f67\u03b9"], [0x1fa8, "\u1f60\u03b9"],
+  [0x1fa9, "\u1f61\u03b9"], [0x1faa, "\u1f62\u03b9"], [0x1fab, "\u1f63\u03b9"],
+  [0x1fac, "\u1f64\u03b9"], [0x1fad, "\u1f65\u03b9"], [0x1fae, "\u1f66\u03b9"],
+  [0x1faf, "\u1f67\u03b9"], [0x1fb2, "\u1f70\u03b9"], [0x1fb3, "\u03b1\u03b9"],
+  [0x1fb4, "\u03ac\u03b9"], [0x1fb6, "\u03b1\u0342"], [0x1fb7, "\u03b1\u0342\u03b9"],
+  [0x1fbc, "\u03b1\u03b9"], [0x1fbe, "\u03b9"], [0x1fc2, "\u1f74\u03b9"], [0x1fc3, "\u03b7\u03b9"],
+  [0x1fc4, "\u03ae\u03b9"], [0x1fc6, "\u03b7\u0342"], [0x1fc7, "\u03b7\u0342\u03b9"],
+  [0x1fcc, "\u03b7\u03b9"], [0x1fd2, "\u03b9\u0308\u0300"], [0x1fd3, "\u03b9\u0308\u0301"],
+  [0x1fd6, "\u03b9\u0342"], [0x1fd7, "\u03b9\u0308\u0342"], [0x1fe2, "\u03c5\u0308\u0300"],
+  [0x1fe3, "\u03c5\u0308\u0301"], [0x1fe4, "\u03c1\u0313"], [0x1fe6, "\u03c5\u0342"],
+  [0x1fe7, "\u03c5\u0308\u0342"], [0x1ff2, "\u1f7c\u03b9"], [0x1ff3, "\u03c9\u03b9"],
+  [0x1ff4, "\u03ce\u03b9"], [0x1ff6, "\u03c9\u0342"], [0x1ff7, "\u03c9\u0342\u03b9"],
+  [0x1ffc, "\u03c9\u03b9"], [0xab70, "\u13a0"], [0xab71, "\u13a1"], [0xab72, "\u13a2"],
+  [0xab73, "\u13a3"], [0xab74, "\u13a4"], [0xab75, "\u13a5"], [0xab76, "\u13a6"],
+  [0xab77, "\u13a7"], [0xab78, "\u13a8"], [0xab79, "\u13a9"], [0xab7a, "\u13aa"],
+  [0xab7b, "\u13ab"], [0xab7c, "\u13ac"], [0xab7d, "\u13ad"], [0xab7e, "\u13ae"],
+  [0xab7f, "\u13af"], [0xab80, "\u13b0"], [0xab81, "\u13b1"], [0xab82, "\u13b2"],
+  [0xab83, "\u13b3"], [0xab84, "\u13b4"], [0xab85, "\u13b5"], [0xab86, "\u13b6"],
+  [0xab87, "\u13b7"], [0xab88, "\u13b8"], [0xab89, "\u13b9"], [0xab8a, "\u13ba"],
+  [0xab8b, "\u13bb"], [0xab8c, "\u13bc"], [0xab8d, "\u13bd"], [0xab8e, "\u13be"],
+  [0xab8f, "\u13bf"], [0xab90, "\u13c0"], [0xab91, "\u13c1"], [0xab92, "\u13c2"],
+  [0xab93, "\u13c3"], [0xab94, "\u13c4"], [0xab95, "\u13c5"], [0xab96, "\u13c6"],
+  [0xab97, "\u13c7"], [0xab98, "\u13c8"], [0xab99, "\u13c9"], [0xab9a, "\u13ca"],
+  [0xab9b, "\u13cb"], [0xab9c, "\u13cc"], [0xab9d, "\u13cd"], [0xab9e, "\u13ce"],
+  [0xab9f, "\u13cf"], [0xaba0, "\u13d0"], [0xaba1, "\u13d1"], [0xaba2, "\u13d2"],
+  [0xaba3, "\u13d3"], [0xaba4, "\u13d4"], [0xaba5, "\u13d5"], [0xaba6, "\u13d6"],
+  [0xaba7, "\u13d7"], [0xaba8, "\u13d8"], [0xaba9, "\u13d9"], [0xabaa, "\u13da"],
+  [0xabab, "\u13db"], [0xabac, "\u13dc"], [0xabad, "\u13dd"], [0xabae, "\u13de"],
+  [0xabaf, "\u13df"], [0xabb0, "\u13e0"], [0xabb1, "\u13e1"], [0xabb2, "\u13e2"],
+  [0xabb3, "\u13e3"], [0xabb4, "\u13e4"], [0xabb5, "\u13e5"], [0xabb6, "\u13e6"],
+  [0xabb7, "\u13e7"], [0xabb8, "\u13e8"], [0xabb9, "\u13e9"], [0xabba, "\u13ea"],
+  [0xabbb, "\u13eb"], [0xabbc, "\u13ec"], [0xabbd, "\u13ed"], [0xabbe, "\u13ee"],
+  [0xabbf, "\u13ef"], [0xfb00, "ff"], [0xfb01, "fi"], [0xfb02, "fl"], [0xfb03, "ffi"],
+  [0xfb04, "ffl"], [0xfb05, "st"], [0xfb06, "st"], [0xfb13, "\u0574\u0576"],
+  [0xfb14, "\u0574\u0565"], [0xfb15, "\u0574\u056b"], [0xfb16, "\u057e\u0576"],
+  [0xfb17, "\u0574\u056d"],
+]);
+
+export function pyCasefold(text) {
+  let out = "";
+  for (const ch of text) {
+    const folded = PY_CASEFOLD_DIFF.get(ch.codePointAt(0));
+    out += folded ?? ch.toLowerCase();
+  }
+  return out;
+}
+
+// Python re.IGNORECASE simple-folds U+0130/U+0131 onto "i" and U+017F onto
+// "s" (probed: exactly these non-ASCII code points match [a-z]/[A-Z] under
+// re.I, with ligatures excluded). JS /iu natively folds U+017F and U+212A
+// but not the Turkic pair, so the match input is pre-normalized here instead
+// of relying on engine-specific folding.
+const PY_RE_FOLD_RE = /[\u0130\u0131\u017f\u212a]/gu;
+
+function pyRegexFold(text) {
+  return text.replace(PY_RE_FOLD_RE, (ch) => (ch === "\u017f" ? "s" : ch === "\u212a" ? "k" : "i"));
+}
+
+// Python \d matches Unicode Nd and int() evaluates each Nd code point's
+// digit value. Every Nd block is ten consecutive code points with digit
+// values 0..9, so the block starts below (generated from Python
+// unicodedata) are enough to evaluate arbitrary Nd runs exactly.
+const ND_RUN_STARTS = [
+  48, 1632, 1776, 1984, 2406, 2534, 2662, 2790, 2918, 3046, 3174, 3302, 3430,
+  3558, 3664, 3792, 3872, 4160, 4240, 6112, 6160, 6470, 6608, 6784, 6800,
+  6992, 7088, 7232, 7248, 42528, 43216, 43264, 43472, 43504, 43600, 44016,
+  65296, 66720, 68912, 68928, 69734, 69872, 69942, 70096, 70384, 70736,
+  70864, 71248, 71360, 71376, 71386, 71472, 71904, 72016, 72688, 72784,
+  73040, 73120, 73552, 90416, 92768, 92864, 93008, 93552, 118000, 120782,
+  120792, 120802, 120812, 120822, 123200, 123632, 124144, 124401, 125264,
+  130032,
+];
+
+function pyNdInt(text) {
+  let value = 0n;
+  for (const ch of text) {
+    const cp = ch.codePointAt(0);
+    const start = ND_RUN_STARTS.find((s) => cp >= s && cp <= s + 9);
+    if (start === undefined) throw new RangeError(`not a Unicode decimal digit: U+${cp.toString(16)}`);
+    value = value * 10n + BigInt(cp - start);
+  }
+  return toExactNumber(value);
+}
+
+const DAT_NAME_RE = /(?:^|\/)(\p{Nd}+)_(\p{Nd}+)_(?:res|cmn)\.dat\n?$/iu;
+const MBN_NAME_RE = /rf_config_(\p{Nd}+)_(\p{Nd}+)_(\p{Nd}+)\.mbn\n?$/iu;
 
 export function readRfcardInfo(datName, inputName, rrc) {
   // Recover the RFCard identifiers and embedded RRC environment names.
-  const datMatch = /(?:^|\/)(\d+)_(\d+)_(?:res|cmn)\.dat\n?$/i.exec(datName);
-  const mbnMatch = /rf_config_(\d+)_(\d+)_(\d+)\.mbn\n?$/i.exec(inputName);
-  let hwid = datMatch ? parseInt(datMatch[1], 10) : null;
-  let fsid = datMatch ? parseInt(datMatch[2], 10) : null;
-  const bid = mbnMatch ? parseInt(mbnMatch[3], 10) : null;
+  // Python semantics: re.search with re.IGNORECASE over Unicode strings
+  // (\d == Nd, int() reads Nd digits) and str.strip() on the env names.
+  const datMatch = DAT_NAME_RE.exec(pyRegexFold(datName));
+  const mbnMatch = MBN_NAME_RE.exec(pyRegexFold(inputName));
+  let hwid = datMatch ? pyNdInt(datMatch[1]) : null;
+  let fsid = datMatch ? pyNdInt(datMatch[2]) : null;
+  const bid = mbnMatch ? pyNdInt(mbnMatch[3]) : null;
   if (mbnMatch) {
-    if (hwid === null) hwid = parseInt(mbnMatch[1], 10);
-    if (fsid === null) fsid = parseInt(mbnMatch[2], 10);
+    if (hwid === null) hwid = pyNdInt(mbnMatch[1]);
+    if (fsid === null) fsid = pyNdInt(mbnMatch[2]);
   }
   const envHigh = pyStrip(rrc.env_name_high);
   const envLow = pyStrip(rrc.env_name_low);
@@ -793,8 +981,10 @@ const SECTION_SPECS = [
 
 export function parseModernModule(record, blob) {
   const dats = extractRfcDats(blob);
+  // Python: name.casefold().endswith("_res.dat") (full case folding, e.g.
+  // "x_reſ.dat" matches); toLowerCase leaves U+017F untouched.
   const resItems = dats
-    .filter((d) => d.name.toLowerCase().endsWith("_res.dat"))
+    .filter((d) => pyCasefold(d.name).endsWith("_res.dat"))
     .map((d) => [d.name, d.data]);
   if (resItems.length === 0) throw new ToolError("No embedded /rfc/*_res.dat was found");
   if (resItems.length > 1) {

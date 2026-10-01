@@ -82,3 +82,12 @@ test("utf8 decodes with replacement semantics", () => {
   assert.equal(utf8(b, 0, b.length), "héllo");
   assert.equal(utf8(new Uint8Array([0x61, 0xff, 0x62]), 0, 3), "a\uFFFDb");
 });
+
+test("utf8 keeps a leading U+FEFF like Python .decode('utf-8', 'replace')", () => {
+  // TextDecoder strips a leading EF BB BF by default; Python's decoder keeps
+  // the U+FEFF character (ignoreBOM: true is the "do not strip" setting).
+  assert.equal(utf8(new Uint8Array([0xef, 0xbb, 0xbf]), 0, 3), "\uFEFF");
+  assert.equal(utf8(new Uint8Array([0xef, 0xbb, 0xbf, 0x41]), 0, 4), "\uFEFFA");
+  // A mid-stream BOM was never stripped; it must survive as well.
+  assert.equal(utf8(new Uint8Array([0x41, 0xef, 0xbb, 0xbf, 0x42]), 0, 5), "A\uFEFFB");
+});

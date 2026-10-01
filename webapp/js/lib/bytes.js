@@ -58,5 +58,8 @@ export function indexOfBytes(hay, needle, from = 0) {
 }
 
 export function utf8(u8, start, end) {
-  return new TextDecoder("utf-8").decode(u8.subarray(start, end)); // replacement semantics match errors="replace"
+  // ignoreBOM: true means "keep a leading U+FEFF", matching Python's
+  // .decode("utf-8", "replace") which never strips it (default TextDecoder
+  // would swallow the EF BB BF prefix).
+  return new TextDecoder("utf-8", { ignoreBOM: true }).decode(u8.subarray(start, end)); // replacement semantics match errors="replace"
 }
