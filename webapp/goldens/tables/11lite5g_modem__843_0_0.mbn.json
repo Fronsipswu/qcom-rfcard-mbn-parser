@@ -1,0 +1,39 @@
+{
+ "lte_ca": [],
+ "nr_ca": [
+  {
+   "NR DL": "3A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "30",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  }
+ ],
+ "endc": [
+  {
+   "LTE DL": "3A",
+   "LTE MIMO DL": "2",
+   "LTE DL (QAM)": "256",
+   "NR DL": "41A",
+   "NR MIMO DL": "4",
+   "NR DL (QAM)": "256",
+   "NR SCS DL (kHz)": "15",
+   "NR BW DL (MHz)": "100",
+   "LTE UL": "3A",
+   "LTE MIMO UL": "1",
+   "LTE UL (QAM)": "256",
+   "NR UL": "41A",
+   "NR MIMO UL": "1",
+   "NR UL (QAM)": "256",
+   "NR SCS UL (kHz)": "15",
+   "NR BW UL (MHz)": "100"
+  }
+ ],
+ "nrdc": []
+}

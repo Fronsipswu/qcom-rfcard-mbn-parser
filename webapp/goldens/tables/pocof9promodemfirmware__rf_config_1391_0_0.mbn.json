@@ -1,0 +1,4512 @@
+{
+ "lte_ca": [
+  {
+   "LTE DL": "66A + 66A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "66A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "66A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "66A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "66A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "66A + 5A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "66A + 5A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "66C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "66A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "48A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "48A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "43A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "43A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41C + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 41C + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41C + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 41C + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41C + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41A + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 41A + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41A + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41A + 3A",
+   "MIMO DL": "4 + 4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41C + 3A",
+   "MIMO DL": "4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41C + 3A",
+   "MIMO DL": "4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42A + 41C + 3A",
+   "MIMO DL": "4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41C + 3A",
+   "MIMO DL": "4 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41A + 3A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41A + 3A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41A + 3A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41C",
+   "MIMO DL": "4 + 4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 41C",
+   "MIMO DL": "4 + 4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41C",
+   "MIMO DL": "4 + 4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 41C",
+   "MIMO DL": "4 + 4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 41A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 41A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41C",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41C",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42A + 41C",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 41A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 19A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 19A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "19A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 18A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 18A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "18A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 3A + 1A",
+   "MIMO DL": "4 + 4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 3A + 1A",
+   "MIMO DL": "4 + 4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 3A + 1A",
+   "MIMO DL": "4 + 4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 3A + 1A",
+   "MIMO DL": "4 + 4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 3A + 1A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 3A + 1A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 3A + 1A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 3A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 3A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 3A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 3A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 3A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 1A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C + 1A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C + 1A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 1A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A + 1A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "42C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "42A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "42A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 41A + 41A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 41A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 39A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "41C + 39A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 39A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "39A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 39C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 39C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "39C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "41A + 39C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "39A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 39A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 39A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "39A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "41C + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 28A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "41C + 28A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 28A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 8A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 8A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 8A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 8A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 8A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 8A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "41C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "41C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41D",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "41D",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "41C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "41A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 40A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 28A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40C + 28A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 28A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 8A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 8A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 8A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 8A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40C + 5A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 5A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 3C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "40A + 3C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40D",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "40C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "40D",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40C",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "40C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "40C",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "40A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "39C",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "39C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "39C",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "39A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "39A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "39A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 28A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 8A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 8A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 8A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 8A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 8A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 3C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "38A + 3C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "38C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "38C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "38A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "38A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "38A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "34A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "34A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 7A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 7A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7C + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7C + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "28A + 7C + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7C + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "28A + 7A + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "28A + 7C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "28A + 7C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 4A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 4A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "4A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 3A",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 3A",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "28A + 3C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "28A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 1A + 1A",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 1A + 1A",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "28A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "26A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "26A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "26A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "26A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "26A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "26A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "26A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "26A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "26A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "26A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "26A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "19A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "19A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "18A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "18A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "18A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "18A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "18A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "18A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "18A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "18A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "18A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "18A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "18A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "18A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 7A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "8A + 7A + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A + 3A",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A + 3A",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "8A + 3C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3C + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "8A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8B",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "8A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A + 5A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A + 5A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 5A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 5A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 5A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 5A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 5A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 5A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C + 5A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "7C + 5A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C + 5A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 5A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 5A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 4A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 4A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "4A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 3A + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "7C + 3C",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "7C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 3C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 3C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "7A + 3C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "7C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7C",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "7C",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "7A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 4A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 4A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "4A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "5A + 3C",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 1A + 1A",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 1A + 1A",
+   "MIMO DL": "2 + 4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "5A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "LTE UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "4A + 4A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "4A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "4A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "4A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 3A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 1A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "3C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3C + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 1C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 1C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "3A + 1C",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "3C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "3A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "1A + 1A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "1C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1C",
+   "MIMO UL": "1 + 1",
+   "UL (QAM)": "64"
+  },
+  {
+   "LTE DL": "1C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  },
+  {
+   "LTE DL": "1A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "LTE UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256"
+  }
+ ],
+ "nr_ca": [
+  {
+   "NR DL": "5A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15 + 15",
+   "BW DL (MHz)": "25 + 50 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "5A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15 + 15",
+   "BW DL (MHz)": "25 + 50 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "5A + 3A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15 + 15",
+   "BW DL (MHz)": "25 + 50 + 50",
+   "NR UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 3A + 1A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 50 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 3A + 1A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 50 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 3A + 1A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 50 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "3A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "50 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "3A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "50 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 5A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 25 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 5A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 25 + 50",
+   "NR UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 5A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 25 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "5A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "25 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "5A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "25 + 50",
+   "NR UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 8A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 35 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 8A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 35 + 50",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 8A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 35 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "8A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "35 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "8A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "35 + 50",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 28A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 28A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 28A + 1A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 28A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 28A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 28A + 1A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "28A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "30 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "28A + 1A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "30 + 50",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 40A + 1A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 50",
+   "NR UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 40A + 1A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "40A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 1A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 1A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 1A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 1A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 1A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "1A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "50",
+   "NR UL": "1A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "5A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "25 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "5A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "25 + 50",
+   "NR UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 7A + 3A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 50 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 7A + 3A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 50 + 50",
+   "NR UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 7A + 3A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 50 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "7A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "50 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "7A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "50 + 50",
+   "NR UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 8A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 35 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 8A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 35 + 50",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 8A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 35 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "8A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "35 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "8A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "35 + 50",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "77A + 28A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "77A + 28A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "77A + 28A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "77A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 28A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 28A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 28A + 3A",
+   "MIMO DL": "4 + 2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15 + 15",
+   "BW DL (MHz)": "100 + 30 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "28A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "30 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "28A + 3A",
+   "MIMO DL": "2 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "30 + 50",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41C + 3A",
+   "MIMO DL": "2 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 50",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 3A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "77A + 3A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "77A + 3A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "77A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 3A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 3A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 3A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 3A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "3A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "50",
+   "NR UL": "3A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 5A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 25",
+   "NR UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 5A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 25",
+   "NR UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 5A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 25",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 5A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 25",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "5A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "25",
+   "NR UL": "5A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "28A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "30 + 50",
+   "NR UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "28A + 7A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "30 + 50",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 7A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 7A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 50",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "7A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "50",
+   "NR UL": "7A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "50",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 40A + 8A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 35",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 40A + 8A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 35",
+   "NR UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 40A + 8A",
+   "MIMO DL": "4 + 2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 35",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "40A + 8A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 35",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "40A + 8A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 35",
+   "NR UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 8A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 35",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 8A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 35",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 8A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 35",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 8A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 35",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "8A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "35",
+   "NR UL": "8A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "18A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "15",
+   "NR UL": "18A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "15",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "26A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "20",
+   "NR UL": "26A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "20",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "40A + 28A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 30",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "40A + 28A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 30",
+   "NR UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41C + 28A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 30",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 30",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41C + 28A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 30",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 30",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "77A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 30",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "77A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 30",
+   "NR UL": "77A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 28A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 30",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 30",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C + 28A",
+   "MIMO DL": "4 + 4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 15",
+   "BW DL (MHz)": "100 + 100 + 30",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 28A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 30",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "28A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "30",
+   "NR UL": "28A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "30",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 78A + 38A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 30",
+   "BW DL (MHz)": "100 + 100 + 40",
+   "NR UL": "38A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "40",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 78A + 38A",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 30",
+   "BW DL (MHz)": "100 + 100 + 40",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 38A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 40",
+   "NR UL": "38A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "40",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 38A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 40",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "38A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30",
+   "BW DL (MHz)": "40",
+   "NR UL": "38A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "40",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 40A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 100",
+   "NR UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 40A",
+   "MIMO DL": "4 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 100",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "40A",
+   "MIMO DL": "2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30",
+   "BW DL (MHz)": "100",
+   "NR UL": "40A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A + 41A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 100",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "66A + 41A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 30",
+   "BW DL (MHz)": "45 + 100",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "66A + 41A",
+   "MIMO DL": "2 + 2",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 30",
+   "BW DL (MHz)": "45 + 100",
+   "NR UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "45",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 41A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 100",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 41A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 100",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 100",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "41A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30",
+   "BW DL (MHz)": "100",
+   "NR UL": "41A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "48A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30",
+   "BW DL (MHz)": "40",
+   "NR UL": "48A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "40",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "66A + 66A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "45 + 45",
+   "NR UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "45",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 66A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 45",
+   "NR UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "45",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 66A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 15",
+   "BW DL (MHz)": "100 + 45",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "66B",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15 + 15",
+   "BW DL (MHz)": "40 + 20",
+   "NR UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "40",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "66A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "15",
+   "BW DL (MHz)": "45",
+   "NR UL": "66A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "15",
+   "BW UL (MHz)": "45",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "77A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30",
+   "BW DL (MHz)": "100",
+   "NR UL": "77A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A + 78A",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 100",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78D",
+   "MIMO DL": "4 + 4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30 + 30",
+   "BW DL (MHz)": "100 + 100 + 100",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78C",
+   "MIMO DL": "4 + 4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30 + 30",
+   "BW DL (MHz)": "100 + 100",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  },
+  {
+   "NR DL": "78A",
+   "MIMO DL": "4",
+   "DL (QAM)": "256",
+   "SCS DL (kHz)": "30",
+   "BW DL (MHz)": "100",
+   "NR UL": "78A",
+   "MIMO UL": "1",
+   "UL (QAM)": "256",
+   "SCS UL (kHz)": "30",
+   "BW UL (MHz)": "100",
+   "UL TX Switch": "-"
+  }
+ ],
+ "endc": [],
+ "nrdc": []
+}
