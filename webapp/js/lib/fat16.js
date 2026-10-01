@@ -96,7 +96,10 @@ export class Fat16Image {
     return chain;
   }
 
-  async #readClusters(firstCluster) {
+  // Raw cluster-chain read, mirror of _read_clusters (legacy_rf_parser.py:241).
+  // No size validation: Python's scan_source slices to the directory size
+  // itself (qualcomm_rf_combo_analyzer.py:226), so callers own the truncation.
+  async readClusters(firstCluster) {
     const chain = this.#clusterChain(firstCluster);
     const out = new Uint8Array(chain.length * this.clusterSize);
     let off = 0;
@@ -136,7 +139,7 @@ export class Fat16Image {
       }
       return data;
     }
-    return this.#readClusters(firstCluster);
+    return this.readClusters(firstCluster);
   }
 
   async #listDirectory(firstCluster) {
@@ -222,7 +225,7 @@ export class Fat16Image {
       throw new ParseError(`Path is a directory inside modem.img: ${entry.path ?? entry.name}`);
     }
     if (entry.size === 0) return new Uint8Array(0);
-    const data = await this.#readClusters(entry.firstCluster);
+    const data = await this.readClusters(entry.firstCluster);
     if (data.length < entry.size) {
       throw new ParseError(`FAT16 file is truncated: ${entry.path ?? entry.name}`);
     }

@@ -23,7 +23,7 @@ import {
   parseLegacyModule,
   ToolError,
 } from "./legacy_parser.js";
-import { parseModernModule, pyCasefold } from "./modern_parser.js";
+import { parseModernModule, pyCasefold, pyNdInt, pyRegexFold } from "./modern_parser.js";
 
 export { ToolError };
 
@@ -44,30 +44,10 @@ function pyStem(name) {
 }
 
 // Python int() over regex-captured tokens: decimal IDs while accepting
-// hexadecimal alphabetic tokens (analyzer.py:114-121). Python \d matches
-// Unicode Nd and int() evaluates Nd digits, so matching uses \p{Nd} and value
-// evaluation uses the Nd block table (same approach as modern_parser.js).
-const ND_RUN_STARTS = [
-  48, 1632, 1776, 1984, 2406, 2534, 2662, 2790, 2918, 3046, 3174, 3302, 3430,
-  3558, 3664, 3792, 3872, 4160, 4240, 6112, 6160, 6470, 6608, 6784, 6800,
-  6992, 7088, 7232, 7248, 42528, 43216, 43264, 43472, 43504, 43600, 44016,
-  65296, 66720, 68912, 68928, 69734, 69872, 69942, 70096, 70384, 70736,
-  70864, 71248, 71360, 71376, 71386, 71472, 71904, 72016, 72688, 72784,
-  73040, 73120, 73552, 90416, 92768, 92864, 93008, 93552, 118000, 120782,
-  120792, 120802, 120812, 120822, 123200, 123632, 124144, 124401, 125264,
-  130032,
-];
-
-function pyNdInt(text) {
-  let value = 0n;
-  for (const ch of text) {
-    const cp = ch.codePointAt(0);
-    const start = ND_RUN_STARTS.find((s) => cp >= s && cp <= s + 9);
-    if (start === undefined) throw new RangeError(`not a Unicode decimal digit: U+${cp.toString(16)}`);
-    value = value * 10n + BigInt(cp - start);
-  }
-  return value <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(value) : value;
-}
+// hexadecimal alphabetic tokens (analyzer.py:114-121). pyNdInt/pyRegexFold are
+// shared with modern_parser.js: Python \d matches Unicode Nd and int()
+// evaluates Nd digits, so matching uses \p{Nd} with the re.IGNORECASE fold
+// pre-normalized and value evaluation via the Nd block table.
 
 function parseIdentityToken(token) {
   const base = /[a-z]/i.test(token) ? 16 : 10;
@@ -104,14 +84,6 @@ const dictGet = (obj, key, fallback) => (hasOwn(obj, key) ? obj[key] : fallback)
 
 // --- name classification (analyzer.py:43-52, :129-136) ------------------------
 
-// Python re.IGNORECASE simple-folds U+0130/U+0131/U+017F/U+212A (see
-// modern_parser.js pyRegexFold); pre-normalize the input the same way.
-const PY_RE_FOLD_RE = /[\u0130\u0131\u017f\u212a]/gu;
-
-function pyRegexFold(text) {
-  return text.replace(PY_RE_FOLD_RE, (ch) => (ch === "\u017f" ? "s" : ch === "\u212a" ? "k" : "i"));
-}
-
 const MODERN_NAME_RE = /^rf_config_(?<hwid>\p{Nd}+)_(?<fsid>\p{Nd}+)_(?<bid>\p{Nd}+)(?:_(?<rev>\p{Nd}+))?\.mbn$/iu;
 const LEGACY_NAME_RE = /^(?<hwid>[0-9A-F]+)_(?<fsid>[0-9A-F]+)(?:_(?<bid>[0-9A-F]+))?\.mbn$/iu;
 
@@ -127,15 +99,23 @@ export function matchesCandidate(name) {
 
 // --- sort + dedup (analyzer.py:334-383) ----------------------------------------
 
+// Python tuple comparison over exact ints: relational operators stay exact
+// for mixed Number/BigInt ids (subtraction throws on the mix), mirroring
+// _sort_records' arbitrary-precision tuple key (analyzer.py:334-344).
+const pyCmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+
 export function sortRecords(records) {
   // sorted() with a tuple key; JS sort is stable, matching Python's guarantee.
   return [...records].sort((a, b) => {
     const ka = a.generation === "DAT/protobuf" ? 0 : 1;
     const kb = b.generation === "DAT/protobuf" ? 0 : 1;
     if (ka !== kb) return ka - kb;
-    if (a.hwid !== b.hwid) return a.hwid - b.hwid;
-    if (a.fsid !== b.fsid) return a.fsid - b.fsid;
-    if (a.bid !== b.bid) return a.bid - b.bid;
+    let order = pyCmp(a.hwid, b.hwid);
+    if (order !== 0) return order;
+    order = pyCmp(a.fsid, b.fsid);
+    if (order !== 0) return order;
+    order = pyCmp(a.bid, b.bid);
+    if (order !== 0) return order;
     const fa = pyCasefold(a.inner_path);
     const fb = pyCasefold(b.inner_path);
     return fa < fb ? -1 : fa > fb ? 1 : 0;
@@ -143,11 +123,17 @@ export function sortRecords(records) {
 }
 
 export function deduplicateRecords(records) {
-  // (name, sha256) keep-first. scanSource always hashes during the walk, so
-  // the Python re-hash fallback for empty digests is unreachable here.
+  // (name, sha256) keep-first. A falsy digest keeps the record: Python's
+  // empty-digest fallback re-hashes via read_module and, on OSError, logs a
+  // warning and keeps the record (analyzer.py:360-373). The webapp cannot
+  // re-hash, so the fallback outcome is the parity behavior.
   const seen = new Set();
   const unique = [];
   for (const record of records) {
+    if (!record.sha256) {
+      unique.push(record);
+      continue;
+    }
     const key = `${record.name}\u0000${record.sha256}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -296,7 +282,10 @@ export async function scanSource(source, name) {
     // Numeric legacy modules are meaningful only under the modem's /so tree
     // (analyzer.py:222-225).
     if (generation === "Legacy ELF" && !pyCasefold(entry.path).includes("/so/")) continue;
-    const raw = await fat.readFile(entry);
+    // Python reads the raw cluster chain and slices to the directory size
+    // (analyzer.py:226): no size validation, and the chain is walked even for
+    // size 0, so corrupt entries keep Python's outcomes exactly.
+    const raw = (await fat.readClusters(entry.firstCluster)).slice(0, entry.size);
     const digest = sha256Hex(raw);
     const base = {
       inner_path: entry.path,
@@ -353,7 +342,12 @@ export function recordJson(record) {
 export function formatScsVal(scsCode) {
   try {
     const c = pyInt(scsCode);
-    if (c > 0) return String(2 ** (c - 1) * 15);
+    if (c > 0) {
+      // Python str((1 << (c - 1)) * 15) is a plain decimal at any magnitude;
+      // doubles go exponential >= 1e21, so render via BigInt above 2**30 and
+      // take the fast Number path below it (exact up to 2**53).
+      return c - 1 > 30 ? (2n ** BigInt(c - 1) * 15n).toString() : String(2 ** (c - 1) * 15);
+    }
   } catch {
     // Python: int(None)/ValueError -> fall through
   }

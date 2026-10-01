@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { zlibSync } from "../lib/vendor/fflate.js";
-import { Fat16Image } from "../js/lib/fat16.js";
+import { Fat16Image, ParseError } from "../js/lib/fat16.js";
 import { BrowserFileSource } from "../js/lib/source.js";
 import { sha256Hex } from "../js/lib/hash.js";
 import {
@@ -22,6 +22,9 @@ import {
   csvField,
   formatBw,
   formatBcs,
+  formatScsVal,
+  sortRecords,
+  deduplicateRecords,
   normalizeLegacyComponent,
   normalizeInnerPath,
 } from "../js/lib/analyzer.js";
@@ -537,4 +540,197 @@ test("exportModule csv/json/webcsv produce Python-shaped files", () => {
   );
 
   assert.throws(() => exportModule(record, parsed, "mbn"), ToolError);
+});
+
+// --- regression: scanSource FAT read semantics (Python scan_source:226) --------
+
+// Python-verified digests (probe: gui scan_source over the same fixture bytes).
+const EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const CHAIN2_SHA256 = "58086d49f89f82a7e063ba7e232b480c581dad245fc7a1358389c6d369ea67db";
+const CONTROL_SHA256 = "816cebfc85b241baf5a0575ab65500681f073d69577925bb04c33ed99353e284";
+
+// Root: /IMAGE/SO/6_0_0.MBN with caller-controlled firstCluster/size; FAT
+// entries come from fatLinks. Geometry and pattern match the Python probe.
+function buildCorruptFat16Fixture({ fatLinks, firstCluster, size }) {
+  const image = new Uint8Array(TOTAL_SECTORS * BPS);
+  const dv = new DataView(image.buffer);
+  image.set([0xeb, 0x3c, 0x90], 0);
+  dv.setUint16(11, BPS, true);
+  image[13] = SPC;
+  dv.setUint16(14, RESERVED, true);
+  image[16] = NFATS;
+  dv.setUint16(17, ROOT_ENTRIES, true);
+  dv.setUint16(19, TOTAL_SECTORS, true);
+  image[21] = 0xf8;
+  dv.setUint16(22, SPFT, true);
+  dv.setUint16(510, 0xaa55, true);
+  // directory chains always terminate; fatLinks overlays the file entries
+  dv.setUint16(FAT_OFFSET + 2 * 2, 0xffff, true);
+  dv.setUint16(FAT_OFFSET + 3 * 2, 0xffff, true);
+  for (const [cluster, next] of Object.entries(fatLinks)) {
+    dv.setUint16(FAT_OFFSET + Number(cluster) * 2, next, true);
+  }
+  writeDirEntry(image, ROOT_OFFSET + 0 * 32, "SYSLABEL", "   ", 0x08);
+  writeDirEntry(image, ROOT_OFFSET + 1 * 32, "IMAGE", "   ", 0x10, 2);
+  const d2 = clusterOffset(2);
+  writeDirEntry(image, d2 + 0 * 32, ".", "   ", 0x10, 2);
+  writeDirEntry(image, d2 + 1 * 32, "..", "   ", 0x10);
+  writeDirEntry(image, d2 + 2 * 32, "SO", "   ", 0x10, 3);
+  const d3 = clusterOffset(3);
+  writeDirEntry(image, d3 + 0 * 32, ".", "   ", 0x10, 3);
+  writeDirEntry(image, d3 + 1 * 32, "..", "   ", 0x10);
+  writeDirEntry(image, d3 + 2 * 32, "6_0_0", "MBN", 0x20, firstCluster, size);
+  for (let c = 4; c < 14; c++) {
+    for (let i = 0; i < CLUSTER_SIZE; i++) image[clusterOffset(c) + i] = (i * 7 + 41) & 0xff;
+  }
+  return image;
+}
+
+test("scanSource FAT read uses Python's raw cluster-chain semantics", async () => {
+  // fat._read_clusters(entry.first_cluster)[: entry.size]: no size validation,
+  // chain IS walked even for size 0. Python probe outcomes:
+  //   EOC chain + size=100  -> OK record, sha256 of the empty blob, size 100
+  //   reserved 1 + size=50  -> OK record, sha256 of the empty blob, size 50
+  //   2-chain + size=5000   -> OK record, short blob, size field stays 5000
+  const cases = [
+    { label: "EOC chain", fatLinks: {}, firstCluster: 0xffff, size: 100, sha: EMPTY_SHA256 },
+    { label: "reserved cluster 1", fatLinks: {}, firstCluster: 1, size: 50, sha: EMPTY_SHA256 },
+    {
+      label: "2-cluster chain, size beyond chain",
+      fatLinks: { 4: 5, 5: 0xffff },
+      firstCluster: 4,
+      size: 5000,
+      sha: CHAIN2_SHA256,
+    },
+  ];
+  for (const c of cases) {
+    const result = await scanSource(
+      new BrowserFileSource(new Blob([buildCorruptFat16Fixture(c)])),
+      "modem.img",
+    );
+    assert.deepEqual(result.warnings, [], c.label);
+    assert.equal(result.records.length, 1, c.label);
+    assert.equal(result.records[0].size, c.size, c.label);
+    assert.equal(result.records[0].sha256, c.sha, c.label);
+  }
+});
+
+test("scanSource kills the scan on a looping cluster chain even at size 0", async () => {
+  const src = new BrowserFileSource(
+    new Blob([buildCorruptFat16Fixture({ fatLinks: { 6: 6 }, firstCluster: 6, size: 0 })]),
+  );
+  await assert.rejects(
+    scanSource(src, "modem.img"),
+    (err) => err instanceof ParseError && err.message === "FAT16 cluster chain loops at 6.",
+  );
+});
+
+test("scanSource control: plain file keeps cluster-prefix hashing", async () => {
+  const image = buildCorruptFat16Fixture({ fatLinks: { 10: 0xffff }, firstCluster: 10, size: 100 });
+  const result = await scanSource(new BrowserFileSource(new Blob([image])), "modem.img");
+  assert.deepEqual(result.warnings, []);
+  assert.equal(result.records.length, 1);
+  assert.equal(result.records[0].sha256, CONTROL_SHA256);
+  assert.equal(result.records[0].sha256, sha256Hex(image.slice(clusterOffset(10), clusterOffset(10) + 100)));
+});
+
+test("Fat16Image.readClusters exposes the raw cluster chain", async () => {
+  const image = buildCorruptFat16Fixture({ fatLinks: { 4: 5, 5: 0xffff }, firstCluster: 4, size: 5000 });
+  const fat = new Fat16Image(new BrowserFileSource(new Blob([image])));
+  await fat.init();
+  const chain = await fat.readClusters(4);
+  assert.equal(chain.length, 2 * CLUSTER_SIZE);
+  assert.deepEqual(chain.subarray(0, 8), image.subarray(clusterOffset(4), clusterOffset(4) + 8));
+  assert.deepEqual(await fat.readClusters(0xffff), new Uint8Array(0));
+  assert.deepEqual(await fat.readClusters(1), new Uint8Array(0));
+  const loop = new Fat16Image(
+    new BrowserFileSource(
+      new Blob([buildCorruptFat16Fixture({ fatLinks: { 6: 6 }, firstCluster: 6, size: 0 })]),
+    ),
+  );
+  await loop.init();
+  await assert.rejects(loop.readClusters(6), ParseError);
+});
+
+// --- regression: formatScsVal exactness (Python (1 << (c - 1)) * 15) -----------
+
+test("formatScsVal stays exact for large SCS codes", () => {
+  // Python probe outputs; 2 ** (c - 1) * 15 goes exponential >= 1e21 in JS.
+  assert.equal(formatScsVal(1), "15");
+  assert.equal(formatScsVal(2), "30");
+  assert.equal(formatScsVal(30), "8053063680");
+  assert.equal(formatScsVal(31), "16106127360");
+  assert.equal(formatScsVal(52), "33776997205278720");
+  assert.equal(formatScsVal(69), "4427218577690292387840");
+  assert.equal(formatScsVal(75), "283341988972178712821760");
+  assert.equal(
+    formatScsVal(1023),
+    "674134925573368465398489446545884275106741367103364964775362804341497534270628611747656789959028260079200427049517725091220461633054062334348177864898027966416629600343245569786133323504672852947949061070318771633143065058784235805527174164528102139362564415067198618399802172269298936143132586236090840514560",
+  );
+  assert.equal(formatScsVal(0), "15");
+  assert.equal(formatScsVal(null), "15");
+  assert.equal(formatScsVal(-3), "15");
+  assert.equal(formatScsVal("x"), "15");
+});
+
+// --- regression: deduplicateRecords empty-sha parity (analyzer.py:347-383) -----
+
+test("deduplicateRecords keeps falsy-sha records like the Python OSError fallback", () => {
+  const emptySha = (innerPath) => ({
+    name: "x.mbn",
+    inner_path: innerPath,
+    generation: "Legacy ELF",
+    size: 1,
+    hwid: 6,
+    fsid: 0,
+    bid: 0,
+    external: false,
+    source_path: "",
+    sidecars: {},
+    sha256: "",
+    lte_combos: -1,
+    nr_combos: "—",
+  });
+  // Empty digest + no re-hash source -> Python raises OSError and keeps all.
+  const both = deduplicateRecords([emptySha("/1"), emptySha("/2")]);
+  assert.deepEqual(both.map((r) => r.inner_path), ["/1", "/2"]);
+  const dup = deduplicateRecords([
+    { ...emptySha("/1"), sha256: "aa" },
+    { ...emptySha("/2"), sha256: "aa" },
+  ]);
+  assert.deepEqual(dup.map((r) => r.inner_path), ["/1"]);
+});
+
+// --- regression: sortRecords BigInt ids (Python exact int tuple, :334-344) -----
+
+test("sortRecords compares BigInt ids like Python's exact int tuple", () => {
+  const rec = (innerPath, hwid, extra = {}) => ({
+    inner_path: innerPath,
+    name: "6_0_0.mbn",
+    generation: "Legacy ELF",
+    size: 1,
+    hwid,
+    fsid: 0,
+    bid: 0,
+    external: false,
+    source_path: "",
+    sidecars: {},
+    sha256: "h",
+    lte_combos: -1,
+    nr_combos: "—",
+    ...extra,
+  });
+  // 2**53 and 2**53+1 collapse to the same double; a Number-normalizing
+  // comparator would tie and mis-order via inner_path. Python keeps exact ints.
+  const near = sortRecords([rec("/a", 9007199254740993n), rec("/b", 9007199254740992n)]);
+  assert.deepEqual(near.map((r) => r.inner_path), ["/b", "/a"]);
+  // Mixed Number/BigInt magnitudes compare numerically, Python order.
+  const mixed = sortRecords([rec("/x", 9007199254740993n), rec("/y", 5)]);
+  assert.deepEqual(mixed.map((r) => r.inner_path), ["/y", "/x"]);
+  // Generation bucket still wins; BigInt fsid tie-breaks exactly.
+  const multi = sortRecords([
+    rec("/legacy", 3, { fsid: 9007199254740992n }),
+    rec("/modern", 9, { generation: "DAT/protobuf" }),
+  ]);
+  assert.deepEqual(multi.map((r) => r.inner_path), ["/modern", "/legacy"]);
 });

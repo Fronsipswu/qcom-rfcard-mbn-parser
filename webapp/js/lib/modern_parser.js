@@ -884,7 +884,7 @@ export function pyCasefold(text) {
 // of relying on engine-specific folding.
 const PY_RE_FOLD_RE = /[\u0130\u0131\u017f\u212a]/gu;
 
-function pyRegexFold(text) {
+export function pyRegexFold(text) {
   return text.replace(PY_RE_FOLD_RE, (ch) => (ch === "\u017f" ? "s" : ch === "\u212a" ? "k" : "i"));
 }
 
@@ -903,7 +903,7 @@ const ND_RUN_STARTS = [
   130032,
 ];
 
-function pyNdInt(text) {
+export function pyNdInt(text) {
   let value = 0n;
   for (const ch of text) {
     const cp = ch.codePointAt(0);
