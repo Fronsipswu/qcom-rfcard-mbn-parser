@@ -1,17 +1,69 @@
 from __future__ import annotations
 
 import csv
+import hashlib
+import re
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
-from typing import Any, Sequence
+from typing import Any
 
 try:
     import qualcomm_rf_combo_analyzer as analyzer
 except ImportError:
     from gui_version import qualcomm_rf_combo_analyzer as analyzer
+
+# Curated text colors dark enough to stay readable on white / #F7F9FA backgrounds.
+PALETTE: tuple[str, ...] = (
+    "#B71C1C", "#D32F2F", "#C2185B", "#AD1457", "#880E4F",
+    "#7B1FA2", "#9C27B0", "#6A1B9A", "#512DA8", "#4527A0",
+    "#3949AB", "#303F9F", "#283593", "#1A237E", "#1565C0",
+    "#0D47A1", "#0277BD", "#01579B", "#00838F", "#006064",
+    "#00796B", "#00695C", "#004D40", "#2E7D32", "#1B5E20",
+    "#33691E", "#827717", "#8D6E63", "#795548", "#6D4C41",
+    "#5D4037", "#4E342E", "#5F6368", "#455A64", "#37474F",
+    "#263238", "#BF360C", "#D84315", "#E64A19", "#8E24AA",
+)
+
+BAND_COLUMN_HEADERS: frozenset[str] = frozenset({
+    "LTE DL", "LTE UL", "NR DL", "NR UL",
+    "FR1 DL", "FR2 DL", "FR1 UL", "FR2 UL",
+})
+
+_BAND_RE = re.compile(r"^([Bn]\d+)[A-Z]?$")
+_PLAIN_BAND_RE = re.compile(r"^(\d+)([A-Z])?$")
+
+
+def _column_band_prefix(header: str) -> str:
+    return "B" if "LTE" in header else "n"
+
+
+def _band_spans(cell: str, header: str) -> list[tuple[int, int, str]]:
+    """Return (start, end, canonical band) spans for band tokens joined by ' + '."""
+    if header not in BAND_COLUMN_HEADERS:
+        return []
+    prefix = _column_band_prefix(header)
+    spans: list[tuple[int, int, str]] = []
+    pos = 0
+    for token in cell.split(" + "):
+        match = _BAND_RE.match(token)
+        if match:
+            canonical = match.group(1)
+        else:
+            match = _PLAIN_BAND_RE.match(token)
+            canonical = f"{prefix}{match.group(1)}" if match else None
+        if canonical:
+            spans.append((pos, pos + len(token), canonical))
+        pos += len(token) + 3
+    return spans
+
+
+def _band_color(canonical: str) -> str:
+    """Deterministically map a canonical band (e.g. B3, n78) to a palette color."""
+    digest = int.from_bytes(hashlib.md5(canonical.encode("utf-8")).digest(), "big")
+    return PALETTE[digest % len(PALETTE)]
 
 
 class ComboViewerWindow(tk.Toplevel):
@@ -59,7 +111,7 @@ class ComboViewerWindow(tk.Toplevel):
                 parsed.get("components", []),
             )
 
-        # Tab data tracking: tab_key -> {"columns": [...], "rows": [...], "tree": Treeview, "sort_state": (col, reverse)}
+        # Tab data tracking: tab_key -> {"columns": [...], "rows": [...], "text": Text, "sort_state": (col, reverse)}
         self.tabs_data: dict[str, dict[str, Any]] = {}
         self.active_tab_key: str | None = None
 
@@ -147,19 +199,41 @@ class ComboViewerWindow(tk.Toplevel):
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
     def _update_visible_columns(self, tbl_key: str) -> None:
-        """Update visible columns for a tab based on SCS toggle."""
+        """Update visible columns for a tab based on SCS toggle, then re-render."""
         info = self.tabs_data.get(tbl_key)
         if not info:
             return
-        tree: ttk.Treeview = info["tree"]
+        self._layout_columns(tbl_key)
+        self._render_table(tbl_key)
+
+    def _layout_columns(self, tbl_key: str) -> None:
+        """Compute visible columns, monospace character widths, and offsets for a tab."""
+        info = self.tabs_data[tbl_key]
         columns = info["columns"]
+        rows = info["rows"]
         show_scs = self.show_scs_var.get()
 
-        if show_scs:
-            tree.configure(displaycolumns="#all")
-        else:
-            display_cols = [c for c in columns if "SCS" not in c]
-            tree.configure(displaycolumns=display_cols)
+        visible = [c for c in columns if show_scs or "SCS" not in c]
+        char_w = max(1, self.cell_font.measure("0"))
+        pad_chars = max(2, round(self.s(16) / char_w))
+        min_chars = max(4, round(self.s(45) / char_w))
+
+        widths = []
+        for col in visible:
+            # Reserve room for the sort indicator (" ▲"/" ▼") like the old heading measure
+            header_len = len(col) + 2
+            content_len = max((len(str(r.get(col, ""))) for r in rows), default=0)
+            widths.append(max(min_chars, header_len, content_len) + pad_chars)
+
+        offsets = []
+        pos = 0
+        for width in widths:
+            offsets.append(pos)
+            pos += width
+
+        info["visible_columns"] = visible
+        info["widths"] = widths
+        info["offsets"] = offsets
 
     def _on_scs_toggle(self) -> None:
         """Handle Show SCS toggle across all tabs."""
@@ -168,14 +242,19 @@ class ComboViewerWindow(tk.Toplevel):
 
     def _populate_tabs(self) -> None:
         """Create tabs for available tables and populate them with combination data."""
-        # Fonts for measuring auto-fit column widths
-        self.cell_font = tkfont.Font(font=("TkFixedFont", max(8, self.s(9))))
-        self.header_font = tkfont.nametofont("TkDefaultFont")
-
-        # Row zebra-striping tag styles
-        style = ttk.Style(self)
-        style.configure("Viewer.Treeview", font=self.cell_font)
-        style.map("Viewer.Treeview", background=[("selected", "#0078D7")], foreground=[("selected", "#FFFFFF")])
+        # Monospace font for exact column alignment (must use the real fixed family)
+        fixed = tkfont.nametofont("TkFixedFont")
+        self.cell_font = tkfont.Font(
+            root=self,
+            family=fixed.actual("family"),
+            size=max(8, self.s(9)),
+        )
+        self.header_cell_font = tkfont.Font(
+            root=self,
+            family=self.cell_font.actual("family"),
+            size=self.cell_font.actual("size"),
+            weight="bold",
+        )
 
         created_tabs = 0
         for tab_label, tbl_key in self.TAB_DEFINITIONS:
@@ -189,74 +268,61 @@ class ComboViewerWindow(tk.Toplevel):
             tab_frame.rowconfigure(0, weight=1)
             tab_frame.columnconfigure(0, weight=1)
 
-            tree = ttk.Treeview(
+            text = tk.Text(
                 tab_frame,
-                columns=columns,
-                show="headings",
-                selectmode="extended",
-                style="Viewer.Treeview",
+                font=self.cell_font,
+                state="disabled",
+                wrap="none",
+                cursor="arrow",
+                relief="flat",
+                borderwidth=0,
+                highlightthickness=0,
+                selectbackground="#0078D7",
+                selectforeground="#FFFFFF",
+                spacing1=self.s(2),
+                spacing3=self.s(2),
             )
-            tree.tag_configure("oddrow", background="#F7F9FA")
-            tree.tag_configure("evenrow", background="#FFFFFF")
+            text.tag_configure("header", background="#E8ECF0", font=self.header_cell_font)
+            text.tag_configure("oddrow", background="#F7F9FA")
+            text.tag_configure("evenrow", background="#FFFFFF")
+            text.tag_raise("sel")
 
-            # Column headings and auto-adjusted content widths
-            for col in columns:
-                # Measure header width including space for sort indicator
-                header_w = self.header_font.measure(f"{col} ▲")
+            y_scroll = ttk.Scrollbar(tab_frame, orient="vertical", command=text.yview)
+            x_scroll = ttk.Scrollbar(tab_frame, orient="horizontal", command=text.xview)
+            text.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
 
-                # Measure actual longest text values in this column
-                longest_vals = sorted(
-                    (str(r.get(col, "")) for r in rows),
-                    key=len,
-                    reverse=True,
-                )[:5]
-                content_w = max([self.cell_font.measure(v) for v in longest_vals], default=0)
-
-                # Fit to the widest content with comfortable padding
-                col_width = max(self.s(45), max(header_w, content_w) + self.s(16))
-
-                tree.heading(
-                    col,
-                    text=col,
-                    command=lambda c=col, tk_key=tbl_key: self.sort_column(tk_key, c),
-                )
-                tree.column(
-                    col,
-                    width=col_width,
-                    minwidth=self.s(40),
-                    anchor="center",
-                    stretch=False,
-                )
-
-            y_scroll = ttk.Scrollbar(tab_frame, orient="vertical", command=tree.yview)
-            x_scroll = ttk.Scrollbar(tab_frame, orient="horizontal", command=tree.xview)
-            tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
-
-            tree.grid(row=0, column=0, sticky="nsew")
+            text.grid(row=0, column=0, sticky="nsew")
             y_scroll.grid(row=0, column=1, sticky="ns")
             x_scroll.grid(row=1, column=0, sticky="ew")
 
-            # Right click context menu
-            tree.bind("<Button-3>", lambda e, tr=tree: self._show_context_menu(e, tr))
+            # Click handling: header sorting + row selection (block Text class bindings)
+            text.bind("<Button-1>", lambda e, tk_key=tbl_key: self._on_table_click(e, tk_key))
+            text.bind("<B1-Motion>", lambda _e: "break")
+            text.bind("<Double-Button-1>", lambda _e: "break")
+            text.bind("<Triple-Button-1>", lambda _e: "break")
+            text.bind("<Button-3>", lambda e, tk_key=tbl_key: self._show_context_menu(e, tk_key))
 
             self.tabs_data[tbl_key] = {
                 "label": tab_label,
                 "columns": columns,
                 "rows": rows,
                 "filtered_rows": list(rows),
-                "tree": tree,
+                "text": text,
+                "visible_columns": [],
+                "widths": [],
+                "offsets": [],
+                "band_tags": set(),
                 "sort_col": None,
                 "sort_reverse": False,
+                "selected_lines": set(),
+                "sel_anchor": None,
             }
 
-            # Apply initial column visibility (hide SCS by default)
+            # Apply initial column visibility (hide SCS by default) and render
             self._update_visible_columns(tbl_key)
 
             self.notebook.add(tab_frame, text=f"{tab_label} ({len(rows)})")
             created_tabs += 1
-
-            # Populate initial rows
-            self._insert_rows(tbl_key, rows)
 
         if created_tabs == 0:
             empty_frame = ttk.Frame(self.notebook, padding=self.s(20))
@@ -268,17 +334,58 @@ class ComboViewerWindow(tk.Toplevel):
             self.notebook.add(empty_frame, text="Empty")
             self.count_var.set("0 combos")
 
-    def _insert_rows(self, tbl_key: str, rows: Sequence[dict[str, Any]]) -> None:
-        """Insert rows into a tab's Treeview."""
+    def _render_table(self, tbl_key: str) -> None:
+        """Render header and filtered rows of a tab into its Text widget."""
         info = self.tabs_data[tbl_key]
-        tree: ttk.Treeview = info["tree"]
-        columns = info["columns"]
+        text: tk.Text = info["text"]
+        columns = info["visible_columns"]
+        widths = info["widths"]
+        rows = info["filtered_rows"]
+        band_tags: set[str] = info["band_tags"]
 
-        tree.delete(*tree.get_children())
+        info["selected_lines"] = set()
+        info["sel_anchor"] = None
+
+        arrow = " ▼" if info["sort_reverse"] else " ▲"
+        header_cells = []
+        for col, width in zip(columns, widths):
+            label = f"{col}{arrow}" if col == info["sort_col"] else col
+            header_cells.append(label.center(width))
+
+        text.configure(state="normal")
+        text.delete("1.0", "end")
+        text.insert("end", "".join(header_cells) + "\n")
+        text.tag_add("header", "1.0", "2.0")
+
         for idx, row in enumerate(rows):
-            values = tuple(row.get(col, "") for col in columns)
-            tag = "evenrow" if idx % 2 == 0 else "oddrow"
-            tree.insert("", "end", iid=str(idx), values=values, tags=(tag,))
+            line_no = idx + 2
+            cells = []
+            for col, width in zip(columns, widths):
+                cells.append(str(row.get(col, "")).center(width))
+            text.insert("end", "".join(cells) + "\n")
+            zebra = "evenrow" if idx % 2 == 0 else "oddrow"
+            text.tag_add(zebra, f"{line_no}.0", f"{line_no + 1}.0")
+
+            # Color band tokens wherever they appear (any column)
+            base = 0
+            for col, width in zip(columns, widths):
+                cell = str(row.get(col, ""))
+                marg = width - len(cell)
+                left_pad = marg // 2 + (marg & width & 1) if marg > 0 else 0
+                for start, end, canonical in _band_spans(cell, col):
+                    tag = f"band_{canonical}"
+                    if tag not in band_tags:
+                        text.tag_configure(tag, foreground=_band_color(canonical))
+                        band_tags.add(tag)
+                    text.tag_add(
+                        tag,
+                        f"{line_no}.{base + left_pad + start}",
+                        f"{line_no}.{base + left_pad + end}",
+                    )
+                base += width
+
+        text.tag_raise("sel")
+        text.configure(state="disabled")
 
     def _on_tab_changed(self, _event: Any = None) -> None:
         selected_id = self.notebook.select()
@@ -322,7 +429,7 @@ class ComboViewerWindow(tk.Toplevel):
             reverse = info["sort_reverse"]
             filtered.sort(key=lambda r: str(r.get(sort_col, "")), reverse=reverse)
 
-        self._insert_rows(self.active_tab_key, filtered)
+        self._render_table(self.active_tab_key)
 
         total = len(raw_rows)
         shown = len(filtered)
@@ -344,12 +451,6 @@ class ComboViewerWindow(tk.Toplevel):
             info["sort_reverse"] = False
 
         reverse = info["sort_reverse"]
-        arrow = " ▼" if reverse else " ▲"
-
-        # Update headings with sort indicator
-        tree: ttk.Treeview = info["tree"]
-        for c in info["columns"]:
-            tree.heading(c, text=f"{c}{arrow}" if c == col else c)
 
         filtered = info["filtered_rows"]
         # Numeric or natural sort if possible
@@ -361,12 +462,63 @@ class ComboViewerWindow(tk.Toplevel):
                 return (1, v)
 
         filtered.sort(key=_sort_val, reverse=reverse)
-        self._insert_rows(tbl_key, filtered)
+        self._render_table(tbl_key)
 
-    def _show_context_menu(self, event: Any, tree: ttk.Treeview) -> None:
-        iid = tree.identify_row(event.y)
-        if iid and iid not in tree.selection():
-            tree.selection_set(iid)
+    def _header_column_at(self, info: dict[str, Any], char: int) -> int | None:
+        """Map a character offset on the header line to a visible column index."""
+        for idx, (start, width) in enumerate(zip(info["offsets"], info["widths"])):
+            if start <= char < start + width:
+                return idx
+        return None
+
+    def _apply_selection(self, tbl_key: str) -> None:
+        """Mirror the tracked selected body lines onto the Text 'sel' tag."""
+        info = self.tabs_data[tbl_key]
+        text: tk.Text = info["text"]
+        text.tag_remove("sel", "1.0", "end")
+        for line in info["selected_lines"]:
+            text.tag_add("sel", f"{line}.0", f"{line + 1}.0")
+
+    def _on_table_click(self, event: Any, tbl_key: str) -> str:
+        """Handle clicks on a tab's Text widget (header sorting and row selection)."""
+        info = self.tabs_data[tbl_key]
+        text: tk.Text = info["text"]
+        line_s, char_s = text.index(f"@{event.x},{event.y}").split(".")
+        line = int(line_s)
+
+        if line == 1:
+            col_idx = self._header_column_at(info, int(char_s))
+            if col_idx is not None:
+                self.sort_column(tbl_key, info["visible_columns"][col_idx])
+            return "break"
+
+        if not 2 <= line <= 1 + len(info["filtered_rows"]):
+            return "break"
+
+        if event.state & 0x0004:  # Control: toggle row under cursor
+            if line in info["selected_lines"]:
+                info["selected_lines"].discard(line)
+            else:
+                info["selected_lines"].add(line)
+            info["sel_anchor"] = line
+        elif event.state & 0x0001:  # Shift: extend from anchor row
+            anchor = info["sel_anchor"] or (min(info["selected_lines"]) if info["selected_lines"] else line)
+            info["selected_lines"].update(range(min(anchor, line), max(anchor, line) + 1))
+            info["sel_anchor"] = line
+        else:
+            info["selected_lines"] = {line}
+            info["sel_anchor"] = line
+        self._apply_selection(tbl_key)
+        return "break"
+
+    def _show_context_menu(self, event: Any, tbl_key: str) -> None:
+        info = self.tabs_data[tbl_key]
+        text: tk.Text = info["text"]
+        line = int(text.index(f"@{event.x},{event.y}").split(".")[0])
+        if 2 <= line <= 1 + len(info["filtered_rows"]) and line not in info["selected_lines"]:
+            info["selected_lines"] = {line}
+            info["sel_anchor"] = line
+            self._apply_selection(tbl_key)
 
         menu = tk.Menu(self, tearoff=0)
         menu.add_command(label="Copy Selected Row(s)", command=self.copy_selected)
@@ -379,16 +531,14 @@ class ComboViewerWindow(tk.Toplevel):
         if not self.active_tab_key or self.active_tab_key not in self.tabs_data:
             return
         info = self.tabs_data[self.active_tab_key]
-        tree: ttk.Treeview = info["tree"]
-        selection = tree.selection()
-        if not selection:
+        if not info["selected_lines"]:
             return
 
         columns = info["columns"]
         lines = ["\t".join(columns)]
-        for iid in selection:
-            values = tree.item(iid, "values")
-            lines.append("\t".join(str(v) for v in values))
+        for line in sorted(info["selected_lines"]):
+            row = info["filtered_rows"][line - 2]
+            lines.append("\t".join(str(row.get(c, "")) for c in columns))
 
         text = "\n".join(lines)
         self.clipboard_clear()
@@ -399,9 +549,7 @@ class ComboViewerWindow(tk.Toplevel):
         if not self.active_tab_key or self.active_tab_key not in self.tabs_data:
             return
         info = self.tabs_data[self.active_tab_key]
-        tree: ttk.Treeview = info["tree"]
-        selection = tree.selection()
-        if not selection:
+        if not info["selected_lines"]:
             return
 
         # Find DL column name
@@ -413,10 +561,10 @@ class ComboViewerWindow(tk.Toplevel):
                 break
 
         combos = []
-        for iid in selection:
-            values = tree.item(iid, "values")
-            if dl_col_idx < len(values):
-                combos.append(str(values[dl_col_idx]))
+        for line in sorted(info["selected_lines"]):
+            row = info["filtered_rows"][line - 2]
+            value = row.get(columns[dl_col_idx], "")
+            combos.append(str(value))
 
         text = "\n".join(combos)
         self.clipboard_clear()
