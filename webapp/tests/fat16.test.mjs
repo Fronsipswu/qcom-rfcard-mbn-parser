@@ -179,6 +179,24 @@ test("a deleted LFN chunk keeps the remaining partial name without 8.3 fallback"
   assert.ok(names.includes("/rf_config_130"), `partial LFN name expected, got ${names.join(", ")}`);
 });
 
+test("findFile returns the matching walk entry or null", async () => {
+  const fat = openFixture();
+  await fat.init();
+  assert.deepEqual(await fat.findFile("/RF_CARDS/615_0_0.MBN"), {
+    path: "/RF_CARDS/615_0_0.MBN",
+    firstCluster: 6,
+    size: 100,
+    isDir: false,
+  });
+  assert.equal(await fat.findFile("/missing/thing.mbn"), null);
+  assert.equal(await fat.findFile("/RF_CARDS"), null); // directories are not walked
+});
+
+test("findFile without init() fails with a clear message", async () => {
+  const fat = openFixture();
+  await assert.rejects(() => fat.findFile("/RF_CARDS/615_0_0.MBN"), /call await init\(\) before findFile/);
+});
+
 // --- golden (corpus-gated) ---------------------------------------------------
 
 test("fat16 hardware entries match goldens", { skip: !corpusAvailable() }, async (t) => {

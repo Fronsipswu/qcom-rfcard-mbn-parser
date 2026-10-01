@@ -210,6 +210,13 @@ export class Fat16Image {
     return out;
   }
 
+  // Exact-path lookup over walk(); null when absent (directories are never yielded).
+  async findFile(path) {
+    if (!this.fat) throw new ParseError("Fat16Image not initialised: call await init() before findFile().");
+    const entries = await this.walk();
+    return entries.find((e) => e.path === path) ?? null;
+  }
+
   async readFile(entry) {
     if (entry.isDir) {
       throw new ParseError(`Path is a directory inside modem.img: ${entry.path ?? entry.name}`);
