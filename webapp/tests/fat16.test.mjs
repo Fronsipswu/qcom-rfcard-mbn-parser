@@ -1,0 +1,196 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { Fat16Image } from "../js/lib/fat16.js";
+import { BrowserFileSource, sourceFor } from "../js/lib/source.js";
+import { CORPUS_DIR, corpusAvailable } from "./helpers.mjs";
+
+// --- synthetic FAT16 fixture -------------------------------------------------
+// Geometry: bytesPerSector=512, sectorsPerCluster=4, reserved=1, numFATs=2,
+// rootEntries=512, sectorsPerFat=16, totalSectors=16405 -> exactly 4085 data
+// clusters (the FAT16 lower bound). Layout:
+//   root:  volume label | RF_CARDS dir | LFN pair -> RF_CON~1.MBN | EMPTY.DAT
+//   cluster 2: RF_CARDS dir (".", "..", 615_0_0.MBN)
+//   clusters 3-5: RF_CON~1.MBN chain (size 5000, 3 clusters)
+//   cluster 6: 615_0_0.MBN data (size 100)
+const BPS = 512;
+const SPC = 4;
+const RESERVED = 1;
+const NFATS = 2;
+const ROOT_ENTRIES = 512;
+const SPFT = 16;
+const TOTAL_SECTORS = 16405;
+const FAT_OFFSET = RESERVED * BPS;
+const ROOT_OFFSET = (RESERVED + NFATS * SPFT) * BPS;
+const DATA_OFFSET = (RESERVED + NFATS * SPFT + (ROOT_ENTRIES * 32) / BPS) * BPS;
+const CLUSTER_SIZE = BPS * SPC;
+const clusterOffset = (c) => DATA_OFFSET + (c - 2) * CLUSTER_SIZE;
+const pattern = (i) => (i * 7 + 13) & 0xff;
+
+function writeDirEntry(image, off, name, ext, attr, first = 0, size = 0) {
+  for (let i = 0; i < 8; i++) image[off + i] = i < name.length ? name.charCodeAt(i) : 0x20;
+  for (let i = 0; i < 3; i++) image[off + 8 + i] = i < ext.length ? ext.charCodeAt(i) : 0x20;
+  image[off + 11] = attr;
+  const dv = new DataView(image.buffer);
+  dv.setUint16(off + 26, first, true);
+  dv.setUint32(off + 28, size, true);
+}
+
+function writeLfnEntry(image, off, ordinal, chars, lastPhysical = false) {
+  image[off] = ordinal | (lastPhysical ? 0x40 : 0);
+  image[off + 11] = 0x0f;
+  const units = [];
+  for (const ch of chars) units.push(ch.codePointAt(0));
+  while (units.length < 13) units.push(units.length === chars.length ? 0x0000 : 0xffff);
+  const slots = [1, 3, 5, 7, 9, 14, 16, 18, 20, 22, 24, 28, 30]; // <5H>@1 + <6H>@14 + <2H>@28
+  const dv = new DataView(image.buffer);
+  units.forEach((u, i) => dv.setUint16(off + slots[i], u, true));
+}
+
+function buildFat16Fixture() {
+  const image = new Uint8Array(TOTAL_SECTORS * BPS);
+  const dv = new DataView(image.buffer);
+  image.set([0xeb, 0x3c, 0x90], 0);
+  dv.setUint16(11, BPS, true);
+  image[13] = SPC;
+  dv.setUint16(14, RESERVED, true);
+  image[16] = NFATS;
+  dv.setUint16(17, ROOT_ENTRIES, true);
+  dv.setUint16(19, TOTAL_SECTORS, true);
+  image[21] = 0xf8;
+  dv.setUint16(22, SPFT, true);
+  dv.setUint16(510, 0xaa55, true); // 0x55 at 510, 0xaa at 511
+  // FAT: [0]/[1] media+EOC, [2]=EOC (RF_CARDS), 3->4->5->EOC (big file), [6]=EOC
+  dv.setUint16(FAT_OFFSET + 0, 0xfff8, true);
+  dv.setUint16(FAT_OFFSET + 2, 0xffff, true);
+  dv.setUint16(FAT_OFFSET + 4, 0xffff, true);
+  dv.setUint16(FAT_OFFSET + 6, 4, true);
+  dv.setUint16(FAT_OFFSET + 8, 5, true);
+  dv.setUint16(FAT_OFFSET + 10, 0xffff, true);
+  dv.setUint16(FAT_OFFSET + 12, 0xffff, true);
+  writeDirEntry(image, ROOT_OFFSET + 0 * 32, "SYSLABEL", "   ", 0x08); // volume label: skipped
+  writeDirEntry(image, ROOT_OFFSET + 1 * 32, "RF_CARDS", "   ", 0x10, 2);
+  writeLfnEntry(image, ROOT_OFFSET + 2 * 32, 2, "6_0_0.mbn", true);
+  writeLfnEntry(image, ROOT_OFFSET + 3 * 32, 1, "rf_config_130");
+  writeDirEntry(image, ROOT_OFFSET + 4 * 32, "RF_CON~1", "MBN", 0x20, 3, 5000);
+  writeDirEntry(image, ROOT_OFFSET + 5 * 32, "EMPTY", "DAT", 0x20);
+  const d = clusterOffset(2);
+  writeDirEntry(image, d + 0 * 32, ".", "   ", 0x10, 2);
+  writeDirEntry(image, d + 1 * 32, "..", "   ", 0x10);
+  writeDirEntry(image, d + 2 * 32, "615_0_0", "MBN", 0x20, 6, 100);
+  for (let i = 0; i < 5000; i++) image[clusterOffset(3) + i] = pattern(i);
+  for (let i = 0; i < 100; i++) image[clusterOffset(6) + i] = pattern(i);
+  return image;
+}
+
+const openFixture = () => new Fat16Image(new BrowserFileSource(new Blob([buildFat16Fixture()])));
+
+// --- unit tests --------------------------------------------------------------
+
+test("walk() returns entries in Python DFS order with LFN and 8.3 names", async () => {
+  const fat = openFixture();
+  await fat.init();
+  const entries = await fat.walk();
+  // pre-order: RF_CARDS contents first, then root files in directory order
+  assert.deepEqual(entries.map((e) => e.path), [
+    "/RF_CARDS/615_0_0.MBN",
+    "/rf_config_1306_0_0.mbn", // assembled from ordinals 1+2, not the 8.3 alias
+    "/EMPTY.DAT",
+  ]);
+  assert.deepEqual(entries[0], { path: "/RF_CARDS/615_0_0.MBN", firstCluster: 6, size: 100, isDir: false });
+  assert.deepEqual(entries[1], { path: "/rf_config_1306_0_0.mbn", firstCluster: 3, size: 5000, isDir: false });
+  assert.deepEqual(entries[2], { path: "/EMPTY.DAT", firstCluster: 0, size: 0, isDir: false });
+});
+
+test("readFile follows multi-cluster chains and truncates to entry.size", async () => {
+  const fat = openFixture();
+  await fat.init();
+  const entries = await fat.walk();
+  const expected = new Uint8Array(5000);
+  for (let i = 0; i < 5000; i++) expected[i] = pattern(i);
+  const big = entries.find((e) => e.path === "/rf_config_1306_0_0.mbn");
+  const data = await fat.readFile(big);
+  assert.equal(data.length, 5000);
+  assert.deepEqual(data, expected);
+  const inner = entries.find((e) => e.path === "/RF_CARDS/615_0_0.MBN");
+  assert.deepEqual(await fat.readFile(inner), expected.subarray(0, 100));
+  const empty = entries.find((e) => e.path === "/EMPTY.DAT");
+  assert.deepEqual(await fat.readFile(empty), new Uint8Array(0));
+});
+
+test("readFile rejects directories", async () => {
+  const fat = openFixture();
+  await fat.init();
+  await assert.rejects(
+    () => fat.readFile({ path: "/RF_CARDS", firstCluster: 2, size: 0, isDir: true }),
+    /Path is a directory inside modem.img: \/RF_CARDS/
+  );
+});
+
+test("init rejects inputs too small to be FAT", async () => {
+  const fat = new Fat16Image(new BrowserFileSource(new Blob([new Uint8Array(32)])));
+  await assert.rejects(() => fat.init(), /Input is too small to be a FAT filesystem/);
+});
+
+test("init rejects non-FAT16 boot sectors", async () => {
+  const image = buildFat16Fixture();
+  image[11] = 123; // bytesPerSector not in {512,1024,2048,4096}
+  const fat = new Fat16Image(new BrowserFileSource(new Blob([image])));
+  await assert.rejects(() => fat.init(), /Input is not a supported FAT16 filesystem/);
+});
+
+test("init rejects FAT12-scale cluster counts", async () => {
+  const image = buildFat16Fixture();
+  new DataView(image.buffer).setUint16(19, 100, true); // totalSectors -> 8 data clusters
+  const fat = new Fat16Image(new BrowserFileSource(new Blob([image])));
+  await assert.rejects(() => fat.init(), /Filesystem has 8 data clusters; FAT16 expected/);
+});
+
+test("walk() without init() fails with a clear message", async () => {
+  const fat = openFixture();
+  await assert.rejects(() => fat.walk(), /call await init\(\) before walk/);
+});
+
+test("readFile rejects looping cluster chains", async () => {
+  const image = buildFat16Fixture();
+  new DataView(image.buffer).setUint16(FAT_OFFSET + 10, 3, true); // 5 -> 3: loop
+  const fat = new Fat16Image(new BrowserFileSource(new Blob([image])));
+  await fat.init();
+  const big = (await fat.walk()).find((e) => e.path === "/rf_config_1306_0_0.mbn");
+  await assert.rejects(() => fat.readFile(big), /FAT16 cluster chain loops at 3/);
+});
+
+test("readFile rejects sizes larger than the cluster chain", async () => {
+  const image = buildFat16Fixture();
+  new DataView(image.buffer).setUint32(ROOT_OFFSET + 4 * 32 + 28, 20000, true); // size > 3 clusters
+  const fat = new Fat16Image(new BrowserFileSource(new Blob([image])));
+  await fat.init();
+  const big = (await fat.walk()).find((e) => e.path === "/rf_config_1306_0_0.mbn");
+  await assert.rejects(() => fat.readFile(big), /FAT16 file is truncated/);
+});
+
+test("a deleted LFN chunk keeps the remaining partial name without 8.3 fallback", async () => {
+  const image = buildFat16Fixture();
+  image[ROOT_OFFSET + 2 * 32] = 0xe5; // ordinal 2 deleted, ordinal 1 survives
+  const fat = new Fat16Image(new BrowserFileSource(new Blob([image])));
+  await fat.init();
+  const names = (await fat.walk()).map((e) => e.path);
+  assert.ok(names.includes("/rf_config_130"), `partial LFN name expected, got ${names.join(", ")}`);
+});
+
+// --- golden (corpus-gated) ---------------------------------------------------
+
+test("fat16 hardware entries match goldens", { skip: !corpusAvailable() }, async (t) => {
+  const corpus = JSON.parse(await readFile(new URL("../goldens/corpus.json", import.meta.url)));
+  for (const [img, recs] of Object.entries(corpus)) {
+    if (recs.length === 0) continue;
+    if (!img.endsWith(".img") || img === "radio.img") continue; // tar.md5 + radio.img are wrappers, not FAT16
+    const src = await sourceFor(join(CORPUS_DIR, img));
+    const fat = new Fat16Image(src);
+    await fat.init();
+    const paths = (await fat.walk()).map((e) => e.path);
+    for (const rec of recs) assert.ok(paths.includes(rec.inner_path), `${img}: missing ${rec.inner_path}`);
+    await src.close();
+  }
+});
