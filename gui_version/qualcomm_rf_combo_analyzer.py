@@ -1266,7 +1266,8 @@ def _format_mimo(ant_str: str) -> str:
 def _format_bw(bw_str: str) -> str:
     if not bw_str:
         return ""
-    return bw_str.replace("_", " + ")
+    out = bw_str.replace("_", " + ")
+    return out[:-4] if out.endswith(" MHz") else out
 
 
 def _format_scs_for_comp(comp: dict[str, Any], is_ul: bool = False) -> str:
