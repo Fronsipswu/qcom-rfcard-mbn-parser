@@ -19,6 +19,7 @@ import { join } from "node:path";
 import { Fat16Image } from "../js/lib/fat16.js";
 import { sourceFor } from "../js/lib/source.js";
 import { CORPUS_DIR, corpusAvailable, deepEqualOrdered } from "./helpers.mjs";
+import { truncateParse } from "./golden_transform.mjs";
 import {
   validateCandidate,
   makeDescriptor,
@@ -123,45 +124,6 @@ test("nonzero unused component is rejected", () => {
 });
 
 // --- golden (corpus-gated): differential parity for "Legacy ELF" records -----
-
-const RAW_HEX_LIMIT = 64;
-
-function sampleIndices(n) {
-  const idx = new Set();
-  for (let i = 0; i < Math.min(5, n); i++) idx.add(i);
-  for (let i = 0; i < n; i += 20) idx.add(i);
-  return [...idx].sort((a, b) => a - b);
-}
-
-function truncateRow(row) {
-  for (const k of Object.keys(row)) {
-    const v = row[k];
-    if (typeof v === "string") {
-      if (k.endsWith("raw_hex") && v.length > RAW_HEX_LIMIT) row[k] = v.slice(0, RAW_HEX_LIMIT);
-    } else if (v !== null && typeof v === "object") {
-      if (Array.isArray(v)) {
-        for (const item of v) if (item !== null && typeof item === "object" && !Array.isArray(item)) truncateRow(item);
-      } else {
-        truncateRow(v);
-      }
-    }
-  }
-}
-
-function truncateParse(parsed) {
-  const byTable = new Map();
-  for (const row of parsed.combinations) {
-    const table = row.table ?? "nr_unknown";
-    if (!byTable.has(table)) byTable.set(table, []);
-    byTable.get(table).push(row);
-  }
-  const out = { combinations: {}, components: [...parsed.components] };
-  for (const [tbl, rows] of byTable) {
-    out.combinations[tbl] = sampleIndices(rows.length).map((i) => ({ ...rows[i] }));
-  }
-  truncateRow(out);
-  return out;
-}
 
 test("legacy ELF records match Python goldens", { skip: !corpusAvailable() }, async () => {
   const corpus = JSON.parse(await readFile(new URL("../goldens/corpus.json", import.meta.url)));
