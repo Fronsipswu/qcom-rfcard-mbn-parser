@@ -353,6 +353,7 @@ class ComboViewerWindow(tk.Toplevel):
             text.bind("<Motion>", lambda e, tk_key=tbl_key: self._on_table_hover(e, tk_key))
             text.bind("<Double-Button-1>", lambda _e: "break")
             text.bind("<Triple-Button-1>", lambda _e: "break")
+            text.bind("<B1-Leave>", lambda _e: "break")
             text.bind("<Button-3>", lambda e, tk_key=tbl_key: self._show_context_menu(e, tk_key))
 
             self.tabs_data[tbl_key] = {
