@@ -63,8 +63,6 @@ class ExtractorGUI:
         # pixel-based sizes later, always wrap them in self.s(...) too.
 
         self.root.title(f"qcom-rfcard-mbn-parser GUI {VERSION}")
-        self.root.geometry(f"{self.s(900)}x{self.s(720)}")
-        self.root.minsize(self.s(900), self.s(400))
 
         # Bump the row height of the Treeview to match the scaled font,
         # since ttk doesn't do this automatically.
@@ -215,6 +213,17 @@ class ExtractorGUI:
         ttk.Label(outer, textvariable=self.status_var).pack(fill="x")
         self.log = tk.Text(outer, height=7, wrap="word", state="disabled")
         self.log.pack(fill="x", pady=(self.s(5), 0))
+
+        # Now that the UI is built, measure the "Export formats" row (five
+        # checkbuttons plus the selection buttons, the widest row that
+        # cannot scroll horizontally) and use its required width, including the outer frame's
+        # left/right padding, for the default window width and the minsize.
+        # A fixed 900px basis lets Tk's packer clip the last-packed
+        # selection buttons ("View combos", "Export") when space runs out.
+        self.root.update_idletasks()
+        min_width = max(self.s(900), export_row.winfo_reqwidth() + 2 * self.s(12))
+        self.root.geometry(f"{min_width}x{self.s(720)}")
+        self.root.minsize(min_width, self.s(400))
 
     def append_log(self, message: str) -> None:
         self.log.configure(state="normal")
