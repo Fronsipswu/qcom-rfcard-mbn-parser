@@ -4,6 +4,7 @@ import csv
 import hashlib
 import re
 import sys
+import time
 import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
@@ -14,6 +15,11 @@ try:
     import qualcomm_rf_combo_analyzer as analyzer
 except ImportError:
     from gui_version import qualcomm_rf_combo_analyzer as analyzer
+
+# Cap for user-dragged column widths (in characters) so a drag cannot run away.
+MAX_COLS_CHARS = 300
+# Minimum seconds between live re-renders while dragging a column edge.
+RESIZE_RENDER_INTERVAL = 0.07
 
 # Curated text colors dark enough to stay readable on white / #F7F9FA backgrounds.
 PALETTE: tuple[str, ...] = (
@@ -66,6 +72,11 @@ def _band_color(canonical: str) -> str:
     return PALETTE[digest % len(PALETTE)]
 
 
+def _clamped_col_width(pointer_char: int, offset: int, min_chars: int) -> int:
+    """Clamp a dragged column width between min_chars and MAX_COLS_CHARS."""
+    return min(MAX_COLS_CHARS, max(min_chars, pointer_char - offset))
+
+
 class ComboViewerWindow(tk.Toplevel):
     """Interactive pop-up window to view and search Qualcomm RF combinations."""
 
@@ -114,6 +125,7 @@ class ComboViewerWindow(tk.Toplevel):
         # Tab data tracking: tab_key -> {"columns": [...], "rows": [...], "text": Text, "sort_state": (col, reverse)}
         self.tabs_data: dict[str, dict[str, Any]] = {}
         self.active_tab_key: str | None = None
+        self._resize_state: dict[str, Any] | None = None
 
         # Filter state
         self.search_var = tk.StringVar(value="")
@@ -219,7 +231,12 @@ class ComboViewerWindow(tk.Toplevel):
         min_chars = max(4, round(self.s(45) / char_w))
 
         widths = []
+        overrides = info.get("width_overrides", {})
         for col in visible:
+            override = overrides.get(col)
+            if override is not None:
+                widths.append(max(1, int(override)))
+                continue
             # Reserve room for the sort indicator (" ▲"/" ▼") like the old heading measure
             header_len = len(col) + 2
             content_len = max((len(str(r.get(col, ""))) for r in rows), default=0)
@@ -234,6 +251,7 @@ class ComboViewerWindow(tk.Toplevel):
         info["visible_columns"] = visible
         info["widths"] = widths
         info["offsets"] = offsets
+        info["min_chars"] = min_chars
 
     def _on_scs_toggle(self) -> None:
         """Handle Show SCS toggle across all tabs."""
@@ -295,9 +313,11 @@ class ComboViewerWindow(tk.Toplevel):
             y_scroll.grid(row=0, column=1, sticky="ns")
             x_scroll.grid(row=1, column=0, sticky="ew")
 
-            # Click handling: header sorting + row selection (block Text class bindings)
+            # Click handling: header sorting, column resize, row selection (block Text class bindings)
             text.bind("<Button-1>", lambda e, tk_key=tbl_key: self._on_table_click(e, tk_key))
-            text.bind("<B1-Motion>", lambda _e: "break")
+            text.bind("<B1-Motion>", lambda e, tk_key=tbl_key: self._on_table_drag_motion(e, tk_key))
+            text.bind("<ButtonRelease-1>", lambda e, tk_key=tbl_key: self._on_table_release(e, tk_key))
+            text.bind("<Motion>", lambda e, tk_key=tbl_key: self._on_table_hover(e, tk_key))
             text.bind("<Double-Button-1>", lambda _e: "break")
             text.bind("<Triple-Button-1>", lambda _e: "break")
             text.bind("<Button-3>", lambda e, tk_key=tbl_key: self._show_context_menu(e, tk_key))
@@ -311,6 +331,7 @@ class ComboViewerWindow(tk.Toplevel):
                 "visible_columns": [],
                 "widths": [],
                 "offsets": [],
+                "width_overrides": {},
                 "band_tags": set(),
                 "sort_col": None,
                 "sort_reverse": False,
@@ -334,7 +355,7 @@ class ComboViewerWindow(tk.Toplevel):
             self.notebook.add(empty_frame, text="Empty")
             self.count_var.set("0 combos")
 
-    def _render_table(self, tbl_key: str) -> None:
+    def _render_table(self, tbl_key: str, keep_selection: bool = False) -> None:
         """Render header and filtered rows of a tab into its Text widget."""
         info = self.tabs_data[tbl_key]
         text: tk.Text = info["text"]
@@ -343,8 +364,11 @@ class ComboViewerWindow(tk.Toplevel):
         rows = info["filtered_rows"]
         band_tags: set[str] = info["band_tags"]
 
-        info["selected_lines"] = set()
-        info["sel_anchor"] = None
+        saved_lines = set(info["selected_lines"]) if keep_selection else None
+        saved_anchor = info["sel_anchor"] if keep_selection else None
+        if not keep_selection:
+            info["selected_lines"] = set()
+            info["sel_anchor"] = None
 
         arrow = " ▼" if info["sort_reverse"] else " ▲"
         header_cells = []
@@ -383,6 +407,11 @@ class ComboViewerWindow(tk.Toplevel):
                         f"{line_no}.{base + left_pad + end}",
                     )
                 base += width
+
+        if keep_selection:
+            info["selected_lines"] = saved_lines
+            info["sel_anchor"] = saved_anchor
+            self._apply_selection(tbl_key)
 
         text.tag_raise("sel")
         text.configure(state="disabled")
@@ -479,6 +508,79 @@ class ComboViewerWindow(tk.Toplevel):
         for line in info["selected_lines"]:
             text.tag_add("sel", f"{line}.0", f"{line + 1}.0")
 
+    def _resize_handle_at(self, info: dict[str, Any], char: int) -> int | None:
+        """Return the index of the column whose right header edge is under the pointer."""
+        tol = max(2, self.s(2))
+        best = None
+        best_dist = tol + 1
+        for idx, (start, width) in enumerate(zip(info["offsets"], info["widths"])):
+            dist = abs(char - (start + width))
+            if dist <= tol and dist < best_dist:
+                best = idx
+                best_dist = dist
+        return best
+
+    def _begin_column_resize(self, tbl_key: str, col_idx: int) -> None:
+        """Start dragging the right edge of a header column."""
+        info = self.tabs_data[tbl_key]
+        self._resize_state = {
+            "tbl_key": tbl_key,
+            "col_idx": col_idx,
+            "col_name": info["visible_columns"][col_idx],
+            "start_width": info["widths"][col_idx],
+            "last_render": 0.0,
+        }
+        info["text"].configure(cursor="sb_h_double_arrow")
+
+    def _render_resized(self, tbl_key: str) -> None:
+        """Re-layout and re-render a tab after a width change, keeping selection."""
+        self._layout_columns(tbl_key)
+        self._render_table(tbl_key, keep_selection=True)
+
+    def _on_table_drag_motion(self, event: Any, tbl_key: str) -> str:
+        """Resize the dragged column on B1-Motion with a throttled live re-render."""
+        state = self._resize_state
+        if state is None or state["tbl_key"] != tbl_key:
+            return "break"
+        info = self.tabs_data[tbl_key]
+        pointer_char = int(info["text"].index(f"@{event.x},{event.y}").split(".")[1])
+        info["width_overrides"][state["col_name"]] = _clamped_col_width(
+            pointer_char, info["offsets"][state["col_idx"]], info["min_chars"],
+        )
+        now = time.monotonic()
+        if now - state["last_render"] >= RESIZE_RENDER_INTERVAL:
+            state["last_render"] = now
+            self._render_resized(tbl_key)
+        return "break"
+
+    def _on_table_release(self, event: Any, tbl_key: str) -> str:
+        """Finish a column resize with a final re-render."""
+        state = self._resize_state
+        if state is None or state["tbl_key"] != tbl_key:
+            return "break"
+        self._resize_state = None
+        info = self.tabs_data[tbl_key]
+        info["text"].configure(cursor="arrow")
+        if info["width_overrides"].get(state["col_name"]) != state["start_width"]:
+            self._render_resized(tbl_key)
+        return "break"
+
+    def _on_table_hover(self, event: Any, tbl_key: str) -> str:
+        """Show a resize cursor when hovering a header column boundary."""
+        if self._resize_state is not None:
+            return "break"
+        info = self.tabs_data.get(tbl_key)
+        if not info:
+            return "break"
+        text: tk.Text = info["text"]
+        line_s, char_s = text.index(f"@{event.x},{event.y}").split(".")
+        cursor = "arrow"
+        if line_s == "1" and self._resize_handle_at(info, int(char_s)) is not None:
+            cursor = "sb_h_double_arrow"
+        if str(text.cget("cursor")) != cursor:
+            text.configure(cursor=cursor)
+        return "break"
+
     def _on_table_click(self, event: Any, tbl_key: str) -> str:
         """Handle clicks on a tab's Text widget (header sorting and row selection)."""
         info = self.tabs_data[tbl_key]
@@ -487,6 +589,10 @@ class ComboViewerWindow(tk.Toplevel):
         line = int(line_s)
 
         if line == 1:
+            col_idx = self._resize_handle_at(info, int(char_s))
+            if col_idx is not None:
+                self._begin_column_resize(tbl_key, col_idx)
+                return "break"
             col_idx = self._header_column_at(info, int(char_s))
             if col_idx is not None:
                 self.sort_column(tbl_key, info["visible_columns"][col_idx])
