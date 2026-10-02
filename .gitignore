@@ -12,3 +12,6 @@ __pycache__/
 
 # LibreOffice lock files
 .~lock.*#
+
+# local-only working docs (spec/plans) — never push
+docs/
