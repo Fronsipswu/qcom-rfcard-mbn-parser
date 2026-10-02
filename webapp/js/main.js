@@ -172,6 +172,8 @@ function renderViewer(card, tables) {
       <button type="button" data-format="json">Export JSON</button>
       <button type="button" data-format="csv">Export CSV</button>
       <button type="button" data-format="webcsv">Export Web CSV</button>
+      <button type="button" data-format="b0cd">Export 0xB0CD (LTE)</button>
+      <button type="button" data-format="b826">Export 0xB826 (NR)</button>
     </span>`;
   head.querySelector(".card-detail-title").textContent = record.name;
   for (const btn of head.querySelectorAll("button[data-format]")) {
@@ -348,7 +350,11 @@ worker.onmessage = (event) => {
       const bin = atob(msg.base64);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const mime = msg.filename.endsWith(".json") ? "application/json;charset=utf-8" : "text/csv;charset=utf-8";
+      const mime = msg.filename.endsWith(".json")
+        ? "application/json;charset=utf-8"
+        : msg.filename.endsWith(".txt")
+          ? "text/plain;charset=utf-8"
+          : "text/csv;charset=utf-8";
       download(msg.filename, new TextDecoder().decode(bytes), mime);
       break;
     }

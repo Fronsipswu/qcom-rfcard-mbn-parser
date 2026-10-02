@@ -13,6 +13,7 @@
 // Python parity contract: identical values, dict key insertion order,
 // iteration order and message strings; goldens compare key order.
 import { sha256Hex } from "./hash.js";
+import { hex } from "./bytes.js";
 import { Fat16Image } from "./fat16.js";
 import { Elf32Image, ParseError } from "./elf.js";
 import { extractContainer, discoverCandidates, sidecarsInDirectory } from "./extractor.js";
@@ -720,10 +721,11 @@ function jsonSafe(parsed) {
 }
 
 // export_module writes {stem}_all_combos.json (indent=2 + trailing newline),
-// {stem}_combinations.csv + {stem}_components.csv, and the per-table web CSVs.
-// Python returns written file paths; the browser needs the bytes, so every
-// produced file comes back as { filename, text }. "mbn" (raw blob dump) and
-// the DIAG exports are handled by the UI layer, which owns the blob.
+// {stem}_combinations.csv + {stem}_components.csv, the per-table web CSVs, and
+// the 0xB0CD/0xB826 DIAG payload hexdumps through writeDiagText. Python
+// returns written file paths; the browser needs the bytes, so every produced
+// file comes back as { filename, text }. "mbn" (raw blob dump) is handled by
+// the UI layer, which owns the blob.
 export function exportModule(record, parsed, format) {
   const stem = pyStem(record.name);
   const files = [];
@@ -753,5 +755,35 @@ export function exportModule(record, parsed, format) {
     return files;
   }
 
+  if (format === "b0cd" || format === "b826") {
+    // export_module (:1680-1687): {stem}_0xB0CD_v41.txt / {stem}_0xB826_v22.txt
+    // via _write_diag (:1528-1541). Python indexes parsed["diag"][key]
+    // unconditionally (KeyError on a diag-less result); the JS port raises the
+    // shared ToolError style instead.
+    const logCode = format === "b0cd" ? "0xB0CD" : "0xB826";
+    const version = format === "b0cd" ? 41 : 22;
+    const packets = parsed.diag && parsed.diag[format];
+    if (!Array.isArray(packets)) {
+      throw new ToolError(`No DIAG packets were parsed for the ${logCode} export`);
+    }
+    files.push({ filename: `${stem}_${logCode}_v${version}.txt`, text: writeDiagText(logCode, version, packets) });
+    return files;
+  }
+
   throw new ToolError(`Unsupported export format: ${format}`);
+}
+
+// _write_diag (:1528-1541) minus the file IO: "\n".join(lines) with a blank
+// line after every packet, ASCII-only by construction. The payload hex uses
+// the bytes.js lowercase hex() exactly like Python's bytes.hex().
+function writeDiagText(logCode, version, packets) {
+  const lines = [
+    "# Headerless Qualcomm DIAG payloads reconstructed from static RF tables.",
+    `# Log ${logCode}, payload version ${version}; one Payload block per packet.`,
+    "",
+  ];
+  for (const [label, payload] of packets) {
+    lines.push(`# ${label}`, `Payload: ${hex(payload)}`, "");
+  }
+  return lines.join("\n");
 }

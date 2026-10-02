@@ -11,6 +11,10 @@
 import { StructReader, indexOfBytes } from "./bytes.js";
 import { sha256Hex } from "./hash.js";
 import { Elf32Image, ParseError } from "./elf.js";
+// Cycle note: modern_parser.js imports TABLE_DISPLAY/ToolError from this
+// module, so this import is circular. It is safe because b826V22Packets is a
+// hoisted function declaration and only invoked from function bodies here.
+import { b826V22Packets } from "./modern_parser.js";
 
 export { Elf32Image, LoadSegment, DynamicSymbol, ParseError } from "./elf.js";
 
@@ -49,6 +53,23 @@ export const TABLE_DISPLAY = {
 };
 
 const VERSION = "1.8.0";
+
+// B826 source enum per table (analyzer.py:60).
+const B826_SOURCE = { endc: 3, nr_ca: 4, nrdc: 5 };
+
+// Concat of Uint8Array chunks (same shape as the local helper in
+// modern_parser.js; bytes.js has none).
+function concatBytes(arrs) {
+  let length = 0;
+  for (const arr of arrs) length += arr.length;
+  const out = new Uint8Array(length);
+  let offset = 0;
+  for (const arr of arrs) {
+    out.set(arr, offset);
+    offset += arr.length;
+  }
+  return out;
+}
 
 // Qualcomm BW indexes independently correlated with B826 Versions 8-22.
 export const KNOWN_BANDWIDTH_PARTS_MHZ = {
@@ -1415,6 +1436,87 @@ function recordIdentity(record) {
   return stem;
 }
 
+// dict.get(key, default) semantics: default applies only when the key is absent.
+const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
+// Port of analyzer.py _legacy_b0cd_packets (:682-718): pack every lte_ca
+// combination's band groups as <HBBBBB records, chunk 100 per 0xB0CD v41
+// packet. tableResults are [table, result] pairs exactly like Python's
+// `parsed`; packets return as [label, Uint8Array] pairs.
+export function legacyB0cdPackets(tableResults, packetCombos = 100) {
+  const encoded = [];
+  for (const [table, result] of tableResults) {
+    if (table !== "lte_ca") continue;
+    for (const combo of result.combinations) {
+      const groups = [];
+      for (const entry of combo.entries) {
+        const ulBwClassCode = hasOwn(entry, "ul_bw_class_code")
+          ? entry.ul_bw_class_code
+          : entry.ul_present
+            ? 1
+            : 0;
+        const out = new Uint8Array(7);
+        const dv = new DataView(out.buffer);
+        dv.setUint16(0, entry.band, true);
+        out[2] = entry.dl_bw_class_code;
+        out[3] = ulBwClassCode;
+        out[4] = entry.dl_antenna_index;
+        out[5] = entry.ul_antenna_index;
+        out[6] = entry.ul_qam_cap_index || 0;
+        groups.push(out);
+      }
+      if (groups.length) {
+        encoded.push(concatBytes([Uint8Array.of(groups.length), ...groups]));
+      }
+    }
+  }
+  const packets = [];
+  for (let start = 0; start < encoded.length; start += packetCombos) {
+    const current = encoded.slice(start, start + packetCombos);
+    packets.push(concatBytes([Uint8Array.of(41, current.length), ...current]));
+  }
+  return packets.map((payload, index) => [`LTE CA packet ${index + 1}/${packets.length}`, payload]);
+}
+
+// Port of analyzer.py _legacy_b826_packets (:721-764): feed endc/nr_ca/nrdc
+// tables to the shared b826V22Packets encoder with conservative defaults for
+// fields absent from the static records.
+export function legacyB826Packets(tableResults) {
+  const output = [];
+  for (const [table, result] of tableResults) {
+    const source = B826_SOURCE[table];
+    if (source === undefined) continue;
+    const records = [];
+    for (const combo of result.combinations) {
+      const groups = [];
+      for (const entry of combo.entries) {
+        groups.push({
+          tech: entry.rat === "LTE" ? 1 : 2,
+          band: entry.band,
+          dl_bw_class: entry.dl_bw_class_code,
+          dl_bw_per_cc: entry.dl_bw_code,
+          ul_bw_class: hasOwn(entry, "ul_bw_class_code")
+            ? entry.ul_bw_class_code
+            : entry.ul_present
+              ? 1
+              : 0,
+          ul_bw_per_cc: entry.ul_bw_code,
+          dl_max_antennas_index: entry.dl_antenna_index,
+          ul_max_antennas_index: entry.ul_antenna_index,
+          ul_qam_cap_index: 0,
+        });
+      }
+      const prop = { ul_tx_switch_type: combo.ul_tx_switch_type_raw || 0 };
+      records.push([groups, prop]);
+    }
+    const packets = records.length ? b826V22Packets(records, source) : [];
+    packets.forEach((payload, index) => {
+      output.push([`${TABLE_DISPLAY[table] ?? table} source=${source} packet ${index + 1}/${packets.length}`, payload]);
+    });
+  }
+  return output;
+}
+
 export function parseLegacyModule(record, blob) {
   const image = new Elf32Image(blob);
   const cardName = rfcardNameFromSymbols(image);
@@ -1597,5 +1699,9 @@ export function parseLegacyModule(record, blob) {
     legacy_tables: parsed.map(([, result]) => result),
     combinations,
     components,
+    diag: {
+      b0cd: legacyB0cdPackets(parsed),
+      b826: legacyB826Packets(parsed),
+    },
   };
 }
