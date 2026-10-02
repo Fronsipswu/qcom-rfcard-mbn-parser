@@ -6,7 +6,8 @@
 //   { type: "parseCard", id, file, fileIndex?, record }   file is THE File the
 //                                                   card came from; fileIndex
 //                                                   is bookkeeping only
-//   { type: "export",    id, file, fileIndex?, record, format }  csv|json|webcsv
+//   { type: "export",    id, file, fileIndex?, record, format }  mbn|json|csv|
+//                                                   webcsv|b0cd|b826
 //   { type: "cancel",    id }
 // worker -> main
 //   { type: "progress",  phase, source, done, total, currentFile }
@@ -114,7 +115,12 @@ async function readRecordBlob(source, file, record) {
   throw new Error(`record not found in source: ${record.name} (${record.inner_path})`);
 }
 
-async function ensureParsed(file, fileIndex, record) {
+// Blob + memo entry for a record: extracts the raw blob once per File via the
+// (name, sha256) memo key. No parsing happens here — a pure "mbn" export must
+// be a byte-for-byte extraction that never invokes the parser
+// (qualcomm_rf_combo_analyzer.py export_module: a pure MBN dump "must not
+// invoke either the legacy or modern parser").
+async function ensureBlob(file, fileIndex, record) {
   if (!file || typeof file.slice !== "function") {
     throw new Error(`no File handle for record ${record.name} (fileIndex ${fileIndex})`);
   }
@@ -127,10 +133,15 @@ async function ensureParsed(file, fileIndex, record) {
   let entry = memo.get(key);
   if (!entry) {
     const blob = await readRecordBlob(sourceFor(file), file, record);
-    const parsed = parseModule(record, blob);
-    entry = { blob, parsed };
+    entry = { blob, parsed: null };
     memo.set(key, entry);
   }
+  return entry;
+}
+
+async function ensureParsed(file, fileIndex, record) {
+  const entry = await ensureBlob(file, fileIndex, record);
+  if (!entry.parsed) entry.parsed = parseModule(record, entry.blob);
   return entry;
 }
 
@@ -169,16 +180,29 @@ async function handleParseCard(msg) {
 }
 
 async function handleExport(msg) {
-  const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
-  const files = exportModule(msg.record, parsed, msg.format);
+  let files;
+  if (msg.format === "mbn") {
+    // Raw .mbn dump (Python export_module "mbn"): the untouched blob under
+    // record.name — byte-for-byte, no parse, no text encoding. Reuses the
+    // ensureBlob path incl. the per-File memo, so a batch that also exports
+    // text formats extracts the container exactly once.
+    const { blob } = await ensureBlob(msg.file, msg.fileIndex, msg.record);
+    files = [{ filename: msg.record.name, bytes: blob }];
+  } else {
+    const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
+    files = exportModule(msg.record, parsed, msg.format);
+  }
   const encoder = new TextEncoder();
   // One reply per export request: every file the format produced travels
-  // together (json=1, csv=2, webcsv=1-4, b0cd/b826=1), so the main thread can
-  // await the complete reply when running batch exports.
+  // together (mbn=1, json=1, csv=2, webcsv=1-4, b0cd/b826=1), so the main
+  // thread can await the complete reply when running batch exports.
   post({
     type: "exportBlob",
     id: msg.id,
-    files: files.map((f) => ({ filename: f.filename, base64: bytesToBase64(encoder.encode(f.text)) })),
+    files: files.map((f) => ({
+      filename: f.filename,
+      base64: bytesToBase64(f.bytes ?? encoder.encode(f.text)),
+    })),
   });
 }
 

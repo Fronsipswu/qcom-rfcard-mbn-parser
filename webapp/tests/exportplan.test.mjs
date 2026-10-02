@@ -13,8 +13,10 @@ import {
   decodeExportBytes,
 } from "../js/exportplan.js";
 
-test("EXPORT_FORMATS lists the five export formats in canonical order", () => {
-  assert.deepEqual(EXPORT_FORMATS, ["json", "csv", "webcsv", "b0cd", "b826"]);
+test("EXPORT_FORMATS lists the six export formats in canonical order", () => {
+  // gui_version/main.py:84-90 order is mbn, json, csv, b0cd, b826; the webapp
+  // inserts its extra "webcsv" slot after csv.
+  assert.deepEqual(EXPORT_FORMATS, ["mbn", "json", "csv", "webcsv", "b0cd", "b826"]);
 });
 
 test("buildExportJobs pairs every ticked card with every enabled format", () => {
@@ -34,9 +36,19 @@ test("buildExportJobs applies formats in canonical order regardless of input ord
   assert.deepEqual(jobs.map((j) => j.format), ["json", "webcsv", "b826"]);
 });
 
+test("buildExportJobs builds mbn jobs ahead of json/b0cd in canonical order", () => {
+  const jobs = buildExportJobs([{ key: "a" }], ["b0cd", "mbn", "json"]);
+  assert.deepEqual(jobs.map((j) => j.format), ["mbn", "json", "b0cd"]);
+});
+
 test("buildExportJobs drops unknown formats and duplicate formats", () => {
   const jobs = buildExportJobs([{ key: "a" }], ["csv", "bogus", "csv", "json"]);
   assert.deepEqual(jobs.map((j) => j.format), ["json", "csv"]);
+});
+
+test("buildExportJobs drops unknown formats and duplicates even alongside mbn", () => {
+  const jobs = buildExportJobs([{ key: "a" }], ["mbn", "bogus", "mbn", "json"]);
+  assert.deepEqual(jobs.map((j) => j.format), ["mbn", "json"]);
 });
 
 test("buildExportJobs returns an empty list for no cards or no formats", () => {

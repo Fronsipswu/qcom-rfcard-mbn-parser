@@ -13,7 +13,12 @@
 //   the UTF-8 BOM that toCsvText emits for CSV/Web CSV (Python writes
 //   utf-8-sig; the default TextDecoder strips the BOM).
 
-export const EXPORT_FORMATS = ["json", "csv", "webcsv", "b0cd", "b826"];
+// Canonical order mirrors the Python GUI's format checkboxes
+// (gui_version/main.py:84-90): mbn, json, csv, b0cd, b826. The webapp adds a
+// "webcsv" slot (the viewer's per-table CSVs, no Python counterpart) after csv.
+// "mbn" is the raw .mbn blob under record.name (Python export_module's
+// "mbn" format); worker.js special-cases it before exportModule.
+export const EXPORT_FORMATS = ["mbn", "json", "csv", "webcsv", "b0cd", "b826"];
 
 // >20 exported files → deliver one zip instead of that many downloads.
 export const ZIP_FILE_THRESHOLD = 20;

@@ -59,6 +59,16 @@ export function createCardCache(backend) {
         // quota/errors are non-fatal
       }
     },
+    // Full wipe for the Clear button: every cached parse is dropped so the
+    // next open re-parses from the File. Backend failures are non-fatal, and
+    // a backend without clear() (older fake/custom backends) is a no-op.
+    async clearAll() {
+      try {
+        await backend.clear();
+      } catch {
+        // a broken cache must never break clearing the UI
+      }
+    },
   };
 }
 
@@ -73,6 +83,9 @@ export function memoryBackend() {
     },
     async delete(key) {
       map.delete(key);
+    },
+    async clear() {
+      map.clear();
     },
   };
 }
@@ -116,6 +129,16 @@ export function idbBackend({ database = "rfcard-webapp", store = "tables" } = {}
       return new Promise((resolve, reject) => {
         const tx = db.transaction(store, "readwrite");
         tx.objectStore(store).delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+    },
+    async clear() {
+      const db = await open();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readwrite");
+        tx.objectStore(store).clear();
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error);

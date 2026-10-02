@@ -136,3 +136,40 @@ test("a backend without delete support still misses cleanly on corrupt entries",
   });
   assert.equal(await cache.get(RECORD), null);
 });
+
+// --- clearAll (Clear button wipes the whole parse cache) --------------------------
+
+test("clearAll empties the cache so every get misses again", async () => {
+  const backend = memoryBackend();
+  const cache = createCardCache(backend);
+  const other = { ...RECORD, name: "other.mbn", sha256: "def456" };
+  await cache.put(RECORD, TABLES);
+  await cache.put(other, TABLES);
+  assert.notEqual(await cache.get(RECORD), null); // pre-check: actually cached
+  await cache.clearAll();
+  assert.equal(await cache.get(RECORD), null);
+  assert.equal(await cache.get(other), null);
+  assert.equal(await backend.get(cacheKey(RECORD)), null);
+  assert.equal(await backend.get(cacheKey(other)), null);
+  // The emptied cache is writable again (Clear then re-import must work).
+  await cache.put(RECORD, TABLES);
+  const hit = await cache.get(RECORD);
+  assert.deepEqual(hit.tables, TABLES);
+});
+
+test("clearAll tolerates a backend without clear support (fake {get, put} pattern)", async () => {
+  const cache = createCardCache({
+    async get() { return null; },
+    async put() {},
+  });
+  await cache.clearAll(); // must not throw
+});
+
+test("clearAll swallows a failing backend like get/put do", async () => {
+  const cache = createCardCache({
+    async get() { throw new Error("idb broken"); },
+    async put() { throw new Error("idb broken"); },
+    async clear() { throw new Error("idb broken"); },
+  });
+  await cache.clearAll(); // must not throw
+});

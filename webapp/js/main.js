@@ -14,6 +14,7 @@ import {
 } from "./exportplan.js";
 import { zipSync } from "../lib/vendor/fflate.js";
 import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
+import { uniqueFileNames } from "./loadedfiles.js";
 import {
   MIN_CARD_PANE_PX,
   SPLITTER_STORAGE_KEY,
@@ -35,6 +36,7 @@ const cardCache = createCardCache(
 const els = {
   dropzone: document.getElementById("dropzone"),
   pickBtn: document.getElementById("pick-btn"),
+  clearBtn: document.getElementById("clear-btn"),
   fileInput: document.getElementById("file-input"),
   progressWrap: document.getElementById("progresswrap"),
   progress: document.getElementById("progress"),
@@ -42,9 +44,13 @@ const els = {
   cancelBtn: document.getElementById("cancel-btn"),
   compareBtn: document.getElementById("compare-btn"),
   warnings: document.getElementById("warnings"),
+  loadedFiles: document.getElementById("loadedfiles"),
+  loadedFilesLabel: document.getElementById("loadedfiles-label"),
+  loadedFilesChips: document.getElementById("loadedfiles-chips"),
   cardBody: document.getElementById("cardlist-body"),
   cardsEmpty: document.getElementById("cards-empty"),
   viewerHost: document.getElementById("viewerhost"),
+  viewerPlaceholder: document.getElementById("viewer-placeholder"),
   workbench: document.getElementById("workbench"),
   cardPane: document.getElementById("cardpane"),
   splitter: document.getElementById("splitter"),
@@ -62,7 +68,10 @@ const GENERATION_DISPLAY = { "DAT/protobuf": "XML DAT" }; // gui_version/main.py
 const cards = []; // { record, file, fileIndex, key }; file is THE source File
 const cardKeys = new Set(); // name\0sha256 dedupe across imports (main.py:249-254)
 const checked = new Set(); // card keys (compare selection)
+const loadedFiles = []; // distinct source-file names, first appearance first (chips)
 let scanFiles = []; // FileList snapshot of the scan in flight/last completed
+let sessionEpoch = 0; // bumped by Clear; worker replies from an earlier epoch are dropped
+let scanEpoch = 0; // epoch of the scan whose replies are currently arriving
 let currentScanId = 0;
 let nextMessageId = 1;
 let selectedCard = null;
@@ -141,6 +150,21 @@ function exportStatus(message, { sticky = false } = {}) {
   }
 }
 
+function renderLoadedFiles() {
+  els.loadedFilesChips.replaceChildren();
+  els.loadedFiles.hidden = loadedFiles.length === 0;
+  if (!loadedFiles.length) return;
+  // Count when >1: "Loaded files (3):" — muted like the other bar labels.
+  els.loadedFilesLabel.textContent =
+    loadedFiles.length > 1 ? `Loaded files (${loadedFiles.length}):` : "Loaded files:";
+  for (const name of loadedFiles) {
+    const chip = document.createElement("span");
+    chip.className = "loadedfile-chip";
+    chip.textContent = name;
+    els.loadedFilesChips.appendChild(chip);
+  }
+}
+
 function renderCardList() {
   els.cardBody.innerHTML = "";
   els.cardsEmpty.hidden = cards.length > 0;
@@ -177,14 +201,8 @@ function renderCardList() {
     }
     tr.addEventListener("click", (event) => {
       if (event.target === checkbox) return;
-      // Plain-clicking a row also ticks it for compare/export (Python GUI
-      // parity); un-ticking stays a checkbox-only action so browsing the
-      // viewer never shrinks the export selection.
-      if (!checked.has(card.key)) {
-        checked.add(card.key);
-        checkbox.checked = true;
-        els.compareBtn.disabled = checked.size < 2;
-      }
+      // Row click opens the viewer only; ticking stays a checkbox-only action
+      // (sole ownership in the change handler above).
       selectedCard = card;
       for (const other of els.cardBody.children) other.classList.remove("selected");
       tr.classList.add("selected");
@@ -383,7 +401,13 @@ function deliver(collected, cardCount, failedCount) {
     exportStatus(`Exported ${collected.length.toLocaleString("en-US")} file(s) from ${cardCount.toLocaleString("en-US")} card(s) as ${zipName}.${suffix}`);
   } else {
     for (const f of collected) {
-      download(f.filename, decodeExportBytes(f.bytes), mimeFor(f.filename));
+      if (f.filename.endsWith(".mbn")) {
+        // Raw .mbn blobs are binary: download the bytes untouched — the text
+        // path's UTF-8 decode would corrupt them.
+        downloadBytes(f.filename, f.bytes, "application/octet-stream");
+      } else {
+        download(f.filename, decodeExportBytes(f.bytes), mimeFor(f.filename));
+      }
     }
     exportStatus(`Exported ${collected.length.toLocaleString("en-US")} file(s) from ${cardCount.toLocaleString("en-US")} card(s).${suffix}`);
   }
@@ -410,6 +434,9 @@ async function exportTicked() {
   let failedCount = 0;
   exporting = true;
   els.exportTickedBtn.disabled = true;
+  // Clear is disabled while a batch runs: it would orphan the in-flight
+  // per-job waiters (they are rejected defensively in clearAll too).
+  els.clearBtn.disabled = true;
   try {
     let lastKey = null;
     let done = 0;
@@ -433,6 +460,7 @@ async function exportTicked() {
   } finally {
     exporting = false;
     els.exportTickedBtn.disabled = false;
+    els.clearBtn.disabled = false;
   }
 }
 
@@ -441,7 +469,14 @@ async function exportTicked() {
 function importFiles(files) {
   if (!files.length) return;
   scanFiles = [...files];
+  // Chip row: one pill per distinct source file, first appearance wins —
+  // re-importing the same file leaves the chips unchanged.
+  const names = uniqueFileNames([...loadedFiles, ...scanFiles.map((f) => f.name)]);
+  loadedFiles.length = 0;
+  loadedFiles.push(...names);
+  renderLoadedFiles();
   currentScanId = nextMessageId++;
+  scanEpoch = sessionEpoch;
   els.cancelBtn.hidden = false;
   setProgress(0, files.length, files[0].name);
   worker.postMessage({ type: "scan", id: currentScanId, files: scanFiles });
@@ -453,10 +488,12 @@ worker.onmessage = (event) => {
   const msg = event.data;
   switch (msg.type) {
     case "progress": {
+      if (scanEpoch !== sessionEpoch) break; // late reply from a cleared scan
       setProgress(msg.done, msg.total, msg.currentFile);
       break;
     }
     case "records": {
+      if (scanEpoch !== sessionEpoch) break; // late reply from a cleared scan
       for (const record of msg.records) {
         const key = cardKeyOf(record);
         if (cardKeys.has(key)) continue; // main.py:348-363 dedupe
@@ -526,7 +563,9 @@ els.fileInput.addEventListener("change", () => {
   importFiles(els.fileInput.files);
   els.fileInput.value = "";
 });
-els.cancelBtn.addEventListener("click", () => {
+// Cancel path shared by the Cancel button and Clear: stops the in-flight scan
+// (a no-op when none is running) and tears down the progress row.
+function cancelInFlightScan() {
   worker.postMessage({ type: "cancel", id: currentScanId });
   if (progressHideTimer !== null) {
     clearTimeout(progressHideTimer);
@@ -534,7 +573,45 @@ els.cancelBtn.addEventListener("click", () => {
   }
   els.progressWrap.hidden = true;
   els.cancelBtn.hidden = true;
-});
+}
+
+els.cancelBtn.addEventListener("click", () => cancelInFlightScan());
+
+// FULL reset (Clear button): cancel any in-flight scan, drop every card /
+// selection / viewer / warning / chip, wipe the IndexedDB parse cache, then
+// report what was cleared. No confirm() — Clear is itself the confirmation.
+async function clearAll() {
+  cancelInFlightScan();
+  sessionEpoch++; // orphaned replies from the old scan epoch become no-ops
+  // Drop in-flight batch-export waiters so nothing can deadlock on a reply
+  // that Clear just orphaned; cleared pendingReplies also makes any late
+  // "tables" reply a no-op instead of re-populating the wiped cache.
+  for (const waiter of exportWaiters.values()) {
+    waiter.reject(new Error("Export cancelled: workbench cleared."));
+  }
+  exportWaiters.clear();
+  pendingReplies.clear();
+  const cardCount = cards.length;
+  cards.length = 0;
+  cardKeys.clear();
+  checked.clear();
+  scanFiles = [];
+  loadedFiles.length = 0;
+  pendingView = null;
+  pendingCompare = null;
+  selectedCard = null;
+  els.compareBtn.disabled = true;
+  els.warnings.replaceChildren();
+  els.warnings.hidden = true;
+  destroyViewer();
+  els.viewerHost.replaceChildren(els.viewerPlaceholder);
+  renderCardList();
+  renderLoadedFiles();
+  await cardCache.clearAll();
+  exportStatus(`Cleared ${cardCount.toLocaleString("en-US")} card(s) and the parse cache.`);
+}
+
+els.clearBtn.addEventListener("click", () => clearAll());
 els.compareBtn.addEventListener("click", () => openCompare());
 els.selectAllBtn.addEventListener("click", () => {
   for (const card of cards) checked.add(card.key);

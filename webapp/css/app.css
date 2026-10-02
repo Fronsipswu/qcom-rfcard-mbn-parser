@@ -103,6 +103,38 @@ button:disabled {
 
 #compare-btn { flex: none; }
 
+/* --- loaded-file chips ---------------------------------------------------------- */
+
+#loadedfiles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding: 6px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+#loadedfiles .loadedfiles-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+#loadedfiles .loadedfile-chip {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--zebra);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --- warnings panel ---------------------------------------------------------- */
 
 #warnings {
@@ -257,6 +289,29 @@ body.dragging {
 }
 
 #exportbar #export-status { color: #8a6d1a; }
+
+/* "Export ticked" is the bar's primary action: light-blue tint of the
+   selection accent (#0078D7) with dark text, distinct from the plain buttons. */
+#exportbar #export-ticked-btn {
+  background: #cce4f7;
+  border-color: #8fc1e8;
+  color: var(--text);
+  font-weight: 600;
+}
+
+#exportbar #export-ticked-btn:hover:not(:disabled) {
+  background: #b9d9f2;
+  border-color: #6fb1e0;
+}
+
+/* Disabled stays visually distinct: washed-out blue fill, muted border,
+   reduced opacity like the other disabled buttons. */
+#exportbar #export-ticked-btn:disabled {
+  background: #e8f1fa;
+  border-color: var(--border);
+  color: var(--muted);
+  opacity: 0.6;
+}
 
 /* --- ComboViewer (viewer.js) ------------------------------------------------------ */
 
