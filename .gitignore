@@ -9,3 +9,6 @@ __pycache__/
 *.bbfw
 *.ipsw
 .superpowers/
+
+# LibreOffice lock files
+.~lock.*#
