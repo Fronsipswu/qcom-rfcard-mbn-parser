@@ -95,6 +95,9 @@ export function md5IntMod(s, m) {
 }
 
 export function bandColor(canonical) {
+  if (typeof canonical !== "string") {
+    throw new TypeError(`bandColor: canonical must be a string, got ${typeof canonical}`);
+  }
   return PALETTE[md5IntMod(canonical, PALETTE.length)];
 }
 
