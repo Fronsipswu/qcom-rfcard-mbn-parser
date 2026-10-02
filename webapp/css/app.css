@@ -134,11 +134,30 @@ button:disabled {
 
 #cardpane {
   flex: 0 0 44%;
-  max-width: 640px;
   min-width: 320px;
-  border-right: 1px solid var(--border);
   background: var(--panel);
   overflow: auto;
+}
+
+#splitter {
+  flex: none;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+}
+
+#splitter:hover,
+#splitter.dragging {
+  background: var(--accent);
+  border-left-color: var(--accent);
+}
+
+body.dragging {
+  cursor: col-resize;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #cardlist {
@@ -229,6 +248,7 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: none;
 }
 
 .cv-search {
@@ -250,7 +270,7 @@ button:disabled {
 .cv-clear-btn { padding: 4px 9px; }
 .cv-scs-label { display: flex; align-items: center; gap: 4px; user-select: none; }
 .cv-count { color: var(--muted); }
-.cv-status { color: #8a6d1a; }
+.cv-status { color: #8a6d1a; flex: none; }
 
 .cv-tabs {
   display: flex;
@@ -278,6 +298,7 @@ button:disabled {
   padding: 32px;
   text-align: center;
   font-size: 15px;
+  flex: none;
 }
 
 .cv-tablewrap {

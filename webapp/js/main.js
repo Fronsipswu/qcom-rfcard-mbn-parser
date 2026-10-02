@@ -7,6 +7,13 @@ import { ComboViewer } from "./viewer.js";
 import { compareCards } from "./compare.js";
 import { download } from "./exporter.js";
 import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
+import {
+  MIN_CARD_PANE_PX,
+  SPLITTER_STORAGE_KEY,
+  clampSplitterWidth,
+  maxCardPaneWidth,
+  parseStoredWidth,
+} from "./splitter.js";
 import { recordIdentity, normalizeInnerPath } from "./lib/analyzer.js";
 
 const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
@@ -31,6 +38,9 @@ const els = {
   cardBody: document.getElementById("cardlist-body"),
   cardsEmpty: document.getElementById("cards-empty"),
   viewerHost: document.getElementById("viewerhost"),
+  workbench: document.getElementById("workbench"),
+  cardPane: document.getElementById("cardpane"),
+  splitter: document.getElementById("splitter"),
 };
 
 // --- state ---------------------------------------------------------------------
@@ -382,3 +392,111 @@ els.dropzone.addEventListener("drop", (event) => {
   els.dropzone.classList.remove("drag");
   if (event.dataTransfer && event.dataTransfer.files.length) importFiles(event.dataTransfer.files);
 });
+
+// --- workbench splitter ------------------------------------------------------------
+
+// localStorage can throw (privacy modes); a splitter that never persists is
+// better than one that breaks the page.
+function readStoredSplitterWidth() {
+  try {
+    return localStorage.getItem(SPLITTER_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeSplitterWidth(px) {
+  try {
+    localStorage.setItem(SPLITTER_STORAGE_KEY, String(Math.round(px)));
+  } catch {}
+}
+
+function clearStoredSplitterWidth() {
+  try {
+    localStorage.removeItem(SPLITTER_STORAGE_KEY);
+  } catch {}
+}
+
+function setSplitterAriaBounds() {
+  els.splitter.setAttribute("aria-valuemin", String(MIN_CARD_PANE_PX));
+  els.splitter.setAttribute("aria-valuemax", String(maxCardPaneWidth(els.workbench.clientWidth)));
+}
+
+function applyCardPaneWidth(px) {
+  els.cardPane.style.flexBasis = `${Math.round(px)}px`;
+  els.splitter.setAttribute("aria-valuenow", String(Math.round(px)));
+}
+
+function syncSplitterAria() {
+  setSplitterAriaBounds();
+  els.splitter.setAttribute("aria-valuenow", String(Math.round(els.cardPane.getBoundingClientRect().width)));
+}
+
+let splitterDrag = null; // { id, startX, startWidth }
+
+els.splitter.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  splitterDrag = {
+    id: event.pointerId,
+    startX: event.clientX,
+    startWidth: els.cardPane.getBoundingClientRect().width,
+  };
+  // Synthetic (untrusted) events have no active pointer to capture; the
+  // move/up handlers still work on the splitter for those.
+  try {
+    els.splitter.setPointerCapture(event.pointerId);
+  } catch {}
+  document.body.classList.add("dragging");
+  els.splitter.classList.add("dragging");
+  setSplitterAriaBounds();
+});
+
+els.splitter.addEventListener("pointermove", (event) => {
+  if (!splitterDrag || event.pointerId !== splitterDrag.id) return;
+  const width = clampSplitterWidth(splitterDrag.startWidth + event.clientX - splitterDrag.startX, els.workbench.clientWidth);
+  applyCardPaneWidth(width);
+});
+
+function endSplitterDrag(event) {
+  if (!splitterDrag || event.pointerId !== splitterDrag.id) return;
+  splitterDrag = null;
+  try {
+    els.splitter.releasePointerCapture(event.pointerId);
+  } catch {}
+  document.body.classList.remove("dragging");
+  els.splitter.classList.remove("dragging");
+  storeSplitterWidth(els.cardPane.getBoundingClientRect().width);
+}
+
+els.splitter.addEventListener("pointerup", endSplitterDrag);
+els.splitter.addEventListener("pointercancel", endSplitterDrag);
+
+// Double-click resets to the CSS default (44%) and forgets the stored width.
+els.splitter.addEventListener("dblclick", () => {
+  clearStoredSplitterWidth();
+  els.cardPane.style.removeProperty("flex-basis");
+  syncSplitterAria();
+});
+
+els.splitter.addEventListener("keydown", (event) => {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  event.preventDefault();
+  const delta = event.key === "ArrowRight" ? 16 : -16;
+  const width = clampSplitterWidth(els.cardPane.getBoundingClientRect().width + delta, els.workbench.clientWidth);
+  applyCardPaneWidth(width);
+  storeSplitterWidth(width);
+});
+
+window.addEventListener("resize", () => {
+  setSplitterAriaBounds();
+  if (els.cardPane.style.flexBasis) {
+    applyCardPaneWidth(clampSplitterWidth(els.cardPane.getBoundingClientRect().width, els.workbench.clientWidth));
+  }
+});
+
+// Restore the persisted width (clamped to the current window) on load.
+setSplitterAriaBounds();
+const storedSplitterWidth = parseStoredWidth(readStoredSplitterWidth(), els.workbench.clientWidth);
+if (storedSplitterWidth !== null) applyCardPaneWidth(storedSplitterWidth);
+else syncSplitterAria();
