@@ -1,1 +1,47 @@
-<!doctype html><html><head><meta charset="utf-8"><title>RF Card Parser</title><link rel="stylesheet" href="css/app.css"></head><body><div id="app"></div><script type="module" src="js/main.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RF Card Parser — Workbench</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div id="dropzone">
+        <strong>Import modem images / RF MBNs</strong>
+        <span>Drop files here or</span>
+        <button id="pick-btn" type="button">browse</button>
+        <input id="file-input" type="file" multiple
+               accept=".img,.mbn,.tar.md5,.zip,.ipsw,.bbfw,.gz" hidden>
+      </div>
+      <div id="progresswrap" hidden>
+        <progress id="progress" value="0" max="1"></progress>
+        <span id="progress-label"></span>
+        <button id="cancel-btn" type="button" hidden>Cancel</button>
+      </div>
+      <button id="compare-btn" type="button" disabled>Compare selected</button>
+    </header>
+    <div id="warnings" hidden></div>
+    <main id="workbench">
+      <aside id="cardpane">
+        <table id="cardlist">
+          <thead>
+            <tr>
+              <th></th><th>Name</th><th>HWID_FSID_BID</th><th>Format</th>
+              <th>LTE combos</th><th>NR combos</th>
+            </tr>
+          </thead>
+          <tbody id="cardlist-body"></tbody>
+        </table>
+        <p id="cards-empty">No imports yet.</p>
+      </aside>
+      <section id="viewerhost">
+        <div id="viewer-placeholder">Import a modem image or RF MBN, then click a card to view its combinations.</div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

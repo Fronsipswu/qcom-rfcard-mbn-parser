@@ -28,6 +28,17 @@ import { parseModernModule, pyCasefold, pyNdInt, pyRegexFold } from "./modern_pa
 
 export { ToolError };
 
+// Cooperative cancellation for the worker's scan (Task 11): scanSource accepts
+// an optional { shouldCancel } callback (default no-op, checked between files
+// by the worker and per walk iteration here) and throws ScanCancelled so the
+// worker can unwind silently. Purely additive: no golden path changes.
+export class ScanCancelled extends Error {
+  constructor() {
+    super("scan cancelled");
+    this.name = "ScanCancelled";
+  }
+}
+
 // --- ModuleRecord -------------------------------------------------------------
 
 // Mirrors ModuleRecord.identity: literal firmware spelling of the file stem
@@ -228,7 +239,9 @@ function buildRecord(base, lte, nr) {
   };
 }
 
-export async function scanSource(source, name) {
+export async function scanSource(source, name, { shouldCancel } = {}) {
+  const cancelled = shouldCancel ?? (() => false);
+  if (cancelled()) throw new ScanCancelled();
   // Direct-MBN fast path: a file whose NAME already matches a candidate regex.
   // Python records inner_path/source_path as the absolute filesystem path; the
   // browser has no path, so the file name stands in for it.
@@ -262,8 +275,9 @@ export async function scanSource(source, name) {
     // Not FAT16: the universal container extractor (analyzer.py:209-231,
     // image_extractor.scan_container + _records_from_extraction :268-321).
     try {
-      return await scanExtracted(source, name);
+      return await scanExtracted(source, name, cancelled);
     } catch (extractErr) {
+      if (extractErr instanceof ScanCancelled) throw extractErr;
       return {
         records: [],
         warnings: [
@@ -277,7 +291,9 @@ export async function scanSource(source, name) {
   }
 
   const records = [];
+  if (cancelled()) throw new ScanCancelled();
   for (const entry of await fat.walk()) {
+    if (cancelled()) throw new ScanCancelled();
     // walk() entries carry the path only; the file name is the last segment
     // (path = parent + "/" + entry.name in Python _walk_fat).
     const fileName = entry.path.slice(entry.path.lastIndexOf("/") + 1);
@@ -313,7 +329,8 @@ export async function scanSource(source, name) {
 
 // --- container fallback (_records_from_extraction, analyzer.py:268-321) ---------
 
-async function scanExtracted(source, name) {
+async function scanExtracted(source, name, cancelled = () => false) {
+  if (cancelled()) throw new ScanCancelled();
   // Python: scan_container raises for inputs below the 512-byte container
   // floor; extraction warnings (missing tools, unsupported containers) are
   // collected alongside the records.
@@ -321,6 +338,7 @@ async function scanExtracted(source, name) {
   const { mbns, sidecars } = discoverCandidates(outputs);
   const records = [];
   for (const { vfile, path } of mbns) {
+    if (cancelled()) throw new ScanCancelled();
     const matchInfo = matchesCandidate(vfile.name);
     if (!matchInfo) continue;
     const { generation, match } = matchInfo;
