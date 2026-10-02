@@ -24,6 +24,20 @@
       <button id="compare-btn" type="button" disabled>Compare selected</button>
     </header>
     <div id="warnings" hidden></div>
+    <div id="exportbar">
+      <span class="exportbar-label">Export formats:</span>
+      <label class="exportbar-format"><input type="checkbox" data-format="json"> JSON</label>
+      <label class="exportbar-format"><input type="checkbox" data-format="csv"> CSV</label>
+      <label class="exportbar-format"><input type="checkbox" data-format="webcsv"> Web CSV</label>
+      <label class="exportbar-format"><input type="checkbox" data-format="b0cd" checked> 0xB0CD (LTE)</label>
+      <label class="exportbar-format"><input type="checkbox" data-format="b826" checked> 0xB826 (NR)</label>
+      <span class="exportbar-buttons">
+        <button id="select-all-btn" type="button">Select all</button>
+        <button id="deselect-all-btn" type="button">Deselect all</button>
+        <button id="export-ticked-btn" type="button">Export ticked</button>
+      </span>
+      <span id="export-status" hidden></span>
+    </div>
     <main id="workbench">
       <aside id="cardpane">
         <table id="cardlist">

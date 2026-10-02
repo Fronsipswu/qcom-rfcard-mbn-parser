@@ -13,7 +13,7 @@
 //   { type: "records",   fileIndex, records, warnings? }  plain JSON-able
 //                                                         ModuleRecord list
 //   { type: "tables",    id, fileIndex, recordName, tables }
-//   { type: "exportBlob", id, filename, base64 }
+//   { type: "exportBlob", id, files: [{ filename, base64 }, ...] }
 //   { type: "error",     id?, message, source? }
 //
 // Additive protocol details (documented deviations, needed by the UI layer):
@@ -172,9 +172,14 @@ async function handleExport(msg) {
   const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
   const files = exportModule(msg.record, parsed, msg.format);
   const encoder = new TextEncoder();
-  for (const file of files) {
-    post({ type: "exportBlob", id: msg.id, filename: file.filename, base64: bytesToBase64(encoder.encode(file.text)) });
-  }
+  // One reply per export request: every file the format produced travels
+  // together (json=1, csv=2, webcsv=1-4, b0cd/b826=1), so the main thread can
+  // await the complete reply when running batch exports.
+  post({
+    type: "exportBlob",
+    id: msg.id,
+    files: files.map((f) => ({ filename: f.filename, base64: bytesToBase64(encoder.encode(f.text)) })),
+  });
 }
 
 function handle(msg) {

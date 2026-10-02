@@ -5,7 +5,14 @@
 // this module only handles JSON rows, exactly like the viewer contract.
 import { ComboViewer } from "./viewer.js";
 import { compareCards } from "./compare.js";
-import { download } from "./exporter.js";
+import { download, downloadBytes } from "./exporter.js";
+import {
+  buildExportJobs,
+  decodeExportBytes,
+  deliveryMode,
+  dedupeFilenames,
+} from "./exportplan.js";
+import { zipSync } from "../lib/vendor/fflate.js";
 import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
 import {
   MIN_CARD_PANE_PX,
@@ -41,6 +48,11 @@ const els = {
   workbench: document.getElementById("workbench"),
   cardPane: document.getElementById("cardpane"),
   splitter: document.getElementById("splitter"),
+  exportbar: document.getElementById("exportbar"),
+  selectAllBtn: document.getElementById("select-all-btn"),
+  deselectAllBtn: document.getElementById("deselect-all-btn"),
+  exportTickedBtn: document.getElementById("export-ticked-btn"),
+  exportStatus: document.getElementById("export-status"),
 };
 
 // --- state ---------------------------------------------------------------------
@@ -62,7 +74,12 @@ let pendingCompare = null; // { want, have: [{label, tables}], missing: Set }
 // and a card's fileIndex alone can point at a different file after a later
 // scan. Entries are removed when the reply (or an error with that id) arrives.
 const pendingReplies = new Map();
+// Worker request id -> { resolve, reject } for batch-export requests; a batch
+// awaits each reply before sending the next (sequential, per-card progress).
+const exportWaiters = new Map();
+let exporting = false; // batch export in flight (blocks re-entry)
 let progressHideTimer = null; // post-completion hide timer (Rec-2)
+let exportStatusTimer = null; // export bar flash hide timer
 
 // --- helpers ---------------------------------------------------------------------
 
@@ -108,6 +125,22 @@ function setProgress(done, total, currentFile) {
   }
 }
 
+// Export bar status (same flash pattern as the viewer's status line). Progress
+// updates pass sticky: true so the message survives a slow parse mid-batch;
+// the final message auto-hides.
+function exportStatus(message, { sticky = false } = {}) {
+  clearTimeout(exportStatusTimer);
+  exportStatusTimer = null;
+  els.exportStatus.textContent = message;
+  els.exportStatus.hidden = false;
+  if (!sticky) {
+    exportStatusTimer = setTimeout(() => {
+      exportStatusTimer = null;
+      els.exportStatus.hidden = true;
+    }, 4000);
+  }
+}
+
 function renderCardList() {
   els.cardBody.innerHTML = "";
   els.cardsEmpty.hidden = cards.length > 0;
@@ -115,12 +148,13 @@ function renderCardList() {
     const record = card.record;
     const tr = document.createElement("tr");
     tr.className = card.key === (selectedCard && selectedCard.key) ? "selected" : "";
+    tr.dataset.cardKey = card.key;
     const identity = recordIdentity(record.name);
     const tdCheck = document.createElement("td");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = checked.has(card.key);
-    checkbox.setAttribute("aria-label", `Compare ${identity || record.name}`);
+    checkbox.setAttribute("aria-label", `Select ${identity || record.name} (compare & export)`);
     checkbox.addEventListener("change", () => {
       if (checkbox.checked) checked.add(card.key);
       else checked.delete(card.key);
@@ -143,6 +177,14 @@ function renderCardList() {
     }
     tr.addEventListener("click", (event) => {
       if (event.target === checkbox) return;
+      // Plain-clicking a row also ticks it for compare/export (Python GUI
+      // parity); un-ticking stays a checkbox-only action so browsing the
+      // viewer never shrinks the export selection.
+      if (!checked.has(card.key)) {
+        checked.add(card.key);
+        checkbox.checked = true;
+        els.compareBtn.disabled = checked.size < 2;
+      }
       selectedCard = card;
       for (const other of els.cardBody.children) other.classList.remove("selected");
       tr.classList.add("selected");
@@ -150,6 +192,17 @@ function renderCardList() {
     });
     els.cardBody.appendChild(tr);
   }
+}
+
+// Reflect the checked set into the listed rows' checkboxes + the compare button
+// (Select all / Deselect all mutate the set in bulk; re-rendering the list
+// would drop the viewer's selected-row state for no benefit).
+function syncChecks() {
+  for (const tr of els.cardBody.children) {
+    const checkbox = tr.querySelector("input[type=checkbox]");
+    if (checkbox && tr.dataset.cardKey) checkbox.checked = checked.has(tr.dataset.cardKey);
+  }
+  els.compareBtn.disabled = checked.size < 2;
 }
 
 // --- card view -------------------------------------------------------------------
@@ -165,24 +218,14 @@ function renderViewer(card, tables) {
   destroyViewer();
   const record = card.record;
   const identity = recordIdentity(record.name);
+  // Exports live in the export bar above the workbench now (Python GUI model);
+  // the per-card header buttons were superseded by "Export ticked".
   const head = document.createElement("div");
   head.className = "card-detail";
-  head.innerHTML = `<span class="card-detail-title"></span>
-    <span class="card-detail-actions">
-      <button type="button" data-format="json">Export JSON</button>
-      <button type="button" data-format="csv">Export CSV</button>
-      <button type="button" data-format="webcsv">Export Web CSV</button>
-      <button type="button" data-format="b0cd">Export 0xB0CD (LTE)</button>
-      <button type="button" data-format="b826">Export 0xB826 (NR)</button>
-    </span>`;
-  head.querySelector(".card-detail-title").textContent = record.name;
-  for (const btn of head.querySelectorAll("button[data-format]")) {
-    btn.addEventListener("click", () => {
-      const id = nextMessageId++;
-      pendingReplies.set(id, card);
-      worker.postMessage({ type: "export", id, fileIndex: card.fileIndex, file: card.file, record: card.record, format: btn.dataset.format });
-    });
-  }
+  const title = document.createElement("span");
+  title.className = "card-detail-title";
+  title.textContent = record.name;
+  head.appendChild(title);
   els.viewerHost.replaceChildren(head);
   viewer = new ComboViewer(els.viewerHost, tables, {
     identity,
@@ -286,6 +329,113 @@ function renderCompare(entries) {
   els.viewerHost.replaceChildren(wrap);
 }
 
+// --- batch export (Python GUI model: ticked cards x enabled formats) ---------------
+
+function bytesFromBase64(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function enabledFormats() {
+  return [...els.exportbar.querySelectorAll("input[type=checkbox][data-format]")]
+    .filter((cb) => cb.checked)
+    .map((cb) => cb.dataset.format);
+}
+
+// One worker request per (card, format), resolved when the complete exportBlob
+// reply arrives. Requests run strictly sequentially (the worker chains them
+// anyway) so a card parses exactly once via the per-File parse memo.
+function requestExport(card, format) {
+  return new Promise((resolve, reject) => {
+    const id = nextMessageId++;
+    pendingReplies.set(id, card);
+    exportWaiters.set(id, { resolve, reject });
+    worker.postMessage({ type: "export", id, fileIndex: card.fileIndex, file: card.file, record: card.record, format });
+  });
+}
+
+function mimeFor(filename) {
+  return filename.endsWith(".json")
+    ? "application/json;charset=utf-8"
+    : filename.endsWith(".txt")
+      ? "text/plain;charset=utf-8"
+      : "text/csv;charset=utf-8";
+}
+
+// Delivery per design: <=ZIP_FILE_THRESHOLD files download individually
+// (BOM-preserving decode so CSVs stay byte-identical to Python's utf-8-sig);
+// above it everything ships as ONE fflate zip with deduped entry names.
+function deliver(collected, cardCount, failedCount) {
+  const suffix = failedCount ? ` ${failedCount} export(s) failed — see warnings.` : "";
+  if (!collected.length) {
+    exportStatus(`Nothing was exported — see warnings.${suffix}`);
+    return;
+  }
+  if (deliveryMode(collected.length) === "zip") {
+    const names = dedupeFilenames(collected.map((f) => f.filename));
+    const entries = {};
+    for (const [i, f] of collected.entries()) entries[names[i]] = f.bytes;
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const zipName = `${cardCount}cards_export_${stamp}.zip`;
+    downloadBytes(zipName, zipSync(entries), "application/zip");
+    exportStatus(`Exported ${collected.length.toLocaleString("en-US")} file(s) from ${cardCount.toLocaleString("en-US")} card(s) as ${zipName}.${suffix}`);
+  } else {
+    for (const f of collected) {
+      download(f.filename, decodeExportBytes(f.bytes), mimeFor(f.filename));
+    }
+    exportStatus(`Exported ${collected.length.toLocaleString("en-US")} file(s) from ${cardCount.toLocaleString("en-US")} card(s).${suffix}`);
+  }
+}
+
+async function exportTicked() {
+  if (exporting) {
+    exportStatus("An export is already running…", { sticky: true });
+    return;
+  }
+  const ticked = cards.filter((c) => checked.has(c.key));
+  if (!ticked.length) {
+    exportStatus("No cards are ticked — tick at least one card to export.");
+    return;
+  }
+  const formats = enabledFormats();
+  if (!formats.length) {
+    exportStatus("No export formats are enabled — tick at least one format.");
+    return;
+  }
+  const jobs = buildExportJobs(ticked, formats);
+  const cardCount = new Set(jobs.map((j) => j.card.key)).size;
+  const collected = []; // { filename, bytes }
+  let failedCount = 0;
+  exporting = true;
+  els.exportTickedBtn.disabled = true;
+  try {
+    let lastKey = null;
+    let done = 0;
+    for (const job of jobs) {
+      if (job.card.key !== lastKey) {
+        lastKey = job.card.key;
+        done += 1;
+        exportStatus(`Exporting ${done.toLocaleString("en-US")}/${cardCount.toLocaleString("en-US")}…`, { sticky: true });
+      }
+      try {
+        const files = await requestExport(job.card, job.format);
+        for (const f of files) collected.push({ filename: f.filename, bytes: bytesFromBase64(f.base64) });
+      } catch {
+        // The shared error handler already warned; keep exporting the rest.
+        failedCount += 1;
+      }
+    }
+    deliver(collected, cardCount, failedCount);
+  } catch (err) {
+    exportStatus(`Export failed: ${err && err.message ? err.message : err}`);
+  } finally {
+    exporting = false;
+    els.exportTickedBtn.disabled = false;
+  }
+}
+
 // --- import ------------------------------------------------------------------------
 
 function importFiles(files) {
@@ -343,23 +493,24 @@ worker.onmessage = (event) => {
       break;
     }
     case "exportBlob": {
-      // An export can emit several files; the reply is consumed on the first
-      // blob (the rest still download), and an error with the id would clear
-      // it too — no pending entry outlives its request.
+      // One reply per export request; files carries every file the format
+      // produced (json=1, csv=2, webcsv=1-4, b0cd/b826=1). The batch runner
+      // awaits this; a resolved waiter has no pending entry left.
       pendingReplies.delete(msg.id);
-      const bin = atob(msg.base64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const mime = msg.filename.endsWith(".json")
-        ? "application/json;charset=utf-8"
-        : msg.filename.endsWith(".txt")
-          ? "text/plain;charset=utf-8"
-          : "text/csv;charset=utf-8";
-      download(msg.filename, new TextDecoder().decode(bytes), mime);
+      const waiter = exportWaiters.get(msg.id);
+      exportWaiters.delete(msg.id);
+      if (waiter) waiter.resolve(msg.files ?? []);
       break;
     }
     case "error": {
-      if (msg.id !== undefined) pendingReplies.delete(msg.id);
+      if (msg.id !== undefined) {
+        pendingReplies.delete(msg.id);
+        const waiter = exportWaiters.get(msg.id);
+        if (waiter) {
+          exportWaiters.delete(msg.id);
+          waiter.reject(new Error(msg.message));
+        }
+      }
       addWarning("error", msg.message, msg.source);
       break;
     }
@@ -385,6 +536,15 @@ els.cancelBtn.addEventListener("click", () => {
   els.cancelBtn.hidden = true;
 });
 els.compareBtn.addEventListener("click", () => openCompare());
+els.selectAllBtn.addEventListener("click", () => {
+  for (const card of cards) checked.add(card.key);
+  syncChecks();
+});
+els.deselectAllBtn.addEventListener("click", () => {
+  checked.clear();
+  syncChecks();
+});
+els.exportTickedBtn.addEventListener("click", () => exportTicked());
 
 for (const eventName of ["dragenter", "dragover"]) {
   els.dropzone.addEventListener(eventName, (event) => {

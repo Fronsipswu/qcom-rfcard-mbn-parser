@@ -20,3 +20,17 @@ export function download(filename, text, mime = "text/csv;charset=utf-8") {
   // Revoke on the next tick: revoking synchronously can cancel the download.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
+// Binary variant for the batch-zip delivery (>ZIP_FILE_THRESHOLD files build
+// one fflate zipSync archive on the main thread); same anchor plumbing.
+export function downloadBytes(filename, bytes, mime = "application/octet-stream") {
+  const blob = new Blob([bytes], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}

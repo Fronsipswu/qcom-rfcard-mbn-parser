@@ -227,7 +227,36 @@ body.dragging {
   white-space: nowrap;
 }
 
-.card-detail-actions { display: flex; gap: 6px; flex: none; }
+/* --- export bar (Python GUI export row) --------------------------------------------- */
+
+#exportbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+#exportbar .exportbar-label { font-weight: 600; }
+
+#exportbar .exportbar-format {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#exportbar .exportbar-buttons {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+#exportbar #export-status { color: #8a6d1a; }
 
 /* --- ComboViewer (viewer.js) ------------------------------------------------------ */
 
