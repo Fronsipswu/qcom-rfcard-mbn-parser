@@ -18,9 +18,12 @@ import { uniqueFileNames } from "./loadedfiles.js";
 import {
   MIN_CARD_PANE_PX,
   SPLITTER_STORAGE_KEY,
+  STACKED_MEDIA_QUERY,
+  applyStackedState,
   clampSplitterWidth,
   maxCardPaneWidth,
   parseStoredWidth,
+  shouldDrag,
 } from "./splitter.js";
 import { recordIdentity, normalizeInnerPath } from "./lib/analyzer.js";
 
@@ -679,6 +682,7 @@ let splitterDrag = null; // { id, startX, startWidth }
 
 els.splitter.addEventListener("pointerdown", (event) => {
   if (event.button !== 0) return;
+  if (!shouldDrag(document.body.classList.contains("stacked"))) return;
   event.preventDefault();
   splitterDrag = {
     id: event.pointerId,
@@ -743,3 +747,38 @@ setSplitterAriaBounds();
 const storedSplitterWidth = parseStoredWidth(readStoredSplitterWidth(), els.workbench.clientWidth);
 if (storedSplitterWidth !== null) applyCardPaneWidth(storedSplitterWidth);
 else syncSplitterAria();
+
+// --- stacked (mobile portrait) layout ------------------------------------------------
+
+// Portrait phones stack the card pane above the viewer (css/app.css media
+// query) and hide the splitter; leftover inline widths from drags/resizes
+// would fight the stacked CSS, so transitions clear them (applyStackedState)
+// and leaving stacked re-applies the persisted split like startup.
+// matchMedia is feature-checked: without it the page keeps the split layout
+// instead of breaking.
+const stackedMq = typeof window.matchMedia === "function"
+  ? window.matchMedia(STACKED_MEDIA_QUERY)
+  : null;
+
+function handleStackedChange(stacked) {
+  applyStackedState(stacked, {
+    body: document.body,
+    cardPane: els.cardPane,
+    storedWidth: readStoredSplitterWidth(),
+    containerWidth: els.workbench.clientWidth,
+    applyWidth: applyCardPaneWidth,
+  });
+  if (!stacked) syncSplitterAria();
+}
+
+if (stackedMq) {
+  const onStackedChange = (event) => handleStackedChange(event.matches);
+  if (typeof stackedMq.addEventListener === "function") {
+    stackedMq.addEventListener("change", onStackedChange);
+  } else if (typeof stackedMq.addListener === "function") {
+    stackedMq.addListener(onStackedChange); // older Safari
+  }
+  // Runs after the startup restore above, so a phone opening with a stored
+  // split has its inline width cleared before the stacked view first paints.
+  handleStackedChange(stackedMq.matches);
+}

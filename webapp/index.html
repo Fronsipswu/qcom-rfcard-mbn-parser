@@ -13,7 +13,6 @@
         <strong>Import modem images / RF MBNs</strong>
         <span>Drop files here or</span>
         <button id="pick-btn" type="button">browse</button>
-        <button id="clear-btn" type="button">Clear</button>
         <input id="file-input" type="file" multiple
                accept=".img,.mbn,.tar.md5,.zip,.ipsw,.bbfw,.gz" hidden>
       </div>
@@ -22,7 +21,10 @@
         <span id="progress-label"></span>
         <button id="cancel-btn" type="button" hidden>Cancel</button>
       </div>
-      <button id="compare-btn" type="button" disabled>Compare selected</button>
+      <span id="topbar-actions">
+        <button id="clear-btn" type="button">Clear</button>
+        <button id="compare-btn" type="button" disabled>Compare selected</button>
+      </span>
     </header>
     <div id="loadedfiles" hidden>
       <span id="loadedfiles-label" class="loadedfiles-label">Loaded files:</span>

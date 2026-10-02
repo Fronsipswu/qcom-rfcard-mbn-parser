@@ -35,6 +35,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
 }
 
 /* --- top bar: import + progress + compare ---------------------------------- */
@@ -102,6 +103,12 @@ button:disabled {
 }
 
 #compare-btn { flex: none; }
+
+#topbar-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
 
 /* --- loaded-file chips ---------------------------------------------------------- */
 
@@ -513,3 +520,61 @@ body.dragging {
 .compare-table td.compare-band { text-align: left; font-weight: 600; }
 .compare-table td.present { color: #1b5e20; }
 .compare-table td.absent { color: #b0b7bd; }
+
+/* --- mobile portrait: stacked workbench ---------------------------------------------- */
+
+/* Phones in portrait get one column: dropzone, Clear/Compare row, progress
+   row, then the card pane (capped at 45vh) above the viewer. The splitter is
+   hidden and the stacked helper in main.js clears its leftover inline styles;
+   !important beats any inline width a desktop drag left behind. */
+
+@media (max-width: 768px) and (orientation: portrait) {
+  #topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  #dropzone {
+    order: 1;
+    flex-wrap: wrap;
+  }
+
+  #topbar-actions { order: 2; }
+
+  #topbar-actions button { flex: 1; }
+
+  #progresswrap { order: 3; }
+
+  #progress { flex: 1; width: auto; }
+
+  #workbench { flex-direction: column; }
+
+  #cardpane {
+    flex: none !important;
+    max-height: 45vh;
+    min-width: 0;
+    width: auto !important;
+  }
+
+  #viewerhost {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  #splitter { display: none; }
+
+  /* Touch polish: bigger tap targets, tighter spacing. */
+  button {
+    min-height: 34px;
+    padding: 6px 14px;
+  }
+
+  #exportbar { gap: 4px 10px; }
+
+  #exportbar .exportbar-format { padding: 6px 2px; }
+
+  #loadedfiles .loadedfile-chip { max-width: 60vw; }
+
+  .cv-search-entry { width: min(260px, 100%); }
+}
