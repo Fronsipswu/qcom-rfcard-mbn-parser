@@ -417,6 +417,18 @@ export class ComboViewer {
     this.theadEl.appendChild(this.filterRowEl);
   }
 
+  // The sticky filter row must pin directly beneath the label row, but CSS
+  // cannot know the label row's rendered height, so measure it live and set
+  // an inline top on each filter cell (overrides the top:0 from
+  // `.cv thead th`). Called after every render so the offset never goes
+  // stale, whether the row was rebuilt or persisted.
+  positionFilterRow() {
+    const tr = this.theadEl.querySelector("tr.cv-filterrow");
+    if (!tr) return;
+    const top = `${this.theadEl.rows[0]?.offsetHeight ?? 0}px`;
+    for (const th of tr.cells) th.style.top = top;
+  }
+
   restoreFilterFocus(saved) {
     if (!saved || !this.filterRowEl || !this.filterRowEl.contains(saved.el) || !saved.el.isConnected) return;
     saved.el.focus();
@@ -482,6 +494,7 @@ export class ComboViewer {
     }
     this.tbodyEl.innerHTML = rowsHtml.join("");
     this.applySelection();
+    this.positionFilterRow();
   }
 
   applySelection() {

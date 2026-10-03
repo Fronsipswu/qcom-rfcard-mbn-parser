@@ -445,12 +445,15 @@ body.dragging {
 
 .cv-colhandle:hover { background: var(--accent); }
 
-/* Second header row: one search input per visible column. Static position —
-   the label row above stays sticky, inputs scroll with the body. The extra
-   `tr` element selector out-specifies `.cv thead th` (0-2-2 vs 0-1-2), whose
-   sticky top:0 would otherwise pin the filter row over the labels on scroll. */
+/* Second header row: one search input per visible column. Sticky like the
+   label row, but pinned BENEATH it: positionFilterRow() measures the label
+   row's rendered height and sets it as an inline top on each filter cell,
+   overriding the sticky top:0 inherited from `.cv thead th`. The extra `tr`
+   element selector out-specifies `.cv thead th` (0-2-2 vs 0-1-2) so the
+   position/cursor/padding overrides here win over the base rule. */
 .cv tr.cv-filterrow th {
-  position: static;
+  position: sticky;
+  z-index: 2;
   cursor: default;
   padding: 2px 4px;
 }
