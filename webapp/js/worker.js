@@ -14,7 +14,7 @@
 //   { type: "records",   fileIndex, records, warnings? }  plain JSON-able
 //                                                         ModuleRecord list
 //   { type: "tables",    id, fileIndex, recordName, tables }
-//   { type: "exportBlob", id, files: [{ filename, base64 }, ...] }
+//   { type: "exportBlob", id, files: [{ filename, bytes } | { filename, text }, ...] }
 //   { type: "error",     id?, message, source? }
 //
 // Additive protocol details (documented deviations, needed by the UI layer):
@@ -64,9 +64,14 @@ let currentOp = null;
 // pair content-addresses the entry. Entries die with their File.
 const parseMemo = new WeakMap(); // File -> Map<`${name}\u0000${sha256}`, {blob, parsed}>
 const sourceMemo = new WeakMap(); // File -> BrowserFileSource
+const fatMemo = new WeakMap(); // File -> Fat16Image | null (null = init failed: not FAT16)
+// File -> Promise<Map<`${name}\u0000${inner_path}`, Uint8Array>>: extraction may
+// release VFiles it returns (VFile.release drops consumed members), so the memo
+// harvests the extracted mbn bytes once and lets the virtual tree go.
+const containerMemo = new WeakMap();
 
-function post(message) {
-  self.postMessage(message);
+function post(message, transfer = []) {
+  self.postMessage(message, transfer);
 }
 
 function resetSession() {
@@ -82,13 +87,35 @@ function sourceFor(file) {
   return source;
 }
 
-function bytesToBase64(u8) {
-  let binary = "";
-  const CHUNK = 0x8000;
-  for (let i = 0; i < u8.length; i += CHUNK) {
-    binary += String.fromCharCode.apply(null, u8.subarray(i, i + CHUNK));
+async function fatFor(source, file) {
+  if (fatMemo.has(file)) return fatMemo.get(file);
+  const fat = new Fat16Image(source);
+  try {
+    await fat.init();
+  } catch {
+    fatMemo.set(file, null); // not FAT16; do not re-init per record
+    return null;
   }
-  return btoa(binary);
+  fatMemo.set(file, fat);
+  return fat;
+}
+
+function extractContainerMemoized(source, file, fallbackName) {
+  let pending = containerMemo.get(file);
+  if (!pending) {
+    pending = (async () => {
+      const { outputs } = await extractContainer(source, fallbackName);
+      const { mbns } = discoverCandidates(outputs);
+      const blobs = new Map();
+      for (const { vfile, path } of mbns) {
+        blobs.set(`${vfile.name}\u0000${normalizeInnerPath(path)}`, vfile.read());
+      }
+      return blobs;
+    })();
+    containerMemo.set(file, pending);
+    pending.catch(() => containerMemo.delete(file)); // failed extraction is not memoized
+  }
+  return pending;
 }
 
 // Blob for a record: direct MBN (whole file) / FAT16 cluster chain / container
@@ -98,20 +125,14 @@ async function readRecordBlob(source, file, record) {
   if (record.external && record.inner_path === record.name && matchesCandidate(record.name)) {
     return source.read(0, source.size);
   }
-  const fat = new Fat16Image(source);
-  try {
-    await fat.init();
+  const fat = await fatFor(source, file);
+  if (fat) {
     const entry = await fat.findFile(record.inner_path);
     if (entry) return (await fat.readClusters(entry.firstCluster)).slice(0, entry.size);
-  } catch {
-    // not FAT16: fall through to container extraction
   }
-  const { outputs } = await extractContainer(source, file && file.name ? file.name : record.name);
-  const { mbns } = discoverCandidates(outputs);
-  const wanted = normalizeInnerPath(record.inner_path);
-  for (const { vfile, path } of mbns) {
-    if (vfile.name === record.name && normalizeInnerPath(path) === wanted) return vfile.read();
-  }
+  const blobs = await extractContainerMemoized(source, file, file && file.name ? file.name : record.name);
+  const blob = blobs.get(`${record.name}\u0000${normalizeInnerPath(record.inner_path)}`);
+  if (blob !== undefined) return blob;
   throw new Error(`record not found in source: ${record.name} (${record.inner_path})`);
 }
 
@@ -192,18 +213,23 @@ async function handleExport(msg) {
     const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
     files = exportModule(msg.record, parsed, msg.format);
   }
-  const encoder = new TextEncoder();
   // One reply per export request: every file the format produced travels
   // together (mbn=1, json=1, csv=2, webcsv=1-4, b0cd/b826=1), so the main
   // thread can await the complete reply when running batch exports.
-  post({
-    type: "exportBlob",
-    id: msg.id,
-    files: files.map((f) => ({
-      filename: f.filename,
-      base64: bytesToBase64(f.bytes ?? encoder.encode(f.text)),
-    })),
+  // Binary files travel as transferable ArrayBuffers (one worker-side copy so
+  // the memoized blob stays usable — transferring would detach it); text
+  // files travel as plain strings. No base64 round-trip.
+  const transfer = [];
+  const payload = files.map((f) => {
+    if (f.bytes !== undefined) {
+      const copy = new Uint8Array(f.bytes.byteLength);
+      copy.set(f.bytes);
+      transfer.push(copy.buffer);
+      return { filename: f.filename, bytes: copy };
+    }
+    return { filename: f.filename, text: f.text };
   });
+  post({ type: "exportBlob", id: msg.id, files: payload }, transfer);
 }
 
 function handle(msg) {

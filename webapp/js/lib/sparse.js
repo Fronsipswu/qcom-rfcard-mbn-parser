@@ -53,8 +53,6 @@ export function validSparseHeader(h) {
   );
 }
 
-const SPARSE_MAGIC_BYTES = [0x3a, 0xff, 0x26, 0xed];
-
 // Port of _sparse_headers (:150-210): chunked ~1MB scan reporting every valid
 // sparse header offset (max `maxOffsets`). Deliberate fix over the Python
 // loop's handle bookkeeping: windows overlap by 28 bytes and found offsets are
@@ -70,9 +68,15 @@ export async function scanForSparse(source, fileSize, maxOffsets = 8) {
   while (pos < fileSize && offsets.length < maxOffsets) {
     const readSize = Math.min(CHUNK, fileSize - pos);
     const data = await source.read(pos, readSize);
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
     let start = 0;
     for (;;) {
-      const idx = indexOfBytes(data, SPARSE_MAGIC_BYTES, start);
+      let idx = -1;
+      // DataView.getUint32 handles byte-unaligned offsets; LE gives the
+      // 0x3a 0xff 0x26 0xed magic as 0xed26ff3a.
+      for (let i = start; i + 4 <= data.byteLength; i++) {
+        if (dv.getUint32(i, true) === 0xed26ff3a) { idx = i; break; }
+      }
       if (idx < 0) break;
       const offset = pos + idx;
       if (offset + 28 <= fileSize) {
@@ -88,16 +92,6 @@ export async function scanForSparse(source, fileSize, maxOffsets = 8) {
     pos += readSize - OVERLAP;
   }
   return offsets;
-}
-
-function indexOfBytes(hay, needle, from = 0) {
-  outer: for (let i = from; i <= hay.length - needle.length; i++) {
-    for (let j = 0; j < needle.length; j++) {
-      if (hay[i + j] !== needle[j]) continue outer;
-    }
-    return i;
-  }
-  return -1;
 }
 
 // RandomAccessSource over the UNSPARSED content. Reads resolve through the

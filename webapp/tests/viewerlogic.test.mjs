@@ -15,6 +15,7 @@ import {
   compareKeys,
   bandSortKey,
   columnSortKey,
+  charCount,
 } from "../js/viewer.js";
 import { bandColor } from "../js/lib/bandcolors.js";
 
@@ -166,4 +167,11 @@ test("sortRows handles a 3,906-row band column (card 1426 shape) and completes",
   // Spot-check ordering: band 1 before band 39 in ascending order.
   const firstBands = sorted.slice(0, 3).map((r) => r["LTE DL"]);
   assert.ok(firstBands.every((v) => v.startsWith("1A")), `smallest bands first, got ${firstBands.join(", ")}`);
+});
+
+test("charCount counts code points without allocating (astral plane = 1)", () => {
+  assert.equal(charCount(""), 0);
+  assert.equal(charCount("abc"), 3);
+  assert.equal(charCount("a\u{10348}b"), 3); // Gothic ahd = 1 code point
+  assert.equal(charCount("\u017f\u03bc"), 2); // long s + micro (casefold-diff chars still 1 cp each)
 });

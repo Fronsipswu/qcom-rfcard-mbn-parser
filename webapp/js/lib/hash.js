@@ -59,6 +59,18 @@ export function sha256Hex(data) {
   return hex(out);
 }
 
+// Native SHA-256 where crypto.subtle exists (secure contexts; Node >= 19 has
+// it globally for tests). WebCrypto accepts BufferSource, so subarray views
+// hash exactly the viewed bytes. Falls back to the pure-JS implementation
+// (identical lowercase-hex output) on insecure contexts.
+export async function sha256HexAsync(data) {
+  if (globalThis.crypto?.subtle) {
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", data);
+    return hex(new Uint8Array(digest));
+  }
+  return sha256Hex(data);
+}
+
 // RFC 1321 constants floor(abs(sin(i+1)) * 2^32) — generated, not hand-typed.
 const T = new Uint32Array([
   0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,

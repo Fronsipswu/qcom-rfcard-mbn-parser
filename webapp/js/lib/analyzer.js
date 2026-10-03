@@ -12,7 +12,7 @@
 // that are neither a named MBN nor a FAT16 image.
 // Python parity contract: identical values, dict key insertion order,
 // iteration order and message strings; goldens compare key order.
-import { sha256Hex } from "./hash.js";
+import { sha256Hex, sha256HexAsync } from "./hash.js";
 import { hex } from "./bytes.js";
 import { Fat16Image } from "./fat16.js";
 import { Elf32Image, ParseError } from "./elf.js";
@@ -25,7 +25,7 @@ import {
   parseLegacyModule,
   ToolError,
 } from "./legacy_parser.js";
-import { parseModernModule, pyCasefold, pyNdInt, pyRegexFold } from "./modern_parser.js";
+import { parseModernModule, countModernCombos, pyCasefold, pyNdInt, pyRegexFold } from "./modern_parser.js";
 
 export { ToolError };
 
@@ -157,14 +157,6 @@ export function deduplicateRecords(records) {
 
 // --- combo counts (analyzer.py:1552-1619) --------------------------------------
 
-function countTableRows(parsed) {
-  const counts = {};
-  for (const combo of parsed.combinations) {
-    counts[combo.table] = (hasOwn(counts, combo.table) ? counts[combo.table] : 0) + 1;
-  }
-  return counts;
-}
-
 export function comboCounts(record, blob) {
   try {
     if (record.generation === "Legacy ELF" || record.generation === "legacy") {
@@ -195,7 +187,7 @@ export function comboCounts(record, blob) {
       const total = endc + nrCa + nrdc;
       return [lte, `${endc}+${nrCa}+${nrdc}=${total}`];
     }
-    const counts = countTableRows(parseModule(record, blob));
+    const counts = countModernCombos(record, blob);
     const lte = hasOwn(counts, "lte_ca") ? counts.lte_ca : 0;
     const endc = hasOwn(counts, "endc") ? counts.endc : 0;
     const nrCa = hasOwn(counts, "nr_ca") ? counts.nr_ca : 0;
@@ -251,7 +243,7 @@ export async function scanSource(source, name, { shouldCancel } = {}) {
     const { generation, match } = direct;
     const size = source.size;
     const blob = await source.read(0, size);
-    const digest = sha256Hex(blob);
+    const digest = await sha256HexAsync(blob);
     const base = {
       inner_path: name,
       name,
@@ -308,7 +300,7 @@ export async function scanSource(source, name, { shouldCancel } = {}) {
     // (analyzer.py:226): no size validation, and the chain is walked even for
     // size 0, so corrupt entries keep Python's outcomes exactly.
     const raw = (await fat.readClusters(entry.firstCluster)).slice(0, entry.size);
-    const digest = sha256Hex(raw);
+    const digest = await sha256HexAsync(raw);
     const base = {
       inner_path: entry.path,
       name: fileName,
@@ -348,7 +340,7 @@ async function scanExtracted(source, name, cancelled = () => false) {
     const parts = new Set(pyCasefold(path).split("/").filter(Boolean));
     if (generation === "Legacy ELF" && !parts.has("so") && !parts.has("rfcards")) continue;
     const blob = await vfile.read();
-    const digest = sha256Hex(blob);
+    const digest = await sha256HexAsync(blob);
     const base = {
       inner_path: path,
       name: vfile.name,

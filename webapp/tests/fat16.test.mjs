@@ -197,6 +197,48 @@ test("findFile without init() fails with a clear message", async () => {
   await assert.rejects(() => fat.findFile("/RF_CARDS/615_0_0.MBN"), /call await init\(\) before findFile/);
 });
 
+class CountingSource {
+  constructor(inner) {
+    this.inner = inner;
+    this.size = inner.size;
+    this.reads = []; // [offset, length]
+  }
+  async read(off, len) {
+    this.reads.push([off, len]);
+    return this.inner.read(off, len);
+  }
+}
+
+test("readClusters coalesces a contiguous chain into one read", async () => {
+  const counting = new CountingSource(new BrowserFileSource(new Blob([buildFat16Fixture()])));
+  const fat = new Fat16Image(counting);
+  await fat.init();
+  const entry = await fat.findFile("/rf_config_1306_0_0.mbn"); // 3-4-5 chain, 5000 bytes
+  counting.reads.length = 0; // drop init/walk reads
+  const out = await fat.readClusters(entry.firstCluster);
+  assert.equal(out.length, 3 * CLUSTER_SIZE);
+  assert.equal(counting.reads.length, 1, "one merged read for a contiguous chain");
+  assert.deepEqual(counting.reads[0], [clusterOffset(3), 3 * CLUSTER_SIZE]);
+  for (let i = 0; i < 5000; i++) assert.equal(out[i], pattern(i));
+});
+
+test("readClusters issues one read per non-adjacent run", async () => {
+  // Build a fixture whose big file chain is 3 -> 5 -> EOC (cluster 4 skipped),
+  // i.e. two runs of one cluster each. Patch the FAT link after building.
+  const image = buildFat16Fixture();
+  const dv = new DataView(image.buffer);
+  dv.setUint16(FAT_OFFSET + 6, 5, true); // 3 -> 5 (skip 4)
+  const counting = new CountingSource(new BrowserFileSource(new Blob([image])));
+  const fat = new Fat16Image(counting);
+  await fat.init();
+  const entry = await fat.findFile("/rf_config_1306_0_0.mbn");
+  counting.reads.length = 0;
+  await fat.readClusters(entry.firstCluster);
+  assert.equal(counting.reads.length, 2, "two runs -> two reads");
+  assert.deepEqual(counting.reads[0], [clusterOffset(3), CLUSTER_SIZE]);
+  assert.deepEqual(counting.reads[1], [clusterOffset(5), CLUSTER_SIZE]);
+});
+
 // --- golden (corpus-gated) ---------------------------------------------------
 
 test("fat16 hardware entries match goldens", { skip: !corpusAvailable() }, async (t) => {

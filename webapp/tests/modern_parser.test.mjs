@@ -628,6 +628,15 @@ test("parseModernModule accepts res names only Python casefold() matches", () =>
   assert.throws(() => parseModernModule(record, framedItem("/rfc/x_reſ2.dat", makeResDat())), ToolError);
 });
 
+test("module_sha256 reuses record.sha256 when present, hashes only as fallback", () => {
+  const blob = framedItem("/rfc/x_res.dat", makeResDat());
+  const baseRecord = { name: "rf_config_1_2_3.mbn", inner_path: "/rf_config_1_2_3.mbn" };
+  const withDigest = parseModernModule({ ...baseRecord, sha256: "aa".repeat(32) }, blob);
+  assert.equal(withDigest.metadata.module_sha256, "aa".repeat(32));
+  const without = parseModernModule({ ...baseRecord, sha256: undefined }, blob);
+  assert.equal(without.metadata.module_sha256, sha256Hex(blob));
+});
+
 // --- F5: candidate-loop rejection on a corrupt adler32 trailer ---
 
 test("datPayloadCandidates rejects zlib streams with a corrupt adler trailer", () => {

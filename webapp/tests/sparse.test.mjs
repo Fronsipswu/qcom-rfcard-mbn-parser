@@ -129,6 +129,14 @@ test("SINGLE_N_LONELY offset (plan case)", async () => {
   assert.deepEqual(await scanForSparse(src, wrapped.length), [13568]);
 });
 
+test("scanForSparse finds headers at byte-unaligned offsets", async () => {
+  const sparse = buildSparseImage({ blockSize: 4096, chunks: [{ type: 0xcac1, blocks: 1 }] });
+  const prefix = new Uint8Array([0xde, 0xad, 0xbe]); // magic would start at offset 3, unaligned to 4
+  const image = concat([prefix, sparse]);
+  const src = new BrowserFileSource(new Blob([image]));
+  assert.deepEqual(await scanForSparse(src, image.length, 8), [3]);
+});
+
 test("scanForSparse reports all valid offsets, capped at 8, skipping invalid headers", async () => {
   const good = buildSparseImage({ blockSize: 4096, chunks: [{ type: 0xcac1, blocks: 1 }] });
   const bad = buildSparseHeader({ blocks: 1, chunkCount: 1, blockSize: 4096, major: 2 }); // never validates

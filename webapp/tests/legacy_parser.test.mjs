@@ -27,6 +27,7 @@ import {
   parseDescriptor,
   parseLegacyModule,
 } from "../js/lib/legacy_parser.js";
+import { sha256Hex } from "../js/lib/hash.js";
 
 class FlatImage {
   static RECORDS_VA = 0x1000;
@@ -149,4 +150,29 @@ test("legacy ELF records match Python goldens", { skip: !corpusAvailable() }, as
     await src.close();
   }
   assert.equal(checked, 47);
+});
+
+test("module_sha256 reuses record.sha256 when present, hashes only as fallback (legacy)", { skip: !corpusAvailable() }, async () => {
+  const corpus = JSON.parse(await readFile(new URL("../goldens/corpus.json", import.meta.url)));
+  let checked = 0;
+  for (const [img, recs] of Object.entries(corpus)) {
+    const legacyRecs = recs.filter((r) => r.generation === "Legacy ELF");
+    if (legacyRecs.length === 0) continue;
+    const src = await sourceFor(join(CORPUS_DIR, img));
+    const fat = new Fat16Image(src);
+    await fat.init();
+    const byPath = new Map((await fat.walk()).map((e) => [e.path, e]));
+    for (const rec of legacyRecs) {
+      const entry = byPath.get(rec.inner_path);
+      assert.ok(entry, `${img}: missing ${rec.inner_path}`);
+      const blob = await fat.readFile(entry);
+      const withDigest = parseLegacyModule({ ...rec, sha256: "aa".repeat(32) }, blob);
+      assert.equal(withDigest.metadata.module_sha256, "aa".repeat(32), `${img}/${rec.name}`);
+      const without = parseLegacyModule({ name: rec.name, inner_path: rec.inner_path }, blob);
+      assert.equal(without.metadata.module_sha256, sha256Hex(blob), `${img}/${rec.name}`);
+      checked++;
+    }
+    await src.close();
+  }
+  assert.ok(checked > 0, "expected corpus legacy records");
 });

@@ -198,7 +198,13 @@ function bandCellHtml(cell, header) {
     .join(" + ");
 }
 
-const charCount = (s) => [...s].length;
+// Code-point count (String iterator == [...s].length) without the array
+// allocation; layoutColumns runs this over every cell of every table.
+export const charCount = (s) => {
+  let n = 0;
+  for (const _ of s) n += 1;
+  return n;
+};
 
 function measureCharWidth() {
   const canvas = document.createElement("canvas");

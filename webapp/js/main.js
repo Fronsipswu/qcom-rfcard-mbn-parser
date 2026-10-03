@@ -352,13 +352,6 @@ function renderCompare(entries) {
 
 // --- batch export (Python GUI model: ticked cards x enabled formats) ---------------
 
-function bytesFromBase64(b64) {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
-}
-
 function enabledFormats() {
   return [...els.exportbar.querySelectorAll("input[type=checkbox][data-format]")]
     .filter((cb) => cb.checked)
@@ -434,6 +427,7 @@ async function exportTicked() {
   const jobs = buildExportJobs(ticked, formats);
   const cardCount = new Set(jobs.map((j) => j.card.key)).size;
   const collected = []; // { filename, bytes }
+  const encoder = new TextEncoder();
   let failedCount = 0;
   exporting = true;
   els.exportTickedBtn.disabled = true;
@@ -451,7 +445,7 @@ async function exportTicked() {
       }
       try {
         const files = await requestExport(job.card, job.format);
-        for (const f of files) collected.push({ filename: f.filename, bytes: bytesFromBase64(f.base64) });
+        for (const f of files) collected.push({ filename: f.filename, bytes: f.bytes ?? encoder.encode(f.text) });
       } catch {
         // The shared error handler already warned; keep exporting the rest.
         failedCount += 1;

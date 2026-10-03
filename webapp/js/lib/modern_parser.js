@@ -1037,7 +1037,7 @@ export function parseModernModule(record, blob) {
       version: VERSION,
       generation: record.generation ?? null,
       module: moduleFields(record),
-      module_sha256: sha256Hex(blob),
+      module_sha256: record.sha256 || sha256Hex(blob),
       res_dat_path: datName,
       res_dat_sha256: sha256Hex(resDat),
       dat_encoding: encoding,
@@ -1049,4 +1049,32 @@ export function parseModernModule(record, blob) {
     components,
     diag: { b0cd: b0cdPackets, b826: b826Packets },
   };
+}
+
+// Count-only fast path for scan-time comboCounts: identical table tally to
+// parseModernModule().combinations without building components, DIAG packets,
+// raw_hex, or metadata. Valid because modernLteRows/modernNrRows push exactly
+// one combinations row per raw/section record with no filtering (verified
+// against the full parse by the parity test and the golden corpus).
+export function countModernCombos(record, blob) {
+  const dats = extractRfcDats(blob);
+  const resItems = dats
+    .filter((d) => pyCasefold(d.name).endsWith("_res.dat"))
+    .map((d) => [d.name, d.data]);
+  if (resItems.length === 0) throw new ToolError("No embedded /rfc/*_res.dat was found");
+  if (resItems.length > 1) {
+    throw new ToolError("More than one *_res.dat was found: " + resItems.map(([name]) => name).join(", "));
+  }
+  const { rrc } = parseResDat(resItems[0][1]);
+  const counts = {};
+  for (const suffix of ["high", "low"]) {
+    const field = `lte_info_per_band_sub_cap_${suffix}`;
+    const lteRows = chunks(rrc[field], 50).slice(0, asCount(rrc[`${field}_num`])).length;
+    if (lteRows) counts.lte_ca = (counts.lte_ca ?? 0) + lteRows;
+    for (const [prefix, table] of SECTION_SPECS) {
+      const n = nrSectionRecords(rrc, prefix, suffix).length;
+      if (n) counts[table] = (counts[table] ?? 0) + n;
+    }
+  }
+  return counts;
 }

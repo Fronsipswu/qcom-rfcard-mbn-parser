@@ -1677,7 +1677,7 @@ export function parseLegacyModule(record, blob) {
       version: VERSION,
       generation: record.generation ?? null,
       module: moduleFields(record),
-      module_sha256: sha256Hex(blob),
+      module_sha256: record.sha256 || sha256Hex(blob),
       rfcard: {
         name: cardName,
         name_source: cardName !== null ? "ELF dynamic symbol" : null,

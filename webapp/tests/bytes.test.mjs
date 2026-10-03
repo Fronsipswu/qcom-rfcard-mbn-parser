@@ -91,3 +91,13 @@ test("utf8 keeps a leading U+FEFF like Python .decode('utf-8', 'replace')", () =
   // A mid-stream BOM was never stripped; it must survive as well.
   assert.equal(utf8(new Uint8Array([0x41, 0xef, 0xbb, 0xbf, 0x42]), 0, 5), "A\uFEFFB");
 });
+
+test("hex() lowercases all 256 byte values and handles empty input", () => {
+  const all = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) all[i] = i;
+  const expected = Array.from(all, (b) => b.toString(16).padStart(2, "0")).join("");
+  assert.equal(hex(all), expected);
+  assert.equal(hex(new Uint8Array(0)), "");
+  const view = all.subarray(250); // subarray view must work
+  assert.equal(hex(view), "fafbfcfdfeff");
+});

@@ -44,7 +44,12 @@ export class StructReader {
   }
 }
 
-export function hex(u8) { let s = ""; for (const b of u8) s += b.toString(16).padStart(2, "0"); return s; }
+const HEX = "0123456789abcdef";
+export function hex(u8) {
+  let s = "";
+  for (let i = 0; i < u8.length; i++) s += HEX[u8[i] >> 4] + HEX[u8[i] & 15];
+  return s;
+}
 export function hexToBytes(s) { if (s.length % 2 !== 0) throw new RangeError(`odd hex length ${s.length}`); const a = new Uint8Array(s.length / 2); for (let i = 0; i < a.length; i++) a[i] = parseInt(s.slice(i * 2, i * 2 + 2), 16); return a; }
 
 export function indexOfBytes(hay, needle, from = 0) {

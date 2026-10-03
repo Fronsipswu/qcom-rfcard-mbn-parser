@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sha256Hex, md5Hex } from "../js/lib/hash.js";
+import { sha256Hex, sha256HexAsync, md5Hex } from "../js/lib/hash.js";
 
 test("sha256 known vectors", () => {
   assert.equal(sha256Hex(new TextEncoder().encode("")), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
@@ -37,4 +37,29 @@ test("sha256/md5 accept subarray views (parser callers pass views)", () => {
   const view = buf.subarray(10, 74);
   assert.equal(sha256Hex(view), sha256Hex(new Uint8Array(view)));
   assert.equal(md5Hex(view), md5Hex(new Uint8Array(view)));
+});
+
+test("sha256HexAsync matches sha256Hex on NIST vectors, block-edge lengths, and subarray views", async () => {
+  const vectors = [
+    new Uint8Array(0),
+    new Uint8Array([0x61]), // "abc" -> ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+    new Uint8Array(55), new Uint8Array(56), new Uint8Array(63), new Uint8Array(64), new Uint8Array(65),
+    new Uint8Array(1000).map((_, i) => (i * 31 + 7) & 0xff),
+    new Uint8Array(1_000_003).map((_, i) => i & 0xff),
+  ];
+  const big = new Uint8Array(1000).map((_, i) => (i * 31 + 7) & 0xff);
+  const view = big.subarray(17, 800); // NOT byteOffset 0, NOT whole buffer
+  for (const v of [...vectors, view]) {
+    assert.equal(await sha256HexAsync(v), sha256Hex(v), `len ${v.length}`);
+  }
+});
+
+test("sha256HexAsync falls back to the pure-JS path without crypto.subtle", async () => {
+  const saved = globalThis.crypto;
+  Object.defineProperty(globalThis, "crypto", { value: undefined, configurable: true });
+  try {
+    assert.equal(await sha256HexAsync(new Uint8Array([1, 2, 3])), sha256Hex(new Uint8Array([1, 2, 3])));
+  } finally {
+    Object.defineProperty(globalThis, "crypto", { value: saved, configurable: true });
+  }
 });
