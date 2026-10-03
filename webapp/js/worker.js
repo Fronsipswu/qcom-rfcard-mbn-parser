@@ -108,7 +108,16 @@ function extractContainerMemoized(source, file, fallbackName) {
       const { mbns } = discoverCandidates(outputs);
       const blobs = new Map();
       for (const { vfile, path } of mbns) {
-        blobs.set(`${vfile.name}\u0000${normalizeInnerPath(path)}`, vfile.read());
+        // Eagerly harvest every candidate (required: VFile members are
+        // release()d after extraction, so lazy reads would hit dead files).
+        // Region-backed reads are Promises; a rejected read for a candidate
+        // nobody requests must not surface as an unhandled rejection, so each
+        // promise gets a no-op .catch() to mark it handled. The stored promise
+        // itself still rejects for a genuinely requested candidate. Mem/text-
+        // backed reads yield a plain Uint8Array (no .catch), hence the guard.
+        const read = vfile.read();
+        if (typeof read.catch === "function") read.catch(() => {});
+        blobs.set(`${vfile.name}\u0000${normalizeInnerPath(path)}`, read);
       }
       return blobs;
     })();
@@ -127,8 +136,17 @@ async function readRecordBlob(source, file, record) {
   }
   const fat = await fatFor(source, file);
   if (fat) {
-    const entry = await fat.findFile(record.inner_path);
-    if (entry) return (await fat.readClusters(entry.firstCluster)).slice(0, entry.size);
+    try {
+      const entry = await fat.findFile(record.inner_path);
+      if (entry) return (await fat.readClusters(entry.firstCluster)).slice(0, entry.size);
+    } catch {
+      // Base worker semantics: a corrupt-but-initialized FAT (ParseError from
+      // findFile/readClusters) falls through to container extraction instead
+      // of propagating — only init() failures mean "not FAT16". The memoized
+      // image stays cached (it is read-only after init(), so re-lookups are
+      // deterministic) and every lookup re-routes through the container path
+      // exactly like the unmemoized base worker did.
+    }
   }
   const blobs = await extractContainerMemoized(source, file, file && file.name ? file.name : record.name);
   const blob = blobs.get(`${record.name}\u0000${normalizeInnerPath(record.inner_path)}`);

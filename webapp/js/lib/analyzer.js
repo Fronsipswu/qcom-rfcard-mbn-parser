@@ -12,7 +12,7 @@
 // that are neither a named MBN nor a FAT16 image.
 // Python parity contract: identical values, dict key insertion order,
 // iteration order and message strings; goldens compare key order.
-import { sha256Hex, sha256HexAsync } from "./hash.js";
+import { sha256HexAsync } from "./hash.js";
 import { hex } from "./bytes.js";
 import { Fat16Image } from "./fat16.js";
 import { Elf32Image, ParseError } from "./elf.js";

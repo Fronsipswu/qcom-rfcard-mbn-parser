@@ -1066,6 +1066,10 @@ export function countModernCombos(record, blob) {
     throw new ToolError("More than one *_res.dat was found: " + resItems.map(([name]) => name).join(", "));
   }
   const { rrc } = parseResDat(resItems[0][1]);
+  // Throw parity with parseModernModule (:1001): identical arguments, identical
+  // error propagation at the same point of the pipeline. The result (rfcard
+  // metadata) is discarded — the count path skips metadata, not this call.
+  readRfcardInfo(resItems[0][0], record.name, rrc);
   const counts = {};
   for (const suffix of ["high", "low"]) {
     const field = `lte_info_per_band_sub_cap_${suffix}`;
