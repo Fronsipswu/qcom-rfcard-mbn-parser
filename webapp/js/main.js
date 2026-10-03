@@ -15,6 +15,7 @@ import {
 import { zipSync } from "../lib/vendor/fflate.js";
 import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
 import { uniqueFileNames } from "./loadedfiles.js";
+import { PARSER_BASE, buildImportEntries, resultUrl } from "./importparser.js";
 import {
   MIN_CARD_PANE_PX,
   SPLITTER_STORAGE_KEY,
@@ -61,6 +62,7 @@ const els = {
   selectAllBtn: document.getElementById("select-all-btn"),
   deselectAllBtn: document.getElementById("deselect-all-btn"),
   exportTickedBtn: document.getElementById("export-ticked-btn"),
+  importParserBtn: document.getElementById("import-parser-btn"),
   exportStatus: document.getElementById("export-status"),
 };
 
@@ -186,6 +188,7 @@ function renderCardList() {
       if (checkbox.checked) checked.add(card.key);
       else checked.delete(card.key);
       els.compareBtn.disabled = checked.size < 2;
+      updateImportParserBtn();
     });
     tdCheck.appendChild(checkbox);
     tr.appendChild(tdCheck);
@@ -224,6 +227,7 @@ function syncChecks() {
     if (checkbox && tr.dataset.cardKey) checkbox.checked = checked.has(tr.dataset.cardKey);
   }
   els.compareBtn.disabled = checked.size < 2;
+  updateImportParserBtn();
 }
 
 // --- card view -------------------------------------------------------------------
@@ -461,6 +465,104 @@ async function exportTicked() {
   }
 }
 
+// --- import to parser (uecaps.hennes.xyz) -------------------------------------------
+
+const IMPORT_BTN_LABEL = "Import to parser";
+const IMPORT_SUCCESS_LABEL = "✓ Imported — open result";
+let importingToParser = false; // in-flight request; re-entrant clicks ignored
+let importResultId = null; // set on success; click opens the result view
+
+// Enabled iff exactly one card is ticked (spec: 0 or >=2 -> disabled). A
+// selection change also resets a stale success state: the result button is
+// only meaningful for the selection that produced it. Changes during an
+// in-flight import don't reset — completion applies the success state after.
+function updateImportParserBtn() {
+  if (importingToParser) return;
+  els.importParserBtn.disabled = checked.size !== 1;
+  if (importResultId && checked.size !== 1) resetImportParserBtn();
+}
+
+function resetImportParserBtn() {
+  importResultId = null;
+  if (!importingToParser) {
+    els.importParserBtn.textContent = IMPORT_BTN_LABEL;
+    els.importParserBtn.disabled = checked.size !== 1;
+  }
+}
+
+// One importCards request; the reply arrives on the shared exportBlob channel
+// (files as text), so it reuses pendingReplies/exportWaiters incl. the
+// defensive rejection in clearAll.
+function requestImportTexts(card) {
+  return new Promise((resolve, reject) => {
+    const id = nextMessageId++;
+    pendingReplies.set(id, card);
+    exportWaiters.set(id, { resolve, reject });
+    worker.postMessage({ type: "importCards", id, fileIndex: card.fileIndex, file: card.file, record: card.record });
+  });
+}
+
+async function importToParser() {
+  if (importingToParser) return;
+  const ticked = cards.filter((c) => checked.has(c.key));
+  if (ticked.length !== 1) {
+    exportStatus("Import needs exactly one ticked card.");
+    return;
+  }
+  const card = ticked[0];
+  importingToParser = true;
+  importResultId = null;
+  els.importParserBtn.disabled = true;
+  els.importParserBtn.textContent = "Importing…";
+  try {
+    const files = await requestImportTexts(card);
+    // Suffixes match the filenames exportModule produces for the b0cd/b826
+    // formats (<stem>_0xB0CD_v41.txt / <stem>_0xB826_v22.txt) — the reply
+    // reuses them unchanged (deviation note: the plan's ".b0cd.txt" strings
+    // never occur in the reply, so every lookup must key on the real tail).
+    const textFor = (suffix) => files.find((f) => f.filename && f.filename.endsWith(suffix))?.text;
+    const { entries, files: importFiles } = buildImportEntries(
+      textFor("_0xB0CD_v41.txt"),
+      textFor("_0xB826_v22.txt"),
+      card.record.name
+    );
+    const form = new FormData();
+    form.append("requests", JSON.stringify(entries));
+    // File append order MUST match the inputIndexes order entries carry
+    // (b0cd first when present, then b826) — the parser references uploads
+    // by index. Field name is irrelevant to the server (ctx.uploadedFiles()
+    // reads all uploads); "files" is descriptive.
+    for (const f of importFiles) {
+      form.append("files", new Blob([f.text], { type: "text/plain" }), f.filename);
+    }
+    const response = await fetch(`${PARSER_BASE}/parse/multiPart`, {
+      method: "POST",
+      body: form,
+    });
+    if (!response.ok) throw new Error(`parser responded ${response.status}`);
+    const parsed = await response.json();
+    if (!parsed || !parsed.id) throw new Error("parser response has no result id");
+    importResultId = parsed.id;
+    importingToParser = false;
+    els.importParserBtn.textContent = IMPORT_SUCCESS_LABEL;
+    els.importParserBtn.disabled = false; // success button: click opens the result
+    exportStatus("Imported to parser — click the button to open the result.");
+  } catch (err) {
+    importingToParser = false;
+    resetImportParserBtn();
+    exportStatus(`Import failed: ${err && err.message ? err.message : err}`);
+  }
+}
+
+els.importParserBtn.addEventListener("click", () => {
+  if (importingToParser) return; // "Importing…" ignores re-entrant clicks
+  if (importResultId) {
+    window.open(resultUrl(importResultId), "_blank", "noopener");
+    return;
+  }
+  importToParser();
+});
+
 // --- import ------------------------------------------------------------------------
 
 function importFiles(files) {
@@ -555,6 +657,10 @@ worker.onmessage = (event) => {
 
 // --- DOM events -----------------------------------------------------------------------
 
+// Import button starts disabled: no cards are ticked yet (updateImportParserBtn
+// is re-invoked by syncChecks/checkbox handlers once selection changes).
+updateImportParserBtn();
+
 els.pickBtn.addEventListener("click", () => els.fileInput.click());
 els.fileInput.addEventListener("change", () => {
   importFiles(els.fileInput.files);
@@ -598,6 +704,7 @@ async function clearAll() {
   pendingCompare = null;
   selectedCard = null;
   els.compareBtn.disabled = true;
+  updateImportParserBtn();
   els.warnings.replaceChildren();
   els.warnings.hidden = true;
   destroyViewer();

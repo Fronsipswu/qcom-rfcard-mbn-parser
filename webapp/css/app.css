@@ -320,6 +320,30 @@ body.dragging {
   opacity: 0.6;
 }
 
+/* "Import to parser" pushes one card's DIAG packets to uecaps.hennes.xyz:
+   light-red tint of the export accent family, dark text — visually a sibling
+   of the light-blue "Export ticked" but clearly a different action. */
+#exportbar #import-parser-btn {
+  background: #f7d4d4;
+  border-color: #e8a8a8;
+  color: var(--text);
+  font-weight: 600;
+}
+
+#exportbar #import-parser-btn:hover:not(:disabled) {
+  background: #f2bcbc;
+  border-color: #dd8f8f;
+}
+
+/* Disabled stays visually distinct: washed-out red fill, muted border,
+   reduced opacity like the other disabled buttons. */
+#exportbar #import-parser-btn:disabled {
+  background: #f9ecec;
+  border-color: var(--border);
+  color: var(--muted);
+  opacity: 0.6;
+}
+
 /* --- ComboViewer (viewer.js) ------------------------------------------------------ */
 
 .cv {

@@ -8,6 +8,7 @@
 //                                                   is bookkeeping only
 //   { type: "export",    id, file, fileIndex?, record, format }  mbn|json|csv|
 //                                                   webcsv|b0cd|b826
+//   { type: "importCards", id, file, fileIndex?, record } -> both DIAG texts
 //   { type: "cancel",    id }
 // worker -> main
 //   { type: "progress",  phase, source, done, total, currentFile }
@@ -250,10 +251,38 @@ async function handleExport(msg) {
   post({ type: "exportBlob", id: msg.id, files: payload }, transfer);
 }
 
+// Import-to-parser support: the main thread uploads a single card's DIAG
+// packet texts to uecaps.hennes.xyz/parse/multiPart. Both packet sets are
+// forced here regardless of the export checkboxes (import is ticked-only,
+// not export-ticked-only). An empty packet set (rare, legacy-only cards) is
+// OMITTED — exportModule would happily write a header-only text for `[]`,
+// which the parser would accept as an (empty) capability, so the length
+// check here is what makes "send only non-empty entries" true; a card with
+// both sets empty is reported by the main thread. The reply reuses the
+// exportBlob shape (files as text), so the existing waiter/error/clear
+// plumbing applies unchanged.
+async function handleImportCards(msg) {
+  const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
+  const files = [];
+  for (const format of ["b0cd", "b826"]) {
+    if (!Array.isArray(parsed.diag?.[format]) || parsed.diag[format].length === 0) {
+      continue; // empty packet set — omit this format from the import payload
+    }
+    try {
+      const produced = exportModule(msg.record, parsed, format);
+      files.push(...produced.map((f) => ({ filename: f.filename, text: f.text })));
+    } catch {
+      // Belt-and-braces: a ToolError here also means "omit this set".
+    }
+  }
+  post({ type: "exportBlob", id: msg.id, files }, []);
+}
+
 function handle(msg) {
   if (msg.type === "scan") return handleScan(msg);
   if (msg.type === "parseCard") return handleParseCard(msg);
   if (msg.type === "export") return handleExport(msg);
+  if (msg.type === "importCards") return handleImportCards(msg);
   throw new Error(`unknown message type: ${msg.type}`);
 }
 
