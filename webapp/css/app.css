@@ -344,6 +344,38 @@ body.dragging {
   opacity: 0.6;
 }
 
+/* Import success tick: sits after the import button, means "the latest
+   import finished". Shown/hidden by main.js; [hidden] keeps it out of
+   layout until the first success. */
+#import-done-tick {
+  color: #1d7a3a;
+  font-weight: 700;
+  margin-left: 2px;
+  user-select: none;
+}
+
+/* Accumulating per-import results: one line per successful import for the
+   whole session (the flash-style #export-status would be overwritten by
+   other messages). Anchor opens the parser result view; the record name is
+   shown to its right. Cleared by the Clear button, not by selection.
+   No `display` on the region itself so the UA `[hidden]{display:none}` keeps
+   working (flex items are blockified when shown anyway). */
+#import-results {
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 1.6;
+}
+#import-results .import-result-line {
+  display: block; /* each import on its own line, new ones under the last */
+}
+#import-results a {
+  color: #0b62c4;
+}
+#import-results .import-result-name {
+  color: #5a6472;
+  margin-left: 8px;
+}
+
 /* --- ComboViewer (viewer.js) ------------------------------------------------------ */
 
 .cv {

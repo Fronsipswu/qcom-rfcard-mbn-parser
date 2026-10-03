@@ -63,6 +63,8 @@ const els = {
   deselectAllBtn: document.getElementById("deselect-all-btn"),
   exportTickedBtn: document.getElementById("export-ticked-btn"),
   importParserBtn: document.getElementById("import-parser-btn"),
+  importDoneTick: document.getElementById("import-done-tick"),
+  importResults: document.getElementById("import-results"),
   exportStatus: document.getElementById("export-status"),
 };
 
@@ -468,26 +470,17 @@ async function exportTicked() {
 // --- import to parser (uecaps.hennes.xyz) -------------------------------------------
 
 const IMPORT_BTN_LABEL = "Import to parser";
-const IMPORT_SUCCESS_LABEL = "✓ Imported — open result";
 let importingToParser = false; // in-flight request; re-entrant clicks ignored
-let importResultId = null; // set on success; click opens the result view
 
-// Enabled iff exactly one card is ticked (spec: 0 or >=2 -> disabled). A
-// selection change also resets a stale success state: the result button is
-// only meaningful for the selection that produced it. Changes during an
-// in-flight import don't reset — completion applies the success state after.
+// Enabled iff exactly one card is ticked (spec: 0 or >=2 -> disabled). The
+// button's meaning never changes (always "start an import"); the success
+// tick only means "the latest import finished" and hides on selection
+// change. Changes during an in-flight import don't disturb anything —
+// completion applies the tick after.
 function updateImportParserBtn() {
   if (importingToParser) return;
   els.importParserBtn.disabled = checked.size !== 1;
-  if (importResultId && checked.size !== 1) resetImportParserBtn();
-}
-
-function resetImportParserBtn() {
-  importResultId = null;
-  if (!importingToParser) {
-    els.importParserBtn.textContent = IMPORT_BTN_LABEL;
-    els.importParserBtn.disabled = checked.size !== 1;
-  }
+  if (checked.size !== 1) els.importDoneTick.hidden = true;
 }
 
 // One importCards request; the reply arrives on the shared exportBlob channel
@@ -502,6 +495,27 @@ function requestImportTexts(card) {
   });
 }
 
+// Append one persistent result line: the parser result URL as an anchor
+// (opens in a new tab) with the record name to its right. Lines accumulate
+// for the session; only Clear/reload removes them (results stay stored on
+// the parser site). Built via createElement + assigned href/textContent —
+// never string HTML.
+function addImportResult(id, name) {
+  const line = document.createElement("span");
+  line.className = "import-result-line";
+  const link = document.createElement("a");
+  link.href = resultUrl(id);
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = resultUrl(id);
+  const label = document.createElement("span");
+  label.className = "import-result-name";
+  label.textContent = name;
+  line.append(link, label);
+  els.importResults.append(line);
+  els.importResults.hidden = false;
+}
+
 async function importToParser() {
   if (importingToParser) return;
   const ticked = cards.filter((c) => checked.has(c.key));
@@ -511,7 +525,6 @@ async function importToParser() {
   }
   const card = ticked[0];
   importingToParser = true;
-  importResultId = null;
   els.importParserBtn.disabled = true;
   els.importParserBtn.textContent = "Importing…";
   try {
@@ -542,24 +555,22 @@ async function importToParser() {
     if (!response.ok) throw new Error(`parser responded ${response.status}`);
     const parsed = await response.json();
     if (!parsed || !parsed.id) throw new Error("parser response has no result id");
-    importResultId = parsed.id;
     importingToParser = false;
-    els.importParserBtn.textContent = IMPORT_SUCCESS_LABEL;
-    els.importParserBtn.disabled = false; // success button: click opens the result
-    exportStatus("Imported to parser — click the button to open the result.");
+    els.importParserBtn.textContent = IMPORT_BTN_LABEL;
+    els.importParserBtn.disabled = checked.size !== 1;
+    els.importDoneTick.hidden = false; // "latest import finished"
+    addImportResult(parsed.id, card.record.name);
+    exportStatus("Imported to parser — result link added below.");
   } catch (err) {
     importingToParser = false;
-    resetImportParserBtn();
+    els.importParserBtn.textContent = IMPORT_BTN_LABEL;
+    els.importParserBtn.disabled = checked.size !== 1;
     exportStatus(`Import failed: ${err && err.message ? err.message : err}`);
   }
 }
 
 els.importParserBtn.addEventListener("click", () => {
   if (importingToParser) return; // "Importing…" ignores re-entrant clicks
-  if (importResultId) {
-    window.open(resultUrl(importResultId), "_blank", "noopener");
-    return;
-  }
   importToParser();
 });
 
@@ -704,6 +715,9 @@ async function clearAll() {
   pendingCompare = null;
   selectedCard = null;
   els.compareBtn.disabled = true;
+  els.importResults.replaceChildren();
+  els.importResults.hidden = true;
+  els.importDoneTick.hidden = true;
   updateImportParserBtn();
   els.warnings.replaceChildren();
   els.warnings.hidden = true;
