@@ -548,6 +548,12 @@ body.dragging {
 
   #progress { flex: 1; width: auto; }
 
+  #app {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
   #workbench { flex-direction: column; }
 
   #cardpane {
@@ -559,7 +565,17 @@ body.dragging {
 
   #viewerhost {
     flex: 1 1 auto;
+    min-height: 75vh;
+    overflow: visible;
+  }
+
+  .cv-tablewrap {
+    overflow: visible;
     min-height: 0;
+  }
+
+  .compare {
+    overflow: visible;
   }
 
   #splitter { display: none; }

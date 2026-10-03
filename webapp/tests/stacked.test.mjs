@@ -205,9 +205,37 @@ test("app.css portrait query: stacked workbench, hidden splitter, capped card pa
   assert.ok(cardpane.includes("min-width: 0"), "320px desktop min-width must not survive");
   assert.ok(cardpane.includes("!important"), "inline splitter styles must be beaten");
 
-  assert.ok(ruleInside(block, "#viewerhost {").includes("min-height: 0"));
+  const viewerRule = ruleInside(block, "#viewerhost {");
+  assert.ok(viewerRule.includes("min-height: 75vh"), "combo view must be at least 75vh tall in portrait");
+  assert.ok(viewerRule.includes("overflow: visible"), "#viewerhost must not scroll internally in portrait");
 
   assert.ok(ruleInside(block, "#topbar {").includes("flex-direction: column"));
+});
+
+test("portrait: #app switches to page-scroll sizing (height auto, min-height dvh)", async () => {
+  const block = await readMediaQueryBlock();
+  const appRule = ruleInside(block, "#app {");
+  assert.ok(appRule.includes("height: auto"), "#app must release the viewport lock in portrait");
+  const vh = appRule.indexOf("min-height: 100vh;");
+  const dv = appRule.indexOf("min-height: 100dvh;");
+  assert.notEqual(vh, -1, "min-height 100vh fallback required");
+  assert.notEqual(dv, -1, "min-height 100dvh required");
+  assert.ok(vh < dv, "100dvh must follow 100vh (fallback order)");
+});
+
+test("portrait: nested scrollers are opened (table wrap, compare)", async () => {
+  const block = await readMediaQueryBlock();
+  assert.ok(ruleInside(block, ".cv-tablewrap {").includes("overflow: visible"),
+    ".cv-tablewrap must not scroll internally in portrait");
+  assert.ok(ruleInside(block, ".compare {").includes("overflow: visible"),
+    ".compare must not scroll internally in portrait");
+});
+
+test("portrait: #cardpane keeps its 45vh internal scroll", async () => {
+  const block = await readMediaQueryBlock();
+  const cardRule = ruleInside(block, "#cardpane {");
+  assert.ok(cardRule.includes("max-height: 45vh"), "card list keeps its cap");
+  assert.ok(!cardRule.includes("overflow"), "#cardpane keeps its base overflow:auto");
 });
 
 test("app.css portrait query: progress bar flexes and touch polish lands", async () => {
