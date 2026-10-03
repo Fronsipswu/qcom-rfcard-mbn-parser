@@ -445,6 +445,26 @@ body.dragging {
 
 .cv-colhandle:hover { background: var(--accent); }
 
+/* Second header row: one search input per visible column. Static position —
+   the label row above stays sticky, inputs scroll with the body. The extra
+   `tr` element selector out-specifies `.cv thead th` (0-2-2 vs 0-1-2), whose
+   sticky top:0 would otherwise pin the filter row over the labels on scroll. */
+.cv tr.cv-filterrow th {
+  position: static;
+  cursor: default;
+  padding: 2px 4px;
+}
+
+.cv-colfilter {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: 12px var(--mono);
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
 .cv tbody td {
   padding: 4px 10px;
   text-align: center;

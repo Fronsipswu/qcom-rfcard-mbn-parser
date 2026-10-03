@@ -140,9 +140,32 @@ export function filterRows(rows, rawQuery) {
   return filtered;
 }
 
-export function countLabelText(rawQuery, shown, total) {
+// Per-column search (second header row): same matching as filterRows, but per
+// single cell. Empty (or whitespace-only) queries pass everything.
+export function matchColumn(cellText, rawQuery) {
+  const q = pyCasefold(String(rawQuery ?? "").trim());
+  if (!q) return true;
+  const cell = pyCasefold(String(cellText ?? ""));
+  const qNospace = q.replaceAll(" ", "");
+  return cell.includes(q) || cell.replaceAll(" ", "").includes(qNospace);
+}
+
+// AND-combines every non-empty column filter over pre-globally-filtered rows.
+// Order of composition with filterRows is irrelevant: every predicate ANDs.
+export function applyColumnFilters(rows, colFilters) {
+  const active = [];
+  for (const [col, raw] of Object.entries(colFilters ?? {})) {
+    const q = String(raw ?? "").trim();
+    if (q) active.push([col, q]);
+  }
+  if (!active.length) return [...rows];
+  return rows.filter((row) => active.every(([col, q]) => matchColumn(row[col], q)));
+}
+
+export function countLabelText(rawQuery, shown, total, hasColumnFilters = false) {
   const fmt = (n) => n.toLocaleString("en-US");
-  return String(rawQuery ?? "").trim() ? `Showing ${fmt(shown)} of ${fmt(total)} combos` : `Total: ${fmt(total)} combos`;
+  const filtered = String(rawQuery ?? "").trim() !== "" || hasColumnFilters;
+  return filtered ? `Showing ${fmt(shown)} of ${fmt(total)} combos` : `Total: ${fmt(total)} combos`;
 }
 
 // --- columns + banner (viewer.py:261, :183-197) -----------------------------------
@@ -221,6 +244,8 @@ export class ComboViewer {
     this.info = info;
     this.showScs = false;
     this.filterTimer = null;
+    this.filterRowEl = null;
+    this.filterRowSignature = null;
     this.tabs = new Map();
     this.activeKey = null;
     this.charW = measureCharWidth();
@@ -278,6 +303,7 @@ export class ComboViewer {
         overrides: {},
         sortCol: null,
         sortReverse: false,
+        colFilters: {},
         selected: new Set(),
         anchor: null,
       });
@@ -346,7 +372,7 @@ export class ComboViewer {
     const state = this.tab();
     if (!state) return;
     const query = this.searchEl.value;
-    state.filtered = filterRows(state.rows, query);
+    state.filtered = applyColumnFilters(filterRows(state.rows, query), state.colFilters);
     state.selected = new Set();
     state.anchor = null;
     if (state.sortCol) {
@@ -355,7 +381,50 @@ export class ComboViewer {
     }
     this.layoutColumns(state);
     this.renderTable(state);
-    this.countEl.textContent = countLabelText(query, state.filtered.length, state.rows.length);
+    const hasColumnFilters = Object.values(state.colFilters).some((v) => String(v ?? "").trim() !== "");
+    this.countEl.textContent = countLabelText(query, state.filtered.length, state.rows.length, hasColumnFilters);
+  }
+
+  // The filter row is persistent DOM (one <input> per visible column of the
+  // active tab). renderTable rewrites thead.innerHTML, which detaches it, so
+  // the element is re-attached after each render; inputs keep their values,
+  // and the focused input keeps focus + caret across the swap. Rebuilt only
+  // when the (tab x visible columns) signature changes — tab switch or SCS
+  // toggle — never on filter/sort re-renders, so typing never loses focus.
+  syncFilterRow(state) {
+    const signature = `${this.activeKey}\u0000${state.visible.join("\u0001")}`;
+    if (this.filterRowEl && this.filterRowSignature === signature) return;
+    this.filterRowSignature = signature;
+    const tr = document.createElement("tr");
+    tr.className = "cv-filterrow";
+    for (const col of state.visible) {
+      const th = document.createElement("th");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "cv-colfilter";
+      input.dataset.col = col;
+      input.value = state.colFilters[col] ?? "";
+      input.autocomplete = "off";
+      input.spellcheck = false;
+      th.appendChild(input);
+      tr.appendChild(th);
+    }
+    this.filterRowEl = tr;
+  }
+
+  attachFilterRow() {
+    if (!this.filterRowEl) return;
+    this.theadEl.appendChild(this.filterRowEl);
+  }
+
+  restoreFilterFocus(saved) {
+    if (!saved || !this.filterRowEl || !this.filterRowEl.contains(saved.el) || !saved.el.isConnected) return;
+    saved.el.focus();
+    try {
+      saved.el.setSelectionRange(saved.start, saved.end);
+    } catch {
+      // setSelectionRange throws on non-text inputs; all inputs here are text.
+    }
   }
 
   sortBy(col) {
@@ -381,6 +450,14 @@ export class ComboViewer {
     this.emptyEl.hidden = true;
     this.colgroupEl.innerHTML = state.widths.map((w) => `<col style="width:${Math.round(w)}px">`).join("");
 
+    // Preserve focus/caret: the debounced applyFilter can fire while the user
+    // is still focused in a column filter input.
+    const activeInput = document.activeElement;
+    const saved =
+      activeInput && this.filterRowEl && this.filterRowEl.contains(activeInput) && activeInput.tagName === "INPUT"
+        ? { el: activeInput, start: activeInput.selectionStart, end: activeInput.selectionEnd }
+        : null;
+
     const arrow = state.sortReverse ? " ▼" : " ▲";
     let headerHtml = "<tr>";
     for (const col of state.visible) {
@@ -389,6 +466,9 @@ export class ComboViewer {
     }
     headerHtml += "</tr>";
     this.theadEl.innerHTML = headerHtml;
+    this.syncFilterRow(state);
+    this.attachFilterRow();
+    this.restoreFilterFocus(saved);
 
     const rowsHtml = [];
     for (const row of state.filtered) {
@@ -517,6 +597,16 @@ export class ComboViewer {
     }, 4000);
   }
 
+  // ✕ / Escape reset path: clear the top search AND every tab's column
+  // filters (hidden tabs included); their inputs are rebuilt empty on next
+  // activation because syncFilterRow reads state.colFilters.
+  clearColumnFilters() {
+    for (const state of this.tabs.values()) state.colFilters = {};
+    if (this.filterRowEl) {
+      for (const input of this.filterRowEl.querySelectorAll(".cv-colfilter")) input.value = "";
+    }
+  }
+
   // --- CSV export (viewer.py:720-753 via exporter.js) ----------------------------
 
   exportCurrentTabCsv() {
@@ -546,10 +636,25 @@ export class ComboViewer {
         this.applyFilter();
       }, SEARCH_DEBOUNCE_MS);
     });
+    // Column filter inputs: delegated on thead (survives filter-row rebuilds);
+    // input events bubble. Same debounce as the top search bar.
+    this.theadEl.addEventListener("input", (event) => {
+      const input = event.target.closest(".cv-colfilter");
+      if (!input) return;
+      const state = this.tab();
+      if (!state || !state.visible.includes(input.dataset.col)) return;
+      state.colFilters[input.dataset.col] = input.value;
+      clearTimeout(this.filterTimer);
+      this.filterTimer = setTimeout(() => {
+        this.filterTimer = null;
+        this.applyFilter();
+      }, SEARCH_DEBOUNCE_MS);
+    });
     this.clearBtn.addEventListener("click", () => {
       clearTimeout(this.filterTimer);
       this.filterTimer = null;
       this.searchEl.value = "";
+      this.clearColumnFilters();
       this.applyFilter();
       this.searchEl.focus();
     });
@@ -566,6 +671,7 @@ export class ComboViewer {
     });
     this.exportBtn.addEventListener("click", () => this.exportCurrentTabCsv());
     this.theadEl.addEventListener("click", (event) => {
+      if (event.target.closest(".cv-filterrow")) return;
       const th = event.target.closest("th");
       if (th && !event.target.closest(".cv-colhandle")) this.sortBy(th.dataset.col);
     });
@@ -608,10 +714,14 @@ export class ComboViewer {
     this.onKeydown = (event) => {
       if (event.key === "Escape") {
         this.hideContextMenu();
-        if (this.searchEl.value) {
+        const hasColFilters = [...this.tabs.values()].some((s) =>
+          Object.values(s.colFilters).some((v) => String(v ?? "").trim() !== ""),
+        );
+        if (this.searchEl.value || hasColFilters) {
           clearTimeout(this.filterTimer);
           this.filterTimer = null;
           this.searchEl.value = "";
+          this.clearColumnFilters();
           this.applyFilter();
         }
       } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {

@@ -7,6 +7,8 @@ import {
   TAB_DEFINITIONS,
   EMPTY_COUNT_LABEL,
   filterRows,
+  matchColumn,
+  applyColumnFilters,
   countLabelText,
   visibleColumns,
   infoBannerParts,
@@ -64,6 +66,62 @@ test("filterRows uses Python casefold, not toLowerCase", () => {
   const rows = [{ v: "Straße" }];
   assert.deepEqual(filterRows(rows, "STRASSE"), rows); // casefold(ß)=ss
   assert.deepEqual(filterRows(rows, "STRASSE").length, 1);
+});
+
+// --- per-column filter helpers (second header row, 2026-10 spec) ------------------
+
+test("matchColumn mirrors filterRows semantics for a single cell", () => {
+  assert.equal(matchColumn("42E", ""), true); // empty query passes
+  assert.equal(matchColumn("42E", "   "), true); // whitespace-only query passes
+  assert.equal(matchColumn("42E", "42e"), true); // case-insensitive substring
+  assert.equal(matchColumn("42E", "  42E  "), true); // query stripped
+  assert.equal(matchColumn("42E", "4"), true);
+  assert.equal(matchColumn("42E", "43"), false);
+  assert.equal(matchColumn("15 + 15", "15+15"), true); // nospace fallback
+  assert.equal(matchColumn("15 + 15", "1 5"), true); // nospace on both sides
+  assert.equal(matchColumn("Straße", "STRASSE"), true); // pyCasefold, not toLowerCase
+  assert.equal(matchColumn(undefined, ""), true); // missing cell == ""
+  assert.equal(matchColumn(undefined, "x"), false);
+  assert.equal(matchColumn(null, "42"), false);
+});
+
+test("applyColumnFilters: no active filter returns a copy with identical contents", () => {
+  assert.deepEqual(applyColumnFilters(ROWS, {}), ROWS);
+  assert.deepEqual(applyColumnFilters(ROWS, { "LTE DL": "   " }), ROWS); // whitespace-only
+  assert.deepEqual(applyColumnFilters(ROWS, undefined), ROWS);
+  assert.notEqual(applyColumnFilters(ROWS, {}), ROWS); // new array, caller may sort in place
+});
+
+test("applyColumnFilters: single column, casefold + nospace like the top bar", () => {
+  assert.deepEqual(applyColumnFilters(ROWS, { "LTE DL": "a" }), [ROWS[0], ROWS[2]]);
+  assert.deepEqual(applyColumnFilters(ROWS, { "SCS DL (kHz)": "3" }), [ROWS[1]]); // "30 + 30"
+  assert.deepEqual(applyColumnFilters(ROWS, { "SCS DL (kHz)": "30+30" }), [ROWS[1]]); // nospace (plain is "30 + 30")
+  assert.deepEqual(applyColumnFilters(ROWS, { "LTE DL": "ZZZ" }), []);
+});
+
+test("applyColumnFilters: multiple columns AND together", () => {
+  assert.deepEqual(applyColumnFilters(ROWS, { "LTE DL": "a", "SCS DL (kHz)": "15" }), [ROWS[0], ROWS[2]]);
+  assert.deepEqual(applyColumnFilters(ROWS, { "LTE DL": "a", "LTE MIMO DL": "4" }), []); // no row has both
+});
+
+test("applyColumnFilters commutes with filterRows (order-independence)", () => {
+  const colThenGlobal = filterRows(applyColumnFilters(ROWS, { "LTE MIMO DL": "4" }), "42e");
+  const globalThenCol = applyColumnFilters(filterRows(ROWS, "42e"), { "LTE MIMO DL": "4" });
+  assert.deepEqual(colThenGlobal, [ROWS[1]]);
+  assert.deepEqual(globalThenCol, [ROWS[1]]);
+});
+
+test("applyColumnFilters: unknown column name never matches (missing cell == empty string)", () => {
+  assert.deepEqual(applyColumnFilters(ROWS, { "NR DL": "x" }), []);
+  assert.deepEqual(applyColumnFilters(ROWS, { "NR DL": "" }), ROWS); // empty filter passes
+});
+
+test("countLabelText: column filters alone count as active filtering (4th arg)", () => {
+  assert.equal(countLabelText("", 3, 9, true), "Showing 3 of 9 combos");
+  assert.equal(countLabelText(" ", 3, 9, true), "Showing 3 of 9 combos"); // whitespace-only query still counts
+  assert.equal(countLabelText("q", 3, 9, false), "Showing 3 of 9 combos");
+  assert.equal(countLabelText("", 9, 9, false), "Total: 9 combos");
+  assert.equal(countLabelText("", 9, 9), "Total: 9 combos"); // default keeps 3-arg behavior
 });
 
 test("countLabelText reproduces viewer.py:497-502 exactly", () => {
