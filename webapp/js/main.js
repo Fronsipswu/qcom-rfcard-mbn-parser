@@ -52,7 +52,6 @@ const els = {
   loadedFilesLabel: document.getElementById("loadedfiles-label"),
   loadedFilesChips: document.getElementById("loadedfiles-chips"),
   cardBody: document.getElementById("cardlist-body"),
-  cardList: document.getElementById("cardlist"),
   cardHead: document.getElementById("cardlist-head"),
   cardsEmpty: document.getElementById("cards-empty"),
   viewerHost: document.getElementById("viewerhost"),
@@ -60,6 +59,7 @@ const els = {
   workbench: document.getElementById("workbench"),
   cardPane: document.getElementById("cardpane"),
   splitter: document.getElementById("splitter"),
+  splitterGhost: document.getElementById("splitter-ghost"),
   exportbar: document.getElementById("exportbar"),
   selectAllBtn: document.getElementById("select-all-btn"),
   deselectAllBtn: document.getElementById("deselect-all-btn"),
@@ -840,6 +840,12 @@ function syncSplitterAria() {
 
 let splitterDrag = null; // { id, startX, startWidth, containerWidth, pendingWidth, raf }
 
+function positionSplitterGhost(px) {
+  // The future splitter bar will span [px, px+6]; the 2px ghost (left:0) is
+  // centered on it: center = x + 1 → x = px + 2.
+  els.splitterGhost.style.transform = `translateX(${Math.round(px + 2)}px)`;
+}
+
 els.splitter.addEventListener("pointerdown", (event) => {
   if (event.button !== 0) return;
   if (!shouldDrag(document.body.classList.contains("stacked"))) return;
@@ -848,11 +854,8 @@ els.splitter.addEventListener("pointerdown", (event) => {
     id: event.pointerId,
     startX: event.clientX,
     startWidth: els.cardPane.getBoundingClientRect().width,
-    // Read the container width ONCE here. Reading it in pointermove would
-    // force a synchronous layout on every mouse event (mice fire far faster
-    // than frames, while the previous move's flex-basis write is still
-    // un-flushed) — with a populated card list that queued layout work is
-    // the multi-second drag lag.
+    // Read the container width ONCE here (used for clamping in pointermove —
+    // no forced layout while dragging).
     containerWidth: els.workbench.clientWidth,
     pendingWidth: null,
     raf: 0,
@@ -862,27 +865,24 @@ els.splitter.addEventListener("pointerdown", (event) => {
   try {
     els.splitter.setPointerCapture(event.pointerId);
   } catch {}
+  positionSplitterGhost(splitterDrag.startWidth);
+  els.splitterGhost.hidden = false;
   document.body.classList.add("dragging");
   els.splitter.classList.add("dragging");
   setSplitterAriaBounds();
 });
 
-// Coalesce drag updates to one per animation frame: pointermove fires at the
-// input device's rate, the width write should happen at most once per frame.
+// Ghost drag: while dragging, only the preview line moves — a transform on an
+// absolutely positioned element, so NO pane layout happens per frame and the
+// card-list table never re-measures mid-drag. On release the final width is
+// applied in a single write, so both panes land exactly aligned with the ghost.
 function scheduleDragFrame() {
   if (!splitterDrag || splitterDrag.raf) return;
   splitterDrag.raf = requestAnimationFrame(() => {
     if (!splitterDrag) return;
     splitterDrag.raf = 0;
-    // Freeze the card-list table's width for the drag: #cardlist uses auto
-    // table layout, so every pane-width change would re-measure every cell
-    // of every row. With the table pinned to its current pixel width the
-    // per-frame relayout is trivial; one normal reflow happens at drag end
-    // instead of one per mouse event.
-    if (!els.cardList.style.width) {
-      els.cardList.style.width = `${els.cardList.getBoundingClientRect().width}px`;
-    }
-    applyCardPaneWidth(splitterDrag.pendingWidth);
+    positionSplitterGhost(splitterDrag.pendingWidth);
+    els.splitter.setAttribute("aria-valuenow", String(Math.round(splitterDrag.pendingWidth)));
   });
 }
 
@@ -900,8 +900,8 @@ function endSplitterDrag(event) {
   const { raf, pendingWidth } = splitterDrag;
   splitterDrag = null;
   if (raf) cancelAnimationFrame(raf);
-  if (pendingWidth !== null) applyCardPaneWidth(pendingWidth); // land the final width
-  els.cardList.style.removeProperty("width"); // release the frozen table width
+  els.splitterGhost.hidden = true;
+  if (pendingWidth !== null) applyCardPaneWidth(pendingWidth); // single write — both panes align with the ghost
   try {
     els.splitter.releasePointerCapture(event.pointerId);
   } catch {}

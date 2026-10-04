@@ -169,6 +169,7 @@ button:disabled {
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
+  position: relative; /* anchor for the splitter drag ghost */
 }
 
 #cardpane {
@@ -191,6 +192,19 @@ button:disabled {
 #splitter.dragging {
   background: var(--accent);
   border-left-color: var(--accent);
+}
+
+/* Preview line shown while dragging the splitter; the panes themselves only
+   resize once on release (no display property here — [hidden] must work). */
+#splitter-ghost {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--accent);
+  z-index: 30;
+  pointer-events: none;
 }
 
 body.dragging {
