@@ -1243,11 +1243,19 @@ export function lzfseDecode(src, uncompSizeHint) {
   s.src_buf = src;
   // DataView over the whole source; all loads are little-endian.
   const dv = new DataView(src.buffer, src.byteOffset, src.byteLength);
+  let lastStall = null; // (src,dst) cursor at the previous DST_FULL cycle
   for (;;) {
     const status = lzfseDecodeBlock(s, dv);
     if (status === LZFSE_STATUS_OK) break;
     if (status === LZFSE_STATUS_DST_FULL) {
       // JS has no fixed dst: grow and resume from the saved mid-block state.
+      // A crafted stream can make zero progress per cycle (neither src nor
+      // dst advanced since the previous DST_FULL) — fail instead of doubling
+      // dst to the 2 GiB cap on hostile input. Legit streams always advance
+      // dst within one block's buffered state.
+      const cursor = `${s.src}:${s.dst}`;
+      if (cursor === lastStall) fail("corrupt block: no decode progress");
+      lastStall = cursor;
       let cap = s.dst_buf.length;
       if (cap >= LZFSE_MAX_DST_BYTES) fail("output exceeds 2GiB decode cap");
       cap = Math.min(cap * 2, LZFSE_MAX_DST_BYTES);

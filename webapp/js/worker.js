@@ -55,7 +55,7 @@ import {
   toCsvText,
 } from "./lib/analyzer.js";
 import { extractContainer, discoverCandidates } from "./lib/extractor.js";
-import { zipEntryData, zipEntries } from "./lib/extractor.js";
+import { extractFtabMember } from "./lib/apple_ftab.js";
 import { lzfseDecode } from "./lib/lzfse.js";
 import {
   parseAppleBank,
@@ -219,27 +219,9 @@ async function appleFtabMember(file, record) {
   let pending = memo.get(memberName);
   if (!pending) {
     pending = (async () => {
-      const source = sourceFor(file);
-      const entries = await zipEntries(source);
-      // record.apple.member may be "outer!inner" for nested bbfw zip members.
-      const names = memberName.split("!");
-      let data = null;
-      let scope = source;
-      for (const name of names) {
-        const entry = entries.find((e) => e.name === name);
-        if (!entry) throw new Error(`apple ftab member not found in source: ${name}`);
-        data = await zipEntryData(scope, entry);
-        // if the extracted member is itself a zip, descend (nested bbfw)
-        if (data.length >= 4 && data[0] === 0x50 && data[1] === 0x4b && data[2] === 0x03 && data[3] === 0x04) {
-          scope = {
-            size: data.length,
-            read: (o, l) => data.subarray(o, o + l),
-          };
-        } else {
-          scope = null;
-        }
-      }
-      return data;
+      // record.apple.member may be "outer!inner" for nested bbfw zip members;
+      // extractFtabMember re-reads the member list per zip scope.
+      return extractFtabMember(sourceFor(file), memberName);
     })();
     memo.set(memberName, pending);
     pending.catch(() => memo.delete(memberName));
@@ -411,6 +393,11 @@ async function handleImportCards(msg) {
       if (msg.record.apple) {
         const { parsed } = await ensureAppleParsed(msg.file, msg.fileIndex, msg.record);
         produced = exportAppleDiag(parsed, format);
+        // A bank with zero packets for this format yields a header-only text
+        // (no "Payload:" blocks) — omit it, same rule as the qcom empty-set
+        // path below. (exportAppleDiag itself is golden-pinned byte-exact and
+        // must not change.)
+        if (!produced.some((f) => f.text.includes("Payload:"))) continue;
       } else {
         const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
         if (!Array.isArray(parsed.diag?.[format]) || parsed.diag[format].length === 0) {

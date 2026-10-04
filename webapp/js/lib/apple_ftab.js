@@ -7,8 +7,8 @@
 // envelope can surface a scan warning instead of vanishing).
 // Ported from the Python reference apple_containers.py (iter_ftab_entries +
 // unwrap_ftab_bytes walk + unwrap_archive bbfw branches): non-CR tags are
-// ignored, reserved != 0 stops the walk silently (Python validates nothing
-// extra), CR entries with size - 12 != comp are skipped like Python's unwrap.
+// ignored, reserved != 0 stops the walk like Python's `res != 0 -> break`,
+// CR entries with size - 12 != comp are skipped like Python's unwrap.
 import { zipEntries, zipEntryData } from "./extractor.js";
 
 export const FTAB_MAGIC_OFFSET = 0x20;
@@ -171,6 +171,32 @@ export async function findFtabMemberInBbfw(bytesOrVFile, readFn = null) {
 // parseFtabEntries output for the ftab member; Error if absent.
 export async function findFtabInBbfw(bytesOrVFile, readFn = null) {
   return (await findFtabMemberInBbfw(bytesOrVFile, readFn)).descriptors;
+}
+
+// Worker card-open helper: resolve a record's apple.member name ("outer!inner"
+// for nested bbfw zips) against the real source, descending zip scope by zip
+// scope. The member list is RE-READ per scope: after descending into an inner
+// zip, the outer zip's entries no longer apply.
+export async function extractFtabMember(source, memberName) {
+  const names = memberName.split("!");
+  let data = null;
+  let scope = source;
+  for (const name of names) {
+    const entries = await zipEntries(scope);
+    const entry = entries.find((e) => e.name === name);
+    if (!entry) throw new Error(`apple ftab member not found in source: ${name}`);
+    data = await zipEntryData(scope, entry);
+    // if the extracted member is itself a zip, descend (nested bbfw)
+    if (data.length >= 4 && data[0] === 0x50 && data[1] === 0x4b && data[2] === 0x03 && data[3] === 0x04) {
+      scope = {
+        size: data.length,
+        read: (o, l) => data.subarray(o, o + l),
+      };
+    } else {
+      scope = null;
+    }
+  }
+  return data;
 }
 
 // Source-based FTAB entry walk for the fast scan path: reads only the 64 KiB

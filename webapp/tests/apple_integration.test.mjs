@@ -18,7 +18,7 @@ import {
   generateAppleTables,
   exportAppleDiag,
 } from "../js/lib/apple_cr.js";
-import { isFtab } from "../js/lib/apple_ftab.js";
+import { isFtab, extractFtabMember } from "../js/lib/apple_ftab.js";
 
 const REF = join(CORPUS_DIR, "apple-c-modem-parser");
 const corpusAvailableForApple = () =>
@@ -254,4 +254,49 @@ test("apple integration: non-apple inputs still scan unchanged", { skip: !corpus
   const blob = { name: "random.bin", size: 600, slice: (a, b) => new Blob([new Uint8Array(b - a)]) };
   const { records } = await scanSource(new BrowserFileSource(blob), "random.bin");
   assert.equal(records.length, 0);
+});
+
+// Regression (review CRITICAL #1): a zip WITHOUT an ftab member is a Qualcomm
+// container — the apple branch must fall through to the container path, never
+// abort the scan. Pre-fix, findFtabMemberInBbfw's error propagated out of
+// scanSource and the whole scan failed.
+test("apple integration: zip without ftab member falls through to container scan", async () => {
+  const { BrowserFileSource } = await import("../js/lib/source.js");
+  const zip = storedZip([
+    { name: "modem_proxy.txt", data: new TextEncoder().encode("definitely not an ftab") },
+    { name: "rdl.bin", data: new Uint8Array(64) },
+  ]);
+  const fileLike = {
+    name: "modem.zip",
+    size: zip.length,
+    slice: (a, b) => new Blob([zip.subarray(a, b)]),
+  };
+  const { records, warnings } = await scanSource(new BrowserFileSource(fileLike), "modem.zip");
+  assert.deepEqual(records, []);
+  assert.ok(Array.isArray(warnings));
+});
+
+// Regression (review MAJOR #2): nested bbfw — the ftab lives in a zip inside a
+// zip. Scan enumerates it with member "outer!inner"; the card-open member
+// resolution (extractFtabMember, the code the worker uses) must re-read the
+// member list per zip scope. Pre-fix it reused the outer zip's entries and
+// every open threw "apple ftab member not found in source: ftab.bin".
+test("apple integration: nested bbfw scan + open-path member resolution", async () => {
+  const ftab = syntheticFtabBytes();
+  const inner = storedZip([{ name: "ftab.bin", data: ftab }]);
+  const outer = storedZip([{ name: "baseband.bbfw", data: inner }]);
+  const fileLike = {
+    name: "modem.zip",
+    size: outer.length,
+    slice: (a, b) => new Blob([outer.subarray(a, b)]),
+  };
+  const { BrowserFileSource } = await import("../js/lib/source.js");
+  const source = new BrowserFileSource(fileLike);
+  const { records } = await scanSource(source, "modem.zip");
+  assert.equal(records.length, 1);
+  const record = records[0];
+  assert.equal(record.apple.member, "baseband.bbfw!ftab.bin");
+  // The worker's open path resolves the member through extractFtabMember.
+  const memberData = await extractFtabMember(source, record.apple.member);
+  assert.deepEqual([...memberData], [...ftab]);
 });

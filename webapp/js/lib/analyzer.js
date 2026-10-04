@@ -256,8 +256,15 @@ async function scanAppleFtab(source, name, cancelled) {
     descriptors = await parseFtabEntriesFromSource(source);
   } else if (isZipHead(head)) {
     // bbfw/zip: reuse the container path's central-directory read to find the
-    // ftab member, then slice streams from the inflated member bytes.
-    ({ data: ftabData, memberName, descriptors } = await findFtabMemberInBbfw(source));
+    // ftab member, then slice streams from the inflated member bytes. A zip
+    // WITHOUT an ftab member is a Qualcomm container, not an Apple input —
+    // any failure here (no member, malformed archive) must fall through to
+    // the regular FAT/container dispatch below, never abort the scan.
+    try {
+      ({ data: ftabData, memberName, descriptors } = await findFtabMemberInBbfw(source));
+    } catch {
+      return null;
+    }
   } else {
     return null;
   }
