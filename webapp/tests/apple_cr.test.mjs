@@ -19,6 +19,7 @@ import {
   componentClass,
   b826V22Component,
   packetiseB0cd,
+  inspectAppleBank,
   HEAD_TABLES,
 } from "../js/lib/apple_cr.js";
 
@@ -60,6 +61,39 @@ test("apple_cr: DIAG differential — b0cd/b826 byte-equal for all 58 banks", { 
     assert.equal(b0cd.text, golden[key].b0cd, `${key}: b0cd text`);
     assert.equal(b826.text, golden[key].b826, `${key}: b826 text`);
   }
+});
+
+test("inspectAppleBank matches python inspect_bank for all 58 banks", { skip: !corpusAvailableForApple() }, async () => {
+  const manifest = await loadManifest();
+  let n = 0;
+  for (const key of Object.keys(manifest)) {
+    const bank = await readFile(bankPath(key)); // pre-decompressed ftab fixture bank
+    const info = inspectAppleBank(bank);
+    const exp = manifest[key].inspect;
+    assert.deepEqual(
+      {
+        layout: info.layout,
+        lte: info.lteCount,
+        endc: info.endcCount,
+        nrca: info.nrcaCount,
+        nrdc: info.nrdcCount,
+        base: info.baseCounts,
+        companions: info.companionCount,
+      },
+      {
+        layout: manifest[key].layout,
+        lte: exp.lte_count,
+        endc: exp.endc_count,
+        nrca: exp.nrca_count,
+        nrdc: exp.nrdc_count,
+        base: exp.base_candidates,
+        companions: exp.companion_count,
+      },
+      key
+    );
+    n++;
+  }
+  assert.equal(n, 58);
 });
 
 // --- audit parity (corruption fixtures) -----------------------------------------

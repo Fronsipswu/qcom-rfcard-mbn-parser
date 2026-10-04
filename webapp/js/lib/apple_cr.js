@@ -623,6 +623,64 @@ function expandNrCandidate(data, dv, layout, bandTable, cntCompanions, candidate
   };
 }
 
+// --- Fast inspect (apple_cr_parser.py inspect_bank:607-657) ----------------------
+//
+// Header-only summary WITHOUT full combinatorial expansion: counts are the
+// EXPANDED PRE-DUEDUPE numbers (each base candidate expands through
+// companions; each companion contributes matrix_count feature-set rows == one
+// B826 row). These may differ from post-dedupe generateAppleTables row
+// counts — the python GUI displays the same pre-dedupe numbers.
+
+export function inspectAppleBank(data) {
+  const layout = detectLayout(data);
+  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const lteCount = dv.getUint32(LTE_COUNT_OFF, true);
+  const nrCount = dv.getUint32(NR_BASE_OFF - 4, true); // NR_COUNT_OFF = 0x2EE14 (u32 right before the first row)
+  const companionCount = dv.getUint32(COMPANION_COUNT_OFF, true);
+
+  const baseCounts = { endc: 0, nrca: 0, nrdc: 0 };
+  const expanded = { endc: 0, nrca: 0, nrdc: 0 };
+  for (let i = 0; i < nrCount; i++) {
+    const off = NR_BASE_OFF + i * NR_STRIDE;
+    const h0 = dv.getBigUint64(off, true);
+    const cat = Number((h0 >> 5n) & 3n);
+    let kind;
+    if (cat === 2) {
+      kind = "endc";
+    } else if (cat === 1) {
+      let hasFr1 = false;
+      let hasFr2 = false;
+      for (let w = 0; w < 10; w++) {
+        const val = dv.getUint16(off + 0x14 + w * 2, true);
+        if (val === 0) continue;
+        const band = (val >> 1) & 0x3ff;
+        if (band <= 256) hasFr1 = true;
+        else hasFr2 = true;
+      }
+      kind = hasFr1 && hasFr2 ? "nrdc" : "nrca";
+    } else {
+      continue;
+    }
+    baseCounts[kind] += 1;
+    const first = Number((h0 >> 32n) & 0xfffffn);
+    const count = Number((h0 >> 52n) & 0xffn);
+    for (let index = first; index < Math.min(first + count, companionCount); index++) {
+      const ch0 = dv.getBigUint64(COMPANION_BASE + index * COMPANION_STRIDE, true);
+      expanded[kind] += Number((ch0 >> 52n) & 0xffn);
+    }
+  }
+
+  return {
+    layout: layout.name,
+    lteCount,
+    endcCount: expanded.endc,
+    nrcaCount: expanded.nrca,
+    nrdcCount: expanded.nrdc,
+    baseCounts,
+    companionCount,
+  };
+}
+
 // --- parse_bank (apple_cr_parser.py:660-728) ----------------------------------------
 
 export function parseAppleBank(data, name = null, includeSlot2 = true) {
