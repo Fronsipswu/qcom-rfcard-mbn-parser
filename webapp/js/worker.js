@@ -21,6 +21,12 @@
 // Additive protocol details (documented deviations, needed by the UI layer):
 // - "records" carries an optional `warnings` array ({tool, message}) so the
 //   detect-and-warn panel can list them next to the records they belong to.
+// - Apple ftab scans post "records" INCREMENTALLY: the ftab's banks are fanned
+//   out to a pool of scan-worker.js units (see "apple scan pool" below), and
+//   every contiguous in-order group of completed banks is posted as a partial
+//   "records" reply (progressive card list). The final full "records" reply is
+//   still sent (main.js dedupes by card key, so partials are idempotent);
+//   warnings are split so they are never delivered twice.
 // - parseCard/export MUST carry the card's own File handle: the worker resolves
 //   bytes from that file, never from a session fileIndex. Session state resets
 //   on every scan while cards accumulate across imports, so a fileIndex alone
@@ -86,12 +92,94 @@ const containerMemo = new WeakMap();
 const appleBankMemo = new WeakMap(); // File -> Map<key, {bank, parsed}>
 const appleMemberMemo = new WeakMap(); // File -> Map<memberName, Promise<Uint8Array>>
 
+// --- apple scan pool --------------------------------------------------------------
+//
+// A ftab carries ~58 independent CR banks; per bank, 99% of the scan work is
+// the LZFSE decode (measured: ~115 ms/bank desktop, ~6.8 s serial for all 58).
+// The scan coordinator therefore fans banks out to a lazily created pool of
+// scan-worker.js units (one decode each, compressed stream transferred
+// zero-copy) while it keeps sha256/record assembly in-process. Results are
+// folded back in descriptor order by scanAppleFtab, so record order, warnings
+// and the golden byte-parity of the sequential path are unchanged. Units stay
+// alive between scans (idle cost is negligible); a reset settles queued tasks
+// so a cancelled scan cannot strand the coordinator's await.
+
+const SCAN_POOL_SIZE = Math.min(Math.max((typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 2, 1), 6);
+let scanPool = null; // [{ worker, onDone }] — onDone non-null = slot busy
+const scanPoolQueue = []; // pending { stream, uncompSize, settle }
+let scanPoolTaskId = 0;
+
+function scanPoolFor() {
+  if (scanPool) return scanPool;
+  scanPool = [];
+  for (let i = 0; i < SCAN_POOL_SIZE; i++) {
+    const worker = new Worker(new URL("./scan-worker.js", import.meta.url), { type: "module" });
+    const slot = { worker, onDone: null };
+    worker.onmessage = (event) => {
+      const msg = event.data;
+      if (!slot.onDone) return; // stale reply (should not happen) — ignore
+      const done = slot.onDone;
+      slot.onDone = null;
+      done(msg);
+      dispatchScanPool();
+    };
+    worker.onerror = (event) => {
+      if (!slot.onDone) return; // idle worker failed to load; next dispatch retries
+      const done = slot.onDone;
+      slot.onDone = null;
+      done({ ok: false, message: event.message || "scan unit failed" });
+      dispatchScanPool();
+    };
+    scanPool.push(slot);
+  }
+  return scanPool;
+}
+
+function dispatchScanPool() {
+  for (const slot of scanPool) {
+    if (slot.onDone) continue;
+    const task = scanPoolQueue.shift();
+    if (!task) return;
+    slot.onDone = (msg) => task.settle(msg);
+    // Transfer the stream's ArrayBuffer (zero-copy); the coordinator already
+    // took the digest and never reuses the stream after the hook returns.
+    slot.worker.postMessage(
+      { type: "appleBank", id: ++scanPoolTaskId, stream: task.stream, uncompSize: task.uncompSize },
+      [task.stream],
+    );
+  }
+}
+
+// Runs one bank's decode+inspect on the pool. `streamBuffer` must be a
+// standalone (transferable) ArrayBuffer holding the compressed bank. Resolves
+// with the inspect payload ({layout, counts}) or rejects with the unit's error
+// message.
+function inspectBankInPool(streamBuffer, uncompSize) {
+  return new Promise((resolve, reject) => {
+    scanPoolQueue.push({
+      stream: streamBuffer,
+      uncompSize,
+      settle: (msg) => (msg && msg.ok ? resolve(msg.appleInfo) : reject(new Error((msg && msg.message) || "scan unit failed"))),
+    });
+    dispatchScanPool();
+  });
+}
+
+function drainScanPoolQueue() {
+  // Settle (reject) queued-but-undispatched tasks: their promises hang off the
+  // abandoned scan's Promise.all (handlers attached), so rejecting them is
+  // absorbed there and cannot surface as an unhandled rejection. In-flight
+  // banks (≤ pool size) are left to finish their single ~100 ms decode.
+  for (const task of scanPoolQueue.splice(0)) task.settle({ ok: false, message: "scan cancelled" });
+}
+
 function post(message, transfer = []) {
   self.postMessage(message, transfer);
 }
 
 function resetSession() {
   session = null;
+  drainScanPoolQueue();
 }
 
 function sourceFor(file) {
@@ -305,12 +393,32 @@ async function handleScan(msg) {
     const file = files[fileIndex];
     post({ type: "progress", phase: "scan", source: file.name, done: fileIndex, total, currentFile: file.name });
     try {
+      let postedWarnings = 0; // partial batches already delivered these
       const source = new BrowserFileSource(file);
       const { records, warnings } = await scanSource(source, file.name, {
         shouldCancel: () => cancelled.has(id),
+        // Fan the ftab's banks out to the scan pool (measured: 99% of apple
+        // scan time is the per-bank LZFSE decode; sha256/inspect are ~1%).
+        // The hook receives the stream AFTER its digest was taken and may
+        // detach it: raw-ftab reads are compact standalone buffers (transfer
+        // as-is), bbfw banks are subarray views of the inflated member (copy
+        // the range into a standalone buffer first).
+        inspectAppleBankAsync: (stream, uncompSize) =>
+          inspectBankInPool(
+            stream.byteOffset === 0 && stream.byteLength === stream.buffer.byteLength ? stream.buffer : stream.slice().buffer,
+            uncompSize,
+          ),
+        // Progressive card list: each contiguous, in-order group of completed
+        // banks is posted immediately (main.js dedupes by card key; the final
+        // "records" reply below still carries the authoritative full set).
+        onAppleBatch: (batchRecords, batchWarnings) => {
+          if (cancelled.has(id)) return;
+          postedWarnings += batchWarnings.length;
+          post({ type: "records", fileIndex, records: batchRecords, warnings: batchWarnings });
+        },
       });
       if (cancelled.has(id)) break;
-      post({ type: "records", fileIndex, records, warnings: warnings ?? [] });
+      post({ type: "records", fileIndex, records, warnings: warnings.slice(postedWarnings) });
     } catch (err) {
       if (err instanceof ScanCancelled || cancelled.has(id)) break;
       post({ type: "error", message: err && err.message ? err.message : String(err), source: file.name });

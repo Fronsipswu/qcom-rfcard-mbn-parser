@@ -251,7 +251,16 @@ function isZipHead(head) {
   return head.length >= 4 && head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04;
 }
 
-async function scanAppleFtab(source, name, cancelled) {
+// Apple bank decode+inspect, with an optional parallel path:
+// - inspectAppleBankAsync: (stream, uncompSize) => appleInfo. The hook MAY
+//   consume/detach `stream` (the pool path transfers a copy), so it is only
+//   called after the stream's digest was taken. Default = inline sequential
+//   decode (identical records, used by node tests and non-pool scans).
+// - onAppleBatch(records, warnings): progressive output. Called whenever a
+//   contiguous, in-order prefix of banks completed, so the UI can render rows
+//   before the scan finishes. The final return value still carries the FULL
+//   record set (batches are informational; receivers dedupe by card key).
+async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, onAppleBatch } = {}) {
   const head = await source.read(0, Math.min(0x30, source.size));
   let descriptors = null;
   let ftabData = null; // inflated ftab member bytes (bbfw) or null (raw ftab)
@@ -274,77 +283,118 @@ async function scanAppleFtab(source, name, cancelled) {
   }
   if (!descriptors.length) return null;
 
+  const inspectBank = inspectAppleBankAsync ?? defaultInspectAppleBank;
+  // Per-descriptor outcome (record or warning), emitted strictly in descriptor
+  // order: records must keep the name-sorted order (python parity) even though
+  // banks complete out of order under the pool.
+  const outcomes = new Array(descriptors.length).fill(null);
+  let emitIndex = 0;
   const records = [];
   const warnings = [];
-  for (const desc of descriptors) {
-    if (cancelled()) throw new ScanCancelled();
-    const stream = ftabData
-      ? ftabData.subarray(desc.streamStart, desc.streamStart + desc.compSize)
-      : await source.read(desc.streamStart, desc.compSize);
-    const dv = new DataView(stream.buffer, stream.byteOffset, stream.byteLength);
-    if (stream.length < 4 || dv.getUint32(0, true) !== APPLE_CR_MAGIC) {
-      warnings.push({
-        tool: "apple",
-        message: `apple CR bank ${desc.name}: unexpected compression magic — skipped`,
-      });
-      continue;
+  const emitBatch = onAppleBatch ?? (() => {});
+  const flush = () => {
+    if (cancelled()) return; // no emissions past cancel; final reply drops too
+    const batch = [];
+    const batchWarnings = [];
+    while (emitIndex < outcomes.length && outcomes[emitIndex]) {
+      const { record, warning } = outcomes[emitIndex++];
+      if (warning) {
+        warnings.push(warning);
+        batchWarnings.push(warning);
+      } else {
+        records.push(record);
+        batch.push(record);
+      }
     }
-    const digest = await sha256HexAsync(stream);
-    // Decompress + fast-inspect NOW (python GUI parity: counts and layout are
-    // visible at load). Full table parse stays deferred to card open. A bank
-    // that fails to decompress/inspect is warned and skipped — never fatal.
-    let appleInfo = null;
-    try {
-      const bank = lzfseDecode(stream, desc.uncompSize);
-      const inspected = inspectAppleBank(bank);
-      appleInfo = {
-        layout: inspected.layout,
-        counts: {
-          lte: inspected.lteCount,
-          endc: inspected.endcCount,
-          nrca: inspected.nrcaCount,
-          nrdc: inspected.nrdcCount,
-        },
-      };
-    } catch (err) {
-      warnings.push({
-        tool: "apple",
-        message: `apple CR bank ${desc.name}: unreadable (${err && err.message ? err.message : err}) — skipped`,
-      });
-      continue;
-    }
-    records.push({
-      inner_path: desc.name,
-      name: `${desc.name} (profile 0x${desc.profileId.toString(16).padStart(6, "0")})`,
-      generation: "Apple CR",
-      size: desc.uncompSize,
-      hwid: 0,
-      fsid: 0,
-      bid: 0,
-      external: true,
-      source_path: name,
-      sidecars: {},
-      sha256: digest,
-      lte_combos: null,
-      nr_combos: null,
-      apple: {
-        profileId: desc.profileId,
-        offset: desc.offset,
-        compSize: desc.compSize,
-        uncompSize: desc.uncompSize,
-        // member-relative offsets when the ftab came from a zip (bbfw)
-        member: memberName,
-        layout: appleInfo.layout,
-        counts: appleInfo.counts,
-      },
-      combo_counts_deferred: true,
-    });
-  }
+    if (batch.length || batchWarnings.length) emitBatch(batch, batchWarnings);
+  };
+
+  // Decompress + fast-inspect each bank (python GUI parity: counts and layout
+  // are visible at load). Full table parse stays deferred to card open. A bank
+  // that fails to decompress/inspect is warned and skipped — never fatal.
+  // Banks are independent units; the hook (pool) decides concurrency. The
+  // inline default decodes synchronously, so at most one bank is materialized
+  // at a time regardless of how many callbacks are parked at their awaits.
+  await Promise.all(
+    descriptors.map(async (desc, index) => {
+      if (cancelled()) return;
+      const stream = ftabData
+        ? ftabData.subarray(desc.streamStart, desc.streamStart + desc.compSize)
+        : await source.read(desc.streamStart, desc.compSize);
+      const dv = new DataView(stream.buffer, stream.byteOffset, stream.byteLength);
+      if (stream.length < 4 || dv.getUint32(0, true) !== APPLE_CR_MAGIC) {
+        outcomes[index] = {
+          warning: {
+            tool: "apple",
+            message: `apple CR bank ${desc.name}: unexpected compression magic — skipped`,
+          },
+        };
+        flush();
+        return;
+      }
+      const digest = await sha256HexAsync(stream);
+      try {
+        const appleInfo = await inspectBank(stream, desc.uncompSize);
+        outcomes[index] = {
+          record: {
+            inner_path: desc.name,
+            name: `${desc.name} (profile 0x${desc.profileId.toString(16).padStart(6, "0")})`,
+            generation: "Apple CR",
+            size: desc.uncompSize,
+            hwid: 0,
+            fsid: 0,
+            bid: 0,
+            external: true,
+            source_path: name,
+            sidecars: {},
+            sha256: digest,
+            lte_combos: null,
+            nr_combos: null,
+            apple: {
+              profileId: desc.profileId,
+              offset: desc.offset,
+              compSize: desc.compSize,
+              uncompSize: desc.uncompSize,
+              // member-relative offsets when the ftab came from a zip (bbfw)
+              member: memberName,
+              layout: appleInfo.layout,
+              counts: appleInfo.counts,
+            },
+            combo_counts_deferred: true,
+          },
+        };
+      } catch (err) {
+        outcomes[index] = {
+          warning: {
+            tool: "apple",
+            message: `apple CR bank ${desc.name}: unreadable (${err && err.message ? err.message : err}) — skipped`,
+          },
+        };
+      }
+      flush();
+    }),
+  );
+  if (cancelled()) throw new ScanCancelled();
+  flush();
   if (!records.length && !warnings.length) return null;
   return { records, warnings };
 }
 
-export async function scanSource(source, name, { shouldCancel } = {}) {
+function defaultInspectAppleBank(stream, uncompSize) {
+  const bank = lzfseDecode(stream, uncompSize);
+  const inspected = inspectAppleBank(bank);
+  return {
+    layout: inspected.layout,
+    counts: {
+      lte: inspected.lteCount,
+      endc: inspected.endcCount,
+      nrca: inspected.nrcaCount,
+      nrdc: inspected.nrdcCount,
+    },
+  };
+}
+
+export async function scanSource(source, name, { shouldCancel, inspectAppleBankAsync, onAppleBatch } = {}) {
   const cancelled = shouldCancel ?? (() => false);
   if (cancelled()) throw new ScanCancelled();
   // Direct-MBN fast path: a file whose NAME already matches a candidate regex.
@@ -373,9 +423,9 @@ export async function scanSource(source, name, { shouldCancel } = {}) {
     return { records: deduplicateRecords([buildRecord(base, lte, nr)]), warnings: [] };
   }
 
-  // Apple C-series FTAB / bbfw inputs: one card per CR bank, no decompression
-  // during the scan (tried before the FAT/container dispatch).
-  const appleScan = await scanAppleFtab(source, name, cancelled);
+  // Apple C-series FTAB / bbfw inputs: one card per CR bank, decompressed +
+  // inspected per bank (optionally on the worker pool; see scanAppleFtab).
+  const appleScan = await scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, onAppleBatch });
   if (appleScan) return appleScan;
 
   const fat = new Fat16Image(source);

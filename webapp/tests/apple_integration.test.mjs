@@ -343,3 +343,38 @@ test("apple integration: file input accept includes .bin (ftab pickable via brow
   assert.ok(exts.includes(".bin"), `accept must include .bin (got: ${accept})`);
   assert.ok(exts.includes(".bbfw"), `accept must include .bbfw (got: ${accept})`);
 });
+
+// --- parallel scan hook: fan-out inspect must be byte-identical to sequential -------
+
+test("apple integration: inspectAppleBankAsync fan-out + onAppleBatch match the sequential scan", { skip: !corpusAvailableForApple() }, async () => {
+  const { inspectAppleBank } = await import("../js/lib/apple_cr.js");
+  const src = await NodeFileSource.open(join(REF, "c2", "ftab.bin"));
+  const sequential = await scanSource(src, "ftab.bin");
+
+  // Pool-style hook: bounded-concurrency fan-out that (like the worker pool)
+  // detaches the stream buffer before decoding, completing out of order.
+  const inlineInspect = (stream, uncompSize) => {
+    const bank = lzfseDecode(new Uint8Array(stream.slice().buffer), uncompSize);
+    const inspected = inspectAppleBank(bank);
+    return {
+      layout: inspected.layout,
+      counts: { lte: inspected.lteCount, endc: inspected.endcCount, nrca: inspected.nrcaCount, nrdc: inspected.nrdcCount },
+    };
+  };
+  const batches = [];
+  const parallel = await scanSource(src, "ftab.bin", {
+    inspectAppleBankAsync: async (stream, uncompSize) => {
+      await new Promise((r) => setTimeout(r, 5)); // force out-of-order completion
+      return inlineInspect(stream, uncompSize);
+    },
+    onAppleBatch: (batchRecords, batchWarnings) => batches.push({ batchRecords, batchWarnings }),
+  });
+
+  deepEqualOrdered(parallel.records, sequential.records);
+  assert.deepEqual(parallel.warnings, sequential.warnings);
+  // Batches concatenate to the full set, strictly in record order.
+  deepEqualOrdered(batches.flatMap((b) => b.batchRecords), sequential.records);
+  assert.deepEqual(batches.flatMap((b) => b.batchWarnings), sequential.warnings);
+  assert.ok(batches.length > 1, `expected progressive batches, got ${batches.length}`);
+  await src.close();
+});
