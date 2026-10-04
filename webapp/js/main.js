@@ -52,6 +52,7 @@ const els = {
   loadedFilesLabel: document.getElementById("loadedfiles-label"),
   loadedFilesChips: document.getElementById("loadedfiles-chips"),
   cardBody: document.getElementById("cardlist-body"),
+  cardList: document.getElementById("cardlist"),
   cardHead: document.getElementById("cardlist-head"),
   cardsEmpty: document.getElementById("cards-empty"),
   viewerHost: document.getElementById("viewerhost"),
@@ -837,7 +838,7 @@ function syncSplitterAria() {
   els.splitter.setAttribute("aria-valuenow", String(Math.round(els.cardPane.getBoundingClientRect().width)));
 }
 
-let splitterDrag = null; // { id, startX, startWidth }
+let splitterDrag = null; // { id, startX, startWidth, containerWidth, pendingWidth, raf }
 
 els.splitter.addEventListener("pointerdown", (event) => {
   if (event.button !== 0) return;
@@ -847,6 +848,14 @@ els.splitter.addEventListener("pointerdown", (event) => {
     id: event.pointerId,
     startX: event.clientX,
     startWidth: els.cardPane.getBoundingClientRect().width,
+    // Read the container width ONCE here. Reading it in pointermove would
+    // force a synchronous layout on every mouse event (mice fire far faster
+    // than frames, while the previous move's flex-basis write is still
+    // un-flushed) — with a populated card list that queued layout work is
+    // the multi-second drag lag.
+    containerWidth: els.workbench.clientWidth,
+    pendingWidth: null,
+    raf: 0,
   };
   // Synthetic (untrusted) events have no active pointer to capture; the
   // move/up handlers still work on the splitter for those.
@@ -858,15 +867,41 @@ els.splitter.addEventListener("pointerdown", (event) => {
   setSplitterAriaBounds();
 });
 
+// Coalesce drag updates to one per animation frame: pointermove fires at the
+// input device's rate, the width write should happen at most once per frame.
+function scheduleDragFrame() {
+  if (!splitterDrag || splitterDrag.raf) return;
+  splitterDrag.raf = requestAnimationFrame(() => {
+    if (!splitterDrag) return;
+    splitterDrag.raf = 0;
+    // Freeze the card-list table's width for the drag: #cardlist uses auto
+    // table layout, so every pane-width change would re-measure every cell
+    // of every row. With the table pinned to its current pixel width the
+    // per-frame relayout is trivial; one normal reflow happens at drag end
+    // instead of one per mouse event.
+    if (!els.cardList.style.width) {
+      els.cardList.style.width = `${els.cardList.getBoundingClientRect().width}px`;
+    }
+    applyCardPaneWidth(splitterDrag.pendingWidth);
+  });
+}
+
 els.splitter.addEventListener("pointermove", (event) => {
   if (!splitterDrag || event.pointerId !== splitterDrag.id) return;
-  const width = clampSplitterWidth(splitterDrag.startWidth + event.clientX - splitterDrag.startX, els.workbench.clientWidth);
-  applyCardPaneWidth(width);
+  splitterDrag.pendingWidth = clampSplitterWidth(
+    splitterDrag.startWidth + event.clientX - splitterDrag.startX,
+    splitterDrag.containerWidth // cached at drag start — no forced layout here
+  );
+  scheduleDragFrame();
 });
 
 function endSplitterDrag(event) {
   if (!splitterDrag || event.pointerId !== splitterDrag.id) return;
+  const { raf, pendingWidth } = splitterDrag;
   splitterDrag = null;
+  if (raf) cancelAnimationFrame(raf);
+  if (pendingWidth !== null) applyCardPaneWidth(pendingWidth); // land the final width
+  els.cardList.style.removeProperty("width"); // release the frozen table width
   try {
     els.splitter.releasePointerCapture(event.pointerId);
   } catch {}
