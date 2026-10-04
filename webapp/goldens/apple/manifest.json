@@ -1,0 +1,350 @@
+{
+ "c1/CR11": {
+  "profile_id": 1070220,
+  "sha256": "751343fcf15bc50ac9a4f41d3c94acbc40d99d9d21a458a077b762a8b866763c",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR13": {
+  "profile_id": 1040114,
+  "sha256": "8056049ce8e46b6420b71bfbd0f00c5e260bfdae42fc272f2bde60a6274b48ff",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR17": {
+  "profile_id": 1070221,
+  "sha256": "45f68035ce835cf87906b078b45a9f33449d63ba3af5f34384997c8a4922aa35",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR22": {
+  "profile_id": 1070222,
+  "sha256": "4cb69c4d7edd6adef42cbc2d9bc2ccc17aef9f6e535f87999c10bf42575e119e",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR27": {
+  "profile_id": 1070320,
+  "sha256": "f9933d2caef6d2f9aeb2800abf5f98def786d1e9cfc71e5e6c404c2005c2b261",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR28": {
+  "profile_id": 1070230,
+  "sha256": "1247094b6d9945edcf6b445de430ba1be8b53b6924cf5502c264dd6a8f45647f",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR29": {
+  "profile_id": 1070233,
+  "sha256": "73fe0b5ded23c5c1772949165e2c15667620d9b1ee0e53c35324e6a78cb2a030",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR30": {
+  "profile_id": 1070321,
+  "sha256": "bd428742d1c55bedf1383af55c2521bc350713f4d2db9d42ac8354e626cfad63",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR33": {
+  "profile_id": 1070235,
+  "sha256": "04b566b5ad085a323dd60b003431178a3f46160217ecc2337aa90db104ebead3",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR34": {
+  "profile_id": 1070240,
+  "sha256": "b85c46e0a4884f49d8001ec669b7b9aed50cfd71a54a708f46cc4b7cf9aa7fff",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR38": {
+  "profile_id": 1070322,
+  "sha256": "7d0fb206785f7189c55b43e3d2977b1665dc564c50d89fab7e74e93e79740acc",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR39": {
+  "profile_id": 1070330,
+  "sha256": "82be27d829e288208faf99b795842f12fe6eb1307d3a3563fd4ef8db40f078b2",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR44": {
+  "profile_id": 1120420,
+  "sha256": "dbc993fb66d1d505db65287dc1fca9dc46674399d055a5a4db1b4f30cea4722b",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR45": {
+  "profile_id": 1120472,
+  "sha256": "2344fcce9f529fb8605ec680dcd2c47c2f092577907d328ec9c6bc99ac7dace2",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR46": {
+  "profile_id": 1120421,
+  "sha256": "08be5e106ffb896a0cb32c6dd8f36d16f6a40799501816e2ec0fa8338c1e957f",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR47": {
+  "profile_id": 1120430,
+  "sha256": "1e1d17e4cbd233c381f26e6fa0108e8474980cee574624a5d71cfc418b32f616",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR48": {
+  "profile_id": 1120435,
+  "sha256": "a57d27d918b0c36e650b05e5a2443542f88d32a4fa48926091f8e3f640604eb2",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR52": {
+  "profile_id": 1070333,
+  "sha256": "2997a5f05c4b751b10100c90b721ca019922d3c62d5e064b426fb9e2d22d3f04",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR53": {
+  "profile_id": 1070335,
+  "sha256": "936f19200ed5dd751234ac554582fc6185ada8a6597de6341806f768732e2a40",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR54": {
+  "profile_id": 1120474,
+  "sha256": "1ba94bc1bf93db0efcbc498efe9a07824580cf5e3077d96533628bd1302cd3af",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c1/CR61": {
+  "profile_id": 1070340,
+  "sha256": "4a6db3a2de0545d0c980029e0d43ef7501ae15734e5e0119b92578356ff06587",
+  "size": 5732064,
+  "layout": "C4000"
+ },
+ "c2/CR04": {
+  "profile_id": 2040102,
+  "sha256": "44a80da4b88af07d19486c766fb63e4573ad2110131ebc61af50e9f4645d09c2",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR09": {
+  "profile_id": 2100123,
+  "sha256": "5b9afa54139f7fc37bc1d9d303da1408f320a5d662d490995d6bed736b0ec464",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR11": {
+  "profile_id": 2100323,
+  "sha256": "4b63e2b45d78f07d0d3423645a1f25f3e578a4ff7a24246a42129e59d8c64074",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR12": {
+  "profile_id": 2100420,
+  "sha256": "d23e67935ba8f2a8b018b7f923f35b7abe169e4c5834ed6ccf5b914b42618820",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR13": {
+  "profile_id": 2100523,
+  "sha256": "2cbece20d5a41b9c9885df049af15384dfc0f975d07fee91f32d9d279b7580df",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR14": {
+  "profile_id": 2100620,
+  "sha256": "2d6ce0927f1a4900de14512ff10eef33b003d94c62e57baa04d6c285be017b73",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR15": {
+  "profile_id": 2100324,
+  "sha256": "3305825764999d577239c0de7bc5c574b87759020292d31d26ade7f44e2aef94",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR16": {
+  "profile_id": 2100124,
+  "sha256": "86ab141aecccf4f5f1c52e65c3af8d1feffe53f2e78dc886dbeeab418d411521",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR17": {
+  "profile_id": 2100421,
+  "sha256": "053d297d24360d0a028b4ee69d7bc36441df3e0cfceb099f53fa9b151db6191d",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR19": {
+  "profile_id": 2100382,
+  "sha256": "76b691c3b82dba5c19cc3369ead3906b63b1d65328bccf5f06c12dffa62e4b68",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR20": {
+  "profile_id": 2100383,
+  "sha256": "8e63334c8b826cdf48dc49645301a5a5f511c91a508ff0b192d9906326867a6a",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR21": {
+  "profile_id": 2100422,
+  "sha256": "8f34e73cc65efde34818c3d58e63f886768b6bcc4e5f9d6b7475877319bbcce6",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR23": {
+  "profile_id": 2100125,
+  "sha256": "16c970db094233943beb2bdf26a8ffbc1786817fa7eb340c6de06aac1abd53e0",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR26": {
+  "profile_id": 2100325,
+  "sha256": "fc4ddb892cad527b6aa6d87e513819703f2d7372727d52f479a2422310d26e6d",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR28": {
+  "profile_id": 2100183,
+  "sha256": "217a467e11cbf01e2f9b3f6c2654c437e69d963770563b1e0d31058481f3161d",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR29": {
+  "profile_id": 2100482,
+  "sha256": "58e3b8ad37263f3a173355a06243b289715821e2d8e9aa41bf49cbaa3d4a8b7a",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR31": {
+  "profile_id": 2100386,
+  "sha256": "4b66359ca9980992cdbc314401d256d660f637baed7619ca766354b3eabd2b5a",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR38": {
+  "profile_id": 2100524,
+  "sha256": "114f3ea4a887f324a64d468c431c436fc284ccaf4dea2895eaca07dd4f1d4c84",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR39": {
+  "profile_id": 2100621,
+  "sha256": "7292e9e18e4c3111d2f2a6a9786cbed49de945fb0d6ffaa28009d5e941138a1e",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR42": {
+  "profile_id": 2100331,
+  "sha256": "6e3ee76208dcb43f528f541e79eb89dc23c84e1b8aa7155017812ba2192ea3ee",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR43": {
+  "profile_id": 2100131,
+  "sha256": "a63fccd69fb0c22825dba80f67fcd7a2cf0d20c1273f41deb37fb8fcc0784eb7",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR45": {
+  "profile_id": 2100426,
+  "sha256": "394c6b747067cbca1d6ca6042cdf760fa29513295ffc4a09afafb788aad915fd",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR46": {
+  "profile_id": 2100334,
+  "sha256": "b0b64c2fcb7b611823de72e7ee7efe310cd80767d07637746a90b6be9afd7d1c",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR47": {
+  "profile_id": 2100428,
+  "sha256": "854a1c3147b0ad35c98f02acb6c69e05501ccd2f44df43b4dad3d99a71712be6",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR48": {
+  "profile_id": 2101130,
+  "sha256": "e166578bc1ee5124fbe996b022efbb6b39bb3a4a0b4d3123bf0dffc152d37129",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR49": {
+  "profile_id": 2100525,
+  "sha256": "a41e7784e098bb8b02ce7cab3d0e1dd151791af03625b9c4f61765df9cfee934",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR50": {
+  "profile_id": 2100622,
+  "sha256": "a8dd2f535eb04616893387768ff7d9f7ad4153917c38b1469433a23a0dd13e22",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR51": {
+  "profile_id": 2100134,
+  "sha256": "eaa40596ddad05814b434b6bc7911d69a0db3ccee3d0ee36a45f29243f5dbaa1",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR52": {
+  "profile_id": 2101133,
+  "sha256": "728b51b3f080d946a3c1b2efef6cdabd4fe29e3930655664a5245da9389be6ab",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR53": {
+  "profile_id": 2100397,
+  "sha256": "95c8382d73ef3eae93dfb09ce48894eda52a070206be7da9d6595f117edc9b57",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR56": {
+  "profile_id": 2100336,
+  "sha256": "e03cc720e08e19aa5ba8bfaedb50cd3134e699b14c1815d1d003d04d74e25a30",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR61": {
+  "profile_id": 2100586,
+  "sha256": "5e4774fc57a27da2ca24cd2c9061b6fceef25da846ee5b0d030f676e911f1a44",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR62": {
+  "profile_id": 2100685,
+  "sha256": "bf1c8898474ca434f3b4e2c14731469ec8924777591b68bb4c639aa7edd6a6a5",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR63": {
+  "profile_id": 2100136,
+  "sha256": "b4b7e7fb29f04af1a8e27e20677b62a0895049703070d3c97ffc1acc24f27991",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR64": {
+  "profile_id": 2101135,
+  "sha256": "ab12f1c519008a6fa84224a95fcfaa130fae59d3cc6c462376bc7208c5857829",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR65": {
+  "profile_id": 2100531,
+  "sha256": "3f6daed98734cee597028b4d03171d41191a8fe514893dec9b059573da5e83a2",
+  "size": 5836032,
+  "layout": "C4020"
+ },
+ "c2/CR66": {
+  "profile_id": 2100630,
+  "sha256": "2b193364f94cd6d4b4f1fb953ff570e9871d29139af7a8ba1af0b4366de3c559",
+  "size": 5836032,
+  "layout": "C4020"
+ }
+}
