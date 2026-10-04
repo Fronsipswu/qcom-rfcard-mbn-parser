@@ -571,7 +571,9 @@ function zipMemberPath(name) {
 
 // EOCD + central directory (with zip64 fallbacks; per-entry inflate happens
 // in zipEntryData so only requested members are ever decompressed).
-async function zipEntries(source) {
+// Exported for apple_ftab.js's bbfw member walk (same central-directory read
+// as extract_zip — one implementation, no divergence).
+export async function zipEntries(source) {
   const maxComment = 22 + 65535;
   const tailSize = Math.min(maxComment, source.size);
   const tail = await source.read(source.size - tailSize, tailSize);
@@ -649,7 +651,8 @@ async function zipDirectory(source, start, entryCount) {
 // catchable ExtractionError before any data is read.
 const MAX_ZIP_ENTRY_BYTES = 2 ** 31 - 1;
 
-async function zipEntryData(source, entry) {
+// Exported for apple_ftab.js's bbfw member walk (see zipEntries above).
+export async function zipEntryData(source, entry) {
   if (entry.compressedSize > MAX_ZIP_ENTRY_BYTES || entry.uncompressedSize > MAX_ZIP_ENTRY_BYTES) {
     throw new ExtractionError(`${entry.name}: zip member size ${entry.compressedSize}/${entry.uncompressedSize} exceeds the 2GiB extraction cap`);
   }
