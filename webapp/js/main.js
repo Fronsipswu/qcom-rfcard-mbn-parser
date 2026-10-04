@@ -52,6 +52,7 @@ const els = {
   loadedFilesLabel: document.getElementById("loadedfiles-label"),
   loadedFilesChips: document.getElementById("loadedfiles-chips"),
   cardBody: document.getElementById("cardlist-body"),
+  cardHead: document.getElementById("cardlist-head"),
   cardsEmpty: document.getElementById("cards-empty"),
   viewerHost: document.getElementById("viewerhost"),
   viewerPlaceholder: document.getElementById("viewer-placeholder"),
@@ -172,9 +173,33 @@ function renderLoadedFiles() {
   }
 }
 
+// Port of apple-c-modem-parser main.py human_size: one decimal for KB/MB/GB,
+// integer bytes for B, em dash for missing.
+function humanSize(size) {
+  if (size == null) return "—";
+  let value = size;
+  for (const unit of ["B", "KB", "MB", "GB"]) {
+    if (value < 1024 || unit === "GB") {
+      return unit === "B"
+        ? `${value.toLocaleString("en-US")} B`
+        : `${value.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${unit}`;
+    }
+    value /= 1024;
+  }
+  return String(value);
+}
+
+const APPLE_LAYOUT_DESC = { C4000: "C1/C1X (C4000)", C4020: "C2 (C4020)" };
+const CARDLIST_HEAD_QCOM =
+  '<th></th><th>Name</th><th>HWID_FSID_BID</th><th>Format</th><th>LTE combos</th><th>NR combos</th>';
+const CARDLIST_HEAD_APPLE =
+  '<th></th><th>CR Bank</th><th>Layout</th><th>Profile ID</th><th>LTE</th><th>EN-DC</th><th>NR-CA</th><th>NRDC</th><th>File Size</th><th>Source Path</th>';
+
 function renderCardList() {
   els.cardBody.innerHTML = "";
   els.cardsEmpty.hidden = cards.length > 0;
+  const allApple = cards.length > 0 && cards.every((c) => c.record.apple);
+  els.cardHead.innerHTML = allApple ? CARDLIST_HEAD_APPLE : CARDLIST_HEAD_QCOM;
   for (const card of cards) {
     const record = card.record;
     const tr = document.createElement("tr");
@@ -195,17 +220,32 @@ function renderCardList() {
     tdCheck.appendChild(checkbox);
     tr.appendChild(tdCheck);
 
-    for (const [value, cls] of [
-      [record.name, "cell-name"],
-      [identity, "cell-identity"],
-      [GENERATION_DISPLAY[record.generation] ?? record.generation, "cell-generation"],
-      // lte_combos is null while an apple CR card's counts are deferred to
-      // card open — `null >= 0` is true in JS (null coerces to 0), so a plain
-      // >= check would reach null.toLocaleString() and abort the whole list
-      // render. Guard on the actual null/undefined instead.
-      [record.lte_combos == null ? "—" : record.lte_combos.toLocaleString("en-US"), "cell-lte"],
-      [String(record.nr_combos ?? ""), "cell-nr"],
-    ]) {
+    const cells = allApple
+      ? [
+          [record.inner_path, "cell-name"],
+          [APPLE_LAYOUT_DESC[record.apple.layout] ?? record.apple.layout ?? "—", "cell-identity"],
+          [record.apple.profileId == null ? "—" : `0x${record.apple.profileId.toString(16).toUpperCase().padStart(6, "0")}`, "cell-generation"],
+          // Apple counts are the expanded pre-dedupe numbers from the scan
+          // inspect (null-safe: a bank skipped at scan has no counts).
+          [record.apple.counts == null ? "—" : record.apple.counts.lte.toLocaleString("en-US"), "cell-lte"],
+          [record.apple.counts == null ? "—" : record.apple.counts.endc.toLocaleString("en-US"), "cell-lte"],
+          [record.apple.counts == null ? "—" : record.apple.counts.nrca.toLocaleString("en-US"), "cell-lte"],
+          [record.apple.counts == null ? "—" : record.apple.counts.nrdc.toLocaleString("en-US"), "cell-lte"],
+          [humanSize(record.size), "cell-nr"],
+          [String(record.source_path ?? ""), "cell-nr"],
+        ]
+      : [
+          [record.name, "cell-name"],
+          [identity, "cell-identity"],
+          [GENERATION_DISPLAY[record.generation] ?? record.generation, "cell-generation"],
+          // lte_combos is null while an apple CR card's counts are deferred to
+          // card open — `null >= 0` is true in JS (null coerces to 0), so a plain
+          // >= check would reach null.toLocaleString() and abort the whole list
+          // render. Guard on the actual null/undefined instead.
+          [record.lte_combos == null ? "—" : record.lte_combos.toLocaleString("en-US"), "cell-lte"],
+          [String(record.nr_combos ?? ""), "cell-nr"],
+        ];
+    for (const [value, cls] of cells) {
       const td = document.createElement("td");
       td.className = cls;
       td.textContent = value;
