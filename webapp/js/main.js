@@ -199,7 +199,11 @@ function renderCardList() {
       [record.name, "cell-name"],
       [identity, "cell-identity"],
       [GENERATION_DISPLAY[record.generation] ?? record.generation, "cell-generation"],
-      [record.lte_combos >= 0 ? record.lte_combos.toLocaleString("en-US") : "—", "cell-lte"],
+      // lte_combos is null while an apple CR card's counts are deferred to
+      // card open — `null >= 0` is true in JS (null coerces to 0), so a plain
+      // >= check would reach null.toLocaleString() and abort the whole list
+      // render. Guard on the actual null/undefined instead.
+      [record.lte_combos == null ? "—" : record.lte_combos.toLocaleString("en-US"), "cell-lte"],
       [String(record.nr_combos ?? ""), "cell-nr"],
     ]) {
       const td = document.createElement("td");

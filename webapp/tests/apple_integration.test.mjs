@@ -4,7 +4,8 @@
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { CORPUS_DIR, deepEqualOrdered } from "./helpers.mjs";
@@ -299,4 +300,17 @@ test("apple integration: nested bbfw scan + open-path member resolution", async 
   // The worker's open path resolves the member through extractFtabMember.
   const memberData = await extractFtabMember(source, record.apple.member);
   assert.deepEqual([...memberData], [...ftab]);
+});
+
+// --- picker markup: the browse dialog must offer ftab.bin ---------------------------
+
+test("apple integration: file input accept includes .bin (ftab pickable via browse)", async () => {
+  const html = await readFile(join(dirname(fileURLToPath(import.meta.url)), "..", "index.html"), "utf8");
+  const inputStart = html.indexOf('<input id="file-input"');
+  assert.notEqual(inputStart, -1, "file-input missing");
+  const inputTag = html.slice(inputStart, html.indexOf(">", inputStart) + 1);
+  const accept = /accept="([^"]*)"/.exec(inputTag)?.[1] ?? "";
+  const exts = accept.split(",").map((e) => e.trim().toLowerCase());
+  assert.ok(exts.includes(".bin"), `accept must include .bin (got: ${accept})`);
+  assert.ok(exts.includes(".bbfw"), `accept must include .bbfw (got: ${accept})`);
 });
