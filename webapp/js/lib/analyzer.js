@@ -18,6 +18,8 @@ import { Fat16Image } from "./fat16.js";
 import { Elf32Image, ParseError } from "./elf.js";
 import { extractContainer, discoverCandidates, sidecarsInDirectory } from "./extractor.js";
 import { isFtab, parseFtabEntriesFromSource, findFtabMemberInBbfw } from "./apple_ftab.js";
+import { lzfseDecode } from "./lzfse.js";
+import { inspectAppleBank } from "./apple_cr.js";
 import {
   rfcardNameFromSymbols,
   findDescriptors,
@@ -233,11 +235,13 @@ function buildRecord(base, lte, nr) {
   };
 }
 
-// --- Apple C-series FTAB / bbfw branch (fast scan: no decompression) -----------
+// --- Apple C-series FTAB / bbfw branch (scan: decompress + fast inspect) -------
 //
 // One card record per CR bank. Card identity = sha256 of the COMPRESSED
-// stream (the cardcache key); bank decompression is deferred to card open
-// (worker appleBankMemo). Records stay unsorted/deduped here: descriptors are
+// stream (the cardcache key); each bank is decompressed + header-inspected at
+// scan (python GUI parity: layout and expanded combo counts visible at load),
+// while the full table parse stays deferred to card open (worker
+// appleBankMemo). Records stay unsorted/deduped here: descriptors are
 // already name-sorted like Python, and identical streams dedupe naturally
 // downstream (name\0sha256 card keys).
 
@@ -286,6 +290,29 @@ async function scanAppleFtab(source, name, cancelled) {
       continue;
     }
     const digest = await sha256HexAsync(stream);
+    // Decompress + fast-inspect NOW (python GUI parity: counts and layout are
+    // visible at load). Full table parse stays deferred to card open. A bank
+    // that fails to decompress/inspect is warned and skipped — never fatal.
+    let appleInfo = null;
+    try {
+      const bank = lzfseDecode(stream, desc.uncompSize);
+      const inspected = inspectAppleBank(bank);
+      appleInfo = {
+        layout: inspected.layout,
+        counts: {
+          lte: inspected.lteCount,
+          endc: inspected.endcCount,
+          nrca: inspected.nrcaCount,
+          nrdc: inspected.nrdcCount,
+        },
+      };
+    } catch (err) {
+      warnings.push({
+        tool: "apple",
+        message: `apple CR bank ${desc.name}: unreadable (${err && err.message ? err.message : err}) — skipped`,
+      });
+      continue;
+    }
     records.push({
       inner_path: desc.name,
       name: `${desc.name} (profile 0x${desc.profileId.toString(16).padStart(6, "0")})`,
@@ -307,7 +334,8 @@ async function scanAppleFtab(source, name, cancelled) {
         uncompSize: desc.uncompSize,
         // member-relative offsets when the ftab came from a zip (bbfw)
         member: memberName,
-        layout: null, // decided at open from the bank size
+        layout: appleInfo.layout,
+        counts: appleInfo.counts,
       },
       combo_counts_deferred: true,
     });

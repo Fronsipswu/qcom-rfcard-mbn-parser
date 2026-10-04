@@ -26,6 +26,25 @@ const corpusAvailableForApple = () =>
   existsSync(join(REF, "c1", "ftab.bin")) && existsSync(join(REF, "c2", "ftab_cr_banks"));
 const sha256Hex = (u8) => createHash("sha256").update(u8).digest("hex");
 const loadGolden = (name) => readFile(new URL(`../goldens/apple/${name}.json`, import.meta.url)).then(JSON.parse);
+const loadManifest = () => readFile(new URL("../goldens/apple/manifest.json", import.meta.url)).then(JSON.parse);
+
+// Per-record scan pins against the python goldens: layout name and the
+// expanded pre-dedupe inspect counts (apple_cr_parser.py inspect_bank).
+async function assertRecordMatchesManifest(records, layout, manifest) {
+  for (const rec of records) {
+    const key = `${layout}/${rec.inner_path}`;
+    const entry = manifest[key];
+    assert.ok(entry, `${key}: manifest entry`);
+    assert.equal(rec.apple.profileId, entry.profile_id, key);
+    assert.equal(rec.apple.layout, entry.layout, key);
+    assert.deepEqual(rec.apple.counts, {
+      lte: entry.inspect.lte_count,
+      endc: entry.inspect.endc_count,
+      nrca: entry.inspect.nrca_count,
+      nrdc: entry.inspect.nrdc_count,
+    }, key);
+  }
+}
 
 test("apple integration: scanSource on golden c2 ftab -> 37 records, deferred counts", { skip: !corpusAvailableForApple() }, async () => {
   const src = await NodeFileSource.open(join(REF, "c2", "ftab.bin"));
@@ -49,9 +68,9 @@ test("apple integration: scanSource on golden c2 ftab -> 37 records, deferred co
   assert.equal(first.sha256, sha256Hex(stream));
   for (const r of records) {
     assert.ok(r.apple, `${r.name}: apple block`);
-    assert.equal(r.apple.layout, null);
     assert.match(r.name, /^CR\d+ \(profile 0x[0-9a-f]{6}\)$/);
   }
+  await assertRecordMatchesManifest(records, "c2", await loadManifest());
 });
 
 test("apple integration: scanSource on golden c1 ftab -> 21 records, first CR11", { skip: !corpusAvailableForApple() }, async () => {
@@ -60,6 +79,7 @@ test("apple integration: scanSource on golden c1 ftab -> 21 records, first CR11"
   assert.equal(records.length, 21);
   assert.ok(records[0].name.startsWith("CR11 (profile 0x10548c)"), records[0].name);
   assert.equal(records[0].size, 0x5776e0);
+  await assertRecordMatchesManifest(records, "c1", await loadManifest());
 });
 
 test("apple integration: full open path (blob -> parse -> audit -> tables) for all 58 banks", { skip: !corpusAvailableForApple() }, async () => {
@@ -183,7 +203,10 @@ function storedZip(members) {
 }
 
 // Synthetic ftab whose CR stream carries the bvx2 magic so the scan enumerates
-// it (the scan checks the envelope magic only — no decompression happens).
+// it. The 32-byte stream cannot decode (and detectLayout requires an exact
+// C4000/C4020 bank size), so under the decompress-at-scan contract the bank is
+// warned and skipped — the warning still proves the bbfw walk found the ftab
+// member and enumerated its CR entry.
 function syntheticFtabBytes() {
   const stream = new Uint8Array(32);
   const sv = new DataView(stream.buffer);
@@ -215,12 +238,9 @@ test("apple integration: synthetic bbfw through scanSource enumerates the inner 
   };
   const { BrowserFileSource } = await import("../js/lib/source.js");
   const { records, warnings } = await scanSource(new BrowserFileSource(fileLike), "baseband.bbfw");
-  assert.equal(records.length, 1);
-  assert.equal(records[0].inner_path, "CR07");
-  assert.ok(records[0].name.startsWith("CR07 (profile 0xabcdef)"), records[0].name);
-  assert.equal(records[0].apple.profileId, 0xabcdef);
-  assert.equal(records[0].apple.uncompSize, 4096);
-  assert.deepEqual(warnings, []);
+  assert.equal(records.length, 0); // fake bvx2 stream: warned and skipped at scan
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0].message, /apple CR bank CR07: unreadable/);
 });
 
 test("apple integration: non-bvx2 CR stream is skipped with a warning", async () => {
@@ -293,12 +313,15 @@ test("apple integration: nested bbfw scan + open-path member resolution", async 
   };
   const { BrowserFileSource } = await import("../js/lib/source.js");
   const source = new BrowserFileSource(fileLike);
-  const { records } = await scanSource(source, "modem.zip");
-  assert.equal(records.length, 1);
-  const record = records[0];
-  assert.equal(record.apple.member, "baseband.bbfw!ftab.bin");
+  const { records, warnings } = await scanSource(source, "modem.zip");
+  // The fake bvx2 stream is warned and skipped at scan, but reaching the CR07
+  // warning proves the nested ftab member was found and enumerated through
+  // both zip scopes.
+  assert.equal(records.length, 0);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0].message, /apple CR bank CR07: unreadable/);
   // The worker's open path resolves the member through extractFtabMember.
-  const memberData = await extractFtabMember(source, record.apple.member);
+  const memberData = await extractFtabMember(source, "baseband.bbfw!ftab.bin");
   assert.deepEqual([...memberData], [...ftab]);
 });
 
