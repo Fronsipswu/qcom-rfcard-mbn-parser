@@ -11,7 +11,12 @@
 //   { type: "importCards", id, file, fileIndex?, record } -> both DIAG texts
 //   { type: "cancel",    id }
 // worker -> main
-//   { type: "progress",  phase, source, done, total, currentFile }
+//   { type: "progress",  phase, source, done, total, currentFile, detail? }
+//                                                   detail: unit-level scan
+//                                                   progress ("banks a/b",
+//                                                   "counting a/b",
+//                                                   "extracting") on scan
+//                                                   progress posts only
 //   { type: "records",   fileIndex, records, warnings? }  plain JSON-able
 //                                                         ModuleRecord list
 //   { type: "tables",    id, fileIndex, recordName, tables }
@@ -416,6 +421,17 @@ async function handleScan(msg) {
           if (cancelled.has(id)) return;
           postedWarnings += batchWarnings.length;
           post({ type: "records", fileIndex, records: batchRecords, warnings: batchWarnings });
+        },
+        // Unit-level progress (per apple bank / per counted MBN record /
+        // container extraction): the bar stays file-fraction based — main.js
+        // adds the parsed sub-file fraction to `done`. Suppressed after cancel
+        // so a cancelled scan cannot re-show the progress row.
+        onScanProgress: (info) => {
+          if (cancelled.has(id)) return;
+          const detail = info.stage === "apple" ? `banks ${info.done}/${info.total}`
+            : info.stage === "count" ? `counting ${info.done}/${info.total}`
+            : info.stage === "extract" ? "extracting" : "";
+          post({ type: "progress", phase: "scan", source: file.name, done: fileIndex, total, currentFile: file.name, detail });
         },
       });
       if (cancelled.has(id)) break;

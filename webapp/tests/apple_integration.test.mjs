@@ -378,3 +378,30 @@ test("apple integration: inspectAppleBankAsync fan-out + onAppleBatch match the 
   assert.ok(batches.length > 1, `expected progressive batches, got ${batches.length}`);
   await src.close();
 });
+
+// --- scan progress hook: per-bank apple progress via scanSource ---------------------
+
+test("apple integration: scanSource reports per-bank progress via onScanProgress", { skip: !corpusAvailableForApple() }, async () => {
+  const src = await NodeFileSource.open(join(REF, "c1", "ftab.bin"));
+  // Expected bank count derives from a plain scan: one settled outcome (record
+  // or warning) per descriptor, so records + warnings is the bank total.
+  const sequential = await scanSource(src, "ftab.bin");
+  const expectedTotal = sequential.records.length + sequential.warnings.length;
+  const infos = [];
+  await scanSource(src, "ftab.bin", {
+    onScanProgress: (info) => infos.push(info),
+  });
+  const apple = infos.filter((i) => i.stage === "apple");
+  assert.ok(apple.length > 0, "expected apple-stage progress infos");
+  assert.ok(
+    apple.every((i) => i.total === expectedTotal),
+    `every info.total === ${expectedTotal} (got: ${apple.map((i) => i.total).join(",")})`,
+  );
+  assert.equal(apple[0].done, 0, "first apple info reports 0 settled banks");
+  for (let i = 1; i < apple.length; i++) {
+    assert.ok(apple[i].done >= apple[i - 1].done, `apple done non-decreasing at info ${i}`);
+  }
+  assert.ok(apple.every((i) => i.done <= i.total), "no apple info exceeds total");
+  assert.equal(apple[apple.length - 1].done, expectedTotal, "final apple info settles every bank");
+  await src.close();
+});

@@ -260,7 +260,11 @@ function isZipHead(head) {
 //   contiguous, in-order prefix of banks completed, so the UI can render rows
 //   before the scan finishes. The final return value still carries the FULL
 //   record set (batches are informational; receivers dedupe by card key).
-async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, onAppleBatch } = {}) {
+// - onAppleProgress(done, total): per-bank scan progress. Called once with
+//   (0, total) once the descriptor count is known, then after every bank
+//   settles (records AND warned banks count as settled) with the running
+//   settled count. Informational only; never affects scan outcomes.
+async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, onAppleBatch, onAppleProgress } = {}) {
   const head = await source.read(0, Math.min(0x30, source.size));
   let descriptors = null;
   let ftabData = null; // inflated ftab member bytes (bbfw) or null (raw ftab)
@@ -282,6 +286,7 @@ async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, o
     return null;
   }
   if (!descriptors.length) return null;
+  onAppleProgress?.(0, descriptors.length);
 
   const inspectBank = inspectAppleBankAsync ?? defaultInspectAppleBank;
   // Per-descriptor outcome (record or warning), emitted strictly in descriptor
@@ -289,6 +294,7 @@ async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, o
   // banks complete out of order under the pool.
   const outcomes = new Array(descriptors.length).fill(null);
   let emitIndex = 0;
+  let settled = 0; // banks with a final outcome (records + warned banks alike)
   const records = [];
   const warnings = [];
   const emitBatch = onAppleBatch ?? (() => {});
@@ -318,24 +324,32 @@ async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, o
   await Promise.all(
     descriptors.map(async (desc, index) => {
       if (cancelled()) return;
+      // Settle one bank: store its outcome, then report progress immediately
+      // (the hook fires right after the assignment; flush stays exactly where
+      // it was, so batch emission semantics are untouched).
+      const settle = (outcome) => {
+        outcomes[index] = outcome;
+        settled += 1;
+        onAppleProgress?.(settled, descriptors.length);
+      };
       const stream = ftabData
         ? ftabData.subarray(desc.streamStart, desc.streamStart + desc.compSize)
         : await source.read(desc.streamStart, desc.compSize);
       const dv = new DataView(stream.buffer, stream.byteOffset, stream.byteLength);
       if (stream.length < 4 || dv.getUint32(0, true) !== APPLE_CR_MAGIC) {
-        outcomes[index] = {
+        settle({
           warning: {
             tool: "apple",
             message: `apple CR bank ${desc.name}: unexpected compression magic — skipped`,
           },
-        };
+        });
         flush();
         return;
       }
       const digest = await sha256HexAsync(stream);
       try {
         const appleInfo = await inspectBank(stream, desc.uncompSize);
-        outcomes[index] = {
+        settle({
           record: {
             inner_path: desc.name,
             name: `${desc.name} (profile 0x${desc.profileId.toString(16).padStart(6, "0")})`,
@@ -362,14 +376,14 @@ async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, o
             },
             combo_counts_deferred: true,
           },
-        };
+        });
       } catch (err) {
-        outcomes[index] = {
+        settle({
           warning: {
             tool: "apple",
             message: `apple CR bank ${desc.name}: unreadable (${err && err.message ? err.message : err}) — skipped`,
           },
-        };
+        });
       }
       flush();
     }),
@@ -394,8 +408,9 @@ function defaultInspectAppleBank(stream, uncompSize) {
   };
 }
 
-export async function scanSource(source, name, { shouldCancel, inspectAppleBankAsync, onAppleBatch } = {}) {
+export async function scanSource(source, name, { shouldCancel, inspectAppleBankAsync, onAppleBatch, onScanProgress } = {}) {
   const cancelled = shouldCancel ?? (() => false);
+  const reportProgress = onScanProgress ?? (() => {});
   if (cancelled()) throw new ScanCancelled();
   // Direct-MBN fast path: a file whose NAME already matches a candidate regex.
   // Python records inner_path/source_path as the absolute filesystem path; the
@@ -425,7 +440,12 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
 
   // Apple C-series FTAB / bbfw inputs: one card per CR bank, decompressed +
   // inspected per bank (optionally on the worker pool; see scanAppleFtab).
-  const appleScan = await scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, onAppleBatch });
+  // The per-bank settle counter translates onto the shared scan progress hook.
+  const appleScan = await scanAppleFtab(source, name, cancelled, {
+    inspectAppleBankAsync,
+    onAppleBatch,
+    onAppleProgress: (done, total) => reportProgress({ stage: "apple", done, total }),
+  });
   if (appleScan) return appleScan;
 
   const fat = new Fat16Image(source);
@@ -435,7 +455,7 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
     // Not FAT16: the universal container extractor (analyzer.py:209-231,
     // image_extractor.scan_container + _records_from_extraction :268-321).
     try {
-      return await scanExtracted(source, name, cancelled);
+      return await scanExtracted(source, name, cancelled, reportProgress);
     } catch (extractErr) {
       if (extractErr instanceof ScanCancelled) throw extractErr;
       return {
@@ -452,8 +472,14 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
 
   const records = [];
   if (cancelled()) throw new ScanCancelled();
-  for (const entry of await fat.walk()) {
-    if (cancelled()) throw new ScanCancelled();
+  // walk() resolves to a full entry array before any record work starts, so
+  // the candidate list (and thus the count-stage total) is known upfront.
+  // The gates below are the exact per-entry filters the old loop applied,
+  // just hoisted: matchesCandidate non-null, and legacy ELF modules only
+  // under the modem's /so tree (analyzer.py:222-225).
+  const entries = await fat.walk();
+  const targets = [];
+  for (const entry of entries) {
     // walk() entries carry the path only; the file name is the last segment
     // (path = parent + "/" + entry.name in Python _walk_fat).
     const fileName = entry.path.slice(entry.path.lastIndexOf("/") + 1);
@@ -463,6 +489,14 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
     // Numeric legacy modules are meaningful only under the modem's /so tree
     // (analyzer.py:222-225).
     if (generation === "Legacy ELF" && !pyCasefold(entry.path).includes("/so/")) continue;
+    targets.push({ entry, fileName, generation, match });
+  }
+  // Per-record combo counting is the slow loop; report the total before the
+  // first record so the UI can show a real fraction.
+  if (targets.length > 0) reportProgress({ stage: "count", done: 0, total: targets.length });
+  for (let i = 0; i < targets.length; i++) {
+    const { entry, fileName, generation, match } = targets[i];
+    if (cancelled()) throw new ScanCancelled();
     // Python reads the raw cluster chain and slices to the directory size
     // (analyzer.py:226): no size validation, and the chain is walked even for
     // size 0, so corrupt entries keep Python's outcomes exactly.
@@ -483,22 +517,28 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
     };
     const [lte, nr] = comboCounts(base, raw);
     records.push(buildRecord(base, lte, nr));
+    reportProgress({ stage: "count", done: i + 1, total: targets.length });
   }
   return { records: deduplicateRecords(sortRecords(records)), warnings: [] };
 }
 
 // --- container fallback (_records_from_extraction, analyzer.py:268-321) ---------
 
-async function scanExtracted(source, name, cancelled = () => false) {
+async function scanExtracted(source, name, cancelled = () => false, onScanProgress = () => {}) {
   if (cancelled()) throw new ScanCancelled();
+  // Extraction is the uncountable phase (a black-box unpacker with no known
+  // output count); report it as its own stage so the UI can label the wait.
+  onScanProgress?.({ stage: "extract" });
   // Python: scan_container raises for inputs below the 512-byte container
   // floor; extraction warnings (missing tools, unsupported containers) are
   // collected alongside the records.
   const { outputs, warnings } = await extractContainer(source, name);
   const { mbns, sidecars } = discoverCandidates(outputs);
-  const records = [];
+  // Same gate hoist as the FAT16 path: pre-filter with the exact gates the
+  // loop below used inline, so the count stage's total is post-gate and the
+  // label always lands on "counting N/N". Pure in-memory checks, no awaits.
+  const targets = [];
   for (const { vfile, path } of mbns) {
-    if (cancelled()) throw new ScanCancelled();
     const matchInfo = matchesCandidate(vfile.name);
     if (!matchInfo) continue;
     const { generation, match } = matchInfo;
@@ -506,6 +546,15 @@ async function scanExtracted(source, name, cancelled = () => false) {
     // the "rfcards" allowance exists for Apple BBCFG recovery.
     const parts = new Set(pyCasefold(path).split("/").filter(Boolean));
     if (generation === "Legacy ELF" && !parts.has("so") && !parts.has("rfcards")) continue;
+    targets.push({ vfile, path, generation, match });
+  }
+  const records = [];
+  // Per-MBN combo counting is the slow loop; report the total before the
+  // first record so the UI can show a real fraction.
+  if (targets.length > 0) onScanProgress?.({ stage: "count", done: 0, total: targets.length });
+  for (let index = 0; index < targets.length; index++) {
+    if (cancelled()) throw new ScanCancelled();
+    const { vfile, path, generation, match } = targets[index];
     const blob = await vfile.read();
     const digest = await sha256HexAsync(blob);
     const base = {
@@ -523,6 +572,7 @@ async function scanExtracted(source, name, cancelled = () => false) {
     };
     const [lte, nr] = comboCounts(base, blob);
     records.push(buildRecord(base, lte, nr));
+    onScanProgress?.({ stage: "count", done: index + 1, total: targets.length });
   }
   // Python returns the records in discovery order unsorted; the sorted order is
   // identical for every golden record and deterministic across runs.

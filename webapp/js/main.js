@@ -121,7 +121,7 @@ function addWarning(tool, message, source) {
   els.warnings.appendChild(div);
 }
 
-function setProgress(done, total, currentFile) {
+function setProgress(done, total, currentFile, detail) {
   // A new scan (or any per-file progress) must cancel a pending post-completion
   // hide timer, or the bar vanishes mid-scan (Rec-2).
   if (progressHideTimer !== null) {
@@ -130,10 +130,20 @@ function setProgress(done, total, currentFile) {
   }
   els.progressWrap.hidden = false;
   els.progress.max = Math.max(1, total);
-  els.progress.value = done;
-  els.progressLabel.textContent = currentFile
-    ? `Scanning ${currentFile} — ${done.toLocaleString("en-US")}/${total.toLocaleString("en-US")}`
-    : `Scan complete — ${total.toLocaleString("en-US")} file(s)`;
+  if (detail && currentFile) {
+    // Unit-level detail ("banks 23/58", "counting 4/9", "extracting"): the bar
+    // stays file-fraction based — the sub-file fraction from the trailing
+    // "a/b" is added to the whole-file `done` (progress elements accept
+    // floats). "extracting" carries no fraction, so the value stays at done.
+    const m = /(\d+)\s*\/\s*(\d+)$/.exec(detail);
+    els.progress.value = m && Number(m[2]) > 0 ? done + Number(m[1]) / Number(m[2]) : done;
+    els.progressLabel.textContent = `Scanning ${currentFile} — ${detail}`;
+  } else {
+    els.progress.value = done;
+    els.progressLabel.textContent = currentFile
+      ? `Scanning ${currentFile} — ${done.toLocaleString("en-US")}/${total.toLocaleString("en-US")}`
+      : `Scan complete — ${total.toLocaleString("en-US")} file(s)`;
+  }
   els.cancelBtn.hidden = currentFile === "";
   if (currentFile === "") {
     progressHideTimer = setTimeout(() => {
@@ -662,7 +672,7 @@ worker.onmessage = (event) => {
   switch (msg.type) {
     case "progress": {
       if (scanEpoch !== sessionEpoch) break; // late reply from a cleared scan
-      setProgress(msg.done, msg.total, msg.currentFile);
+      setProgress(msg.done, msg.total, msg.currentFile, msg.detail);
       break;
     }
     case "records": {

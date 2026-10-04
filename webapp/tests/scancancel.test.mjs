@@ -42,7 +42,7 @@ test("scanSource honours shouldCancel checked before the walk and per iteration"
     try {
       await assert.rejects(
         () => scanSource(src, "11lite5g_modem.img", {
-          shouldCancel: () => (calls += 1) > 3, // entry + per FAT-walk iteration checks
+          shouldCancel: () => (calls += 1) > 3, // entry + pre-walk + per-target checks
         }),
         (err) => err instanceof ScanCancelled,
       );
