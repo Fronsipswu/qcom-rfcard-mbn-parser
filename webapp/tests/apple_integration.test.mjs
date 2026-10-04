@@ -24,6 +24,12 @@ import { isFtab, extractFtabMember } from "../js/lib/apple_ftab.js";
 const REF = join(CORPUS_DIR, "apple-c-modem-parser");
 const corpusAvailableForApple = () =>
   existsSync(join(REF, "c1", "ftab.bin")) && existsSync(join(REF, "c2", "ftab_cr_banks"));
+// tables.json/diag.json are oversized reference dumps (317/142 MB) excluded
+// from git; regenerate locally from the corpus — tests skip without them.
+const appleGoldenDumpsAvailable = () =>
+  existsSync(new URL("../goldens/apple/tables.json", import.meta.url)) &&
+  existsSync(new URL("../goldens/apple/diag.json", import.meta.url));
+const appleDifferentialAvailable = () => corpusAvailableForApple() && appleGoldenDumpsAvailable();
 const sha256Hex = (u8) => createHash("sha256").update(u8).digest("hex");
 const loadGolden = (name) => readFile(new URL(`../goldens/apple/${name}.json`, import.meta.url)).then(JSON.parse);
 const loadManifest = () => readFile(new URL("../goldens/apple/manifest.json", import.meta.url)).then(JSON.parse);
@@ -82,7 +88,7 @@ test("apple integration: scanSource on golden c1 ftab -> 21 records, first CR11"
   await assertRecordMatchesManifest(records, "c1", await loadManifest());
 });
 
-test("apple integration: full open path (blob -> parse -> audit -> tables) for all 58 banks", { skip: !corpusAvailableForApple() }, async () => {
+test("apple integration: full open path (blob -> parse -> audit -> tables) for all 58 banks", { skip: !appleDifferentialAvailable() }, async () => {
   const golden = await loadGolden("tables");
   let checked = 0;
   for (const layout of ["c1", "c2"]) {
@@ -103,7 +109,7 @@ test("apple integration: full open path (blob -> parse -> audit -> tables) for a
   assert.equal(checked, 58);
 });
 
-test("apple integration: export dispatch — DIAG byte-equal + json shape (worker path)", { skip: !corpusAvailableForApple() }, async () => {
+test("apple integration: export dispatch — DIAG byte-equal + json shape (worker path)", { skip: !appleDifferentialAvailable() }, async () => {
   const golden = await loadGolden("diag");
   const src = await NodeFileSource.open(join(REF, "c2", "ftab.bin"));
   const { records } = await scanSource(src, "ftab.bin");

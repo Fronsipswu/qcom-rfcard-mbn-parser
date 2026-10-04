@@ -26,6 +26,12 @@ import {
 const REF = join(CORPUS_DIR, "apple-c-modem-parser");
 const corpusAvailableForApple = () =>
   existsSync(join(REF, "c1", "ftab.bin")) && existsSync(join(REF, "c2", "ftab_cr_banks"));
+// tables.json/diag.json are oversized reference dumps (317/142 MB) excluded
+// from git; regenerate locally from the corpus — tests skip without them.
+const appleGoldenDumpsAvailable = () =>
+  existsSync(new URL("../goldens/apple/tables.json", import.meta.url)) &&
+  existsSync(new URL("../goldens/apple/diag.json", import.meta.url));
+const appleDifferentialAvailable = () => corpusAvailableForApple() && appleGoldenDumpsAvailable();
 
 const loadManifest = () => readFile(new URL("../goldens/apple/manifest.json", import.meta.url)).then(JSON.parse);
 const loadGolden = (name) => readFile(new URL(`../goldens/apple/${name}.json`, import.meta.url)).then(JSON.parse);
@@ -34,7 +40,7 @@ const bankPath = (key) => {
   return join(REF, layout, "ftab_cr_banks", `${stem}.bin`);
 };
 
-test("apple_cr: tables differential — all 58 banks equal the python goldens", { skip: !corpusAvailableForApple() }, async () => {
+test("apple_cr: tables differential — all 58 banks equal the python goldens", { skip: !appleDifferentialAvailable() }, async () => {
   const [golden, manifest] = await Promise.all([loadGolden("tables"), loadManifest()]);
   const keys = Object.keys(manifest);
   assert.equal(keys.length, 58);
@@ -48,7 +54,7 @@ test("apple_cr: tables differential — all 58 banks equal the python goldens", 
   }
 });
 
-test("apple_cr: DIAG differential — b0cd/b826 byte-equal for all 58 banks", { skip: !corpusAvailableForApple() }, async () => {
+test("apple_cr: DIAG differential — b0cd/b826 byte-equal for all 58 banks", { skip: !appleDifferentialAvailable() }, async () => {
   const [golden, manifest] = await Promise.all([loadGolden("diag"), loadManifest()]);
   for (const key of Object.keys(manifest)) {
     const bank = await readFile(bankPath(key));
