@@ -44,6 +44,10 @@ export const C4000 = {
   dl_descriptors: makeTable(0x576aa0, 0x576aa4, 4, 64),
   ul_descriptors: makeTable(0x576ba4, 0x576ba8, 2, 64),
   bands: makeTable(0x576c50, 0x576c58, 40, 64),
+  lte_dl_feature_sets: makeTable(0x5769d8, 0x5769dc, 6, 16),
+  lte_ul_feature_sets: makeTable(0x576a3c, 0x576a40, 6, 16),
+  lte_dl_descriptors: makeTable(0x576c28, 0x576c2c, 4, 4),
+  lte_ul_descriptors: makeTable(0x576c3c, 0x576c40, 4, 4),
   physical_index_bits: 10,
 };
 
@@ -60,6 +64,10 @@ export const C4020 = {
   dl_descriptors: makeTable(0x5900c0, 0x5900c4, 4, 64),
   ul_descriptors: makeTable(0x5901c4, 0x5901c8, 2, 64),
   bands: makeTable(0x590270, 0x590278, 40, 64),
+  lte_dl_feature_sets: makeTable(0x58fff8, 0x58fffc, 6, 16),
+  lte_ul_feature_sets: makeTable(0x59005c, 0x590060, 6, 16),
+  lte_dl_descriptors: makeTable(0x590248, 0x59024c, 4, 4),
+  lte_ul_descriptors: makeTable(0x59025c, 0x590260, 4, 4),
   physical_index_bits: 11,
 };
 
@@ -110,6 +118,7 @@ export function detectLayout(data) {
   for (const key of [
     "physical", "matrix_nr", "matrix_endc", "ul_matrix_nr", "ul_matrix_endc",
     "dl_groups", "ul_groups", "dl_descriptors", "ul_descriptors", "bands",
+    "lte_dl_feature_sets", "lte_ul_feature_sets", "lte_dl_descriptors", "lte_ul_descriptors",
   ]) {
     tables[key] = layout[key];
   }
@@ -175,6 +184,13 @@ export const SPECIAL_FR1_BANDWIDTH_MHZ = { 12: 35, 13: 45, 14: 70 };
 export const SCS_KHZ = [15, 30, 60, 120, 240, 480, 960];
 export const DL_MIMO_LAYERS = [2, 4, 8];
 export const UL_MIMO_LAYERS = [1, 2, 4];
+
+// LTE per-CC descriptor word -> MIMO layers for LTE legs of EN-DC combinations.
+// The word's bit grammar is not decoded; these are the only words present in any
+// C4000 / C4020 bank, and the mapping matches every LTE leg of the on-device
+// EN-DC UE capability report (CR39). Unknown words resolve to null and fail audit.
+export const LTE_DL_MIMO_LAYERS_BY_WORD = { 0x0a0d: 4, 0x0000: 2 };
+export const LTE_UL_MIMO_LAYERS_BY_WORD = { 0x0004: 1 };
 
 export function decodeBwMaskSlot1(mask) {
   const valid = (mask & SLOT1_RESERVED_MASK) === 0;
@@ -443,6 +459,37 @@ function featureGroup(data, dv, layout, index, uplink) {
   return { index, raw_hex: hex(data.subarray(rawStart, rawStart + 0x14)), descriptor_refs: refs, per_cc: perCc };
 }
 
+// lte_feature_set (apple_cr_parser.py:454-475): resolve an LTE feature set
+// (EN-DC LTE leg) to per-CC descriptors. 6-byte row: [0] CC count (1..5),
+// then that many descriptor refs into the 4-byte LTE descriptor-word table.
+function lteFeatureSet(data, dv, layout, index, uplink) {
+  const table = uplink ? layout.lte_ul_feature_sets : layout.lte_dl_feature_sets;
+  const count = dv.getUint32(table.count_offset, true);
+  if (!(index >= 0 && index < count)) {
+    return { index, out_of_range: true, per_cc: [] };
+  }
+  const rawStart = table.base + index * table.stride;
+  const ccCount = data[rawStart];
+  if (!(ccCount >= 1 && ccCount < table.stride)) {
+    return { index, out_of_range: true, per_cc: [], raw_hex: hex(data.subarray(rawStart, rawStart + table.stride)) };
+  }
+  const refs = [];
+  for (let i = 0; i < ccCount; i++) refs.push(data[rawStart + 1 + i]);
+  const descriptors = uplink ? layout.lte_ul_descriptors : layout.lte_dl_descriptors;
+  const descCount = dv.getUint32(descriptors.count_offset, true);
+  const mimoByWord = uplink ? LTE_UL_MIMO_LAYERS_BY_WORD : LTE_DL_MIMO_LAYERS_BY_WORD;
+  const perCc = [];
+  for (const ref of refs) {
+    if (ref >= descCount) {
+      perCc.push({ descriptor_ref: ref, out_of_range: true });
+      continue;
+    }
+    const word = dv.getUint32(descriptors.base + ref * descriptors.stride, true);
+    perCc.push({ descriptor_ref: ref, raw: word, mimo_layers: mimoByWord[word] ?? null });
+  }
+  return { index, raw_hex: hex(data.subarray(rawStart, rawStart + table.stride)), descriptor_refs: refs, per_cc: perCc };
+}
+
 function ulDescriptorCatalog(data, dv, layout) {
   const table = layout.ul_descriptors;
   const result = new Map();
@@ -484,9 +531,11 @@ function expandFeatureMatrix(data, dv, layout, category, variant) {
     const componentCount = rawByte0 & 0xf;
     const groupIndices = [];
     for (let i = 0; i < componentCount; i++) groupIndices.push(data[rawStart + 1 + i]);
-    const ulMatrixIndex = directUl ? variant.ul_matrix_start + ordinal : null;
-    const ulMatrixOob = directUl && ulMatrixIndex >= ulTableCount;
-    const ulRawStart = directUl && !ulMatrixOob ? ulTable.base + ulMatrixIndex * 10 : -1;
+    const ulMatrixIndex = variant.ul_matrix_start + ordinal;
+    const ulMatrixOob = ulMatrixIndex >= ulTableCount;
+    // Both generations index the UL matrix for LTE legs; NR legs use it only
+    // on C4020 (the row attribute below stays C4020-only, like Python).
+    const ulRawStart = !ulMatrixOob ? ulTable.base + ulMatrixIndex * 10 : -1;
     const components = [];
     const pairCount = Math.min(variant.components.length, groupIndices.length);
     for (let componentIndex = 0; componentIndex < pairCount; componentIndex++) {
@@ -534,6 +583,20 @@ function expandFeatureMatrix(data, dv, layout, category, variant) {
           resolved.combo_ul_bw_per_cc_mhz = [];
           resolved.combo_ul_mimo_per_cc_layers = [];
           resolved.combo_ul_scs_per_cc_khz = [];
+        }
+      } else {
+        // LTE legs index the LTE feature-set table, not the NR DL groups.
+        const dlSet = lteFeatureSet(data, dv, layout, groupIndex, false);
+        resolved.lte_dl_feature_set = dlSet;
+        resolved.combo_dl_mimo_per_cc_layers = dlSet.per_cc.map((x) => x.mimo_layers);
+        if (component.is_ul) {
+          const ulSetIndex = ulRawStart >= 0 ? data[ulRawStart + componentIndex] : 255;
+          const ulSet = lteFeatureSet(data, dv, layout, ulSetIndex, true);
+          resolved.lte_ul_feature_set_index = ulSetIndex;
+          resolved.lte_ul_feature_set = ulSet;
+          resolved.combo_ul_mimo_per_cc_layers = ulSet.per_cc.map((x) => x.mimo_layers);
+        } else {
+          resolved.combo_ul_mimo_per_cc_layers = [];
         }
       }
       components.push(resolved);
@@ -776,6 +839,9 @@ export function parseAppleBank(data, name = null, includeSlot2 = true) {
   let nrDlDescriptorCcMismatch = 0;
   let nrUlDescriptorCcMismatch = 0;
   let nrUlDescriptorUnresolved = 0;
+  let lteFeatureSetOob = 0;
+  let ltePerCcDescriptorUnresolved = 0;
+  let lteFeatureSetCcMismatch = 0;
   let nrVariantRangeOob = 0;
   const unknownUlClassCodes = new Set();
   for (const c of nr) {
@@ -822,6 +888,23 @@ export function parseAppleBank(data, name = null, includeSlot2 = true) {
               }
             }
           }
+          if (x.rat === "LTE") {
+            lteFeatureSetOob += x.lte_dl_feature_set?.out_of_range ? 1 : 0;
+            if (x.is_ul && x.lte_ul_feature_set?.out_of_range) lteFeatureSetOob += 1;
+            for (const set of [x.lte_dl_feature_set, x.lte_ul_feature_set]) {
+              for (const cc of set?.per_cc ?? []) {
+                if (cc.out_of_range === true || cc.mimo_layers == null) ltePerCcDescriptorUnresolved += 1;
+              }
+            }
+            const dlLen = (x.combo_dl_mimo_per_cc_layers ?? []).length;
+            const ulLen = (x.combo_ul_mimo_per_cc_layers ?? []).length;
+            if (
+              dlLen !== x.cc_count ||
+              (x.is_ul && ulLen !== componentClass(x.ul_class_code, x.rat, x.band)[1])
+            ) {
+              lteFeatureSetCcMismatch += 1;
+            }
+          }
         }
       }
     }
@@ -844,6 +927,9 @@ export function parseAppleBank(data, name = null, includeSlot2 = true) {
     nr_dl_descriptor_cc_mismatch: nrDlDescriptorCcMismatch,
     nr_ul_descriptor_cc_mismatch: nrUlDescriptorCcMismatch,
     nr_ul_descriptor_unresolved: nrUlDescriptorUnresolved,
+    lte_feature_set_oob: lteFeatureSetOob,
+    lte_per_cc_descriptor_unresolved: ltePerCcDescriptorUnresolved,
+    lte_feature_set_cc_mismatch: lteFeatureSetCcMismatch,
     nr_variant_range_oob: nrVariantRangeOob,
     unknown_ul_class_codes: [...unknownUlClassCodes].sort((a, b) => a - b),
     cc_mismatches: candidates.reduce((n, c) => n + (c.cc_sum_matches ? 0 : 1), 0),
@@ -869,6 +955,7 @@ const AUDIT_ERROR_FIELDS = [
   "nr_empty_feature_variants", "nr_feature_group_oob", "nr_per_cc_descriptor_invalid",
   "nr_feature_component_count_mismatch", "nr_dl_descriptor_cc_mismatch",
   "nr_ul_descriptor_cc_mismatch", "nr_ul_descriptor_unresolved",
+  "lte_feature_set_oob", "lte_per_cc_descriptor_unresolved", "lte_feature_set_cc_mismatch",
   "cc_mismatches", "band_slot1_encoding_violations",
 ];
 
@@ -913,6 +1000,11 @@ function byCompSortKeyDesc(isUl) {
 
 const joinMimo = (comps, key) =>
   comps.map((c) => (c[key] ?? []).map(String).join("+") || "").join(" + ");
+
+// _per_cc_text (viewer.py:199-201): join per-CC values with '+', showing '?'
+// for anything the bank did not resolve.
+const perCcText = (values) =>
+  values?.length ? values.map((v) => (v == null ? "?" : String(v))).join("+") : "?";
 
 export function generateAppleTables(bank) {
   // 1. Standalone LTE CA
@@ -962,14 +1054,14 @@ export function generateAppleTables(bank) {
           const nrUl = [...nrComps.filter((c) => c.is_ul)].sort(byCompSortKeyDesc(true));
           endcRows.push({
             "LTE DL": lteComps.map((c) => `${c.band}${c.class_letter}`).join(" + "),
-            "LTE MIMO DL": lteComps.map((c) => String(c.dl_mimo_layers || 2)).join(" + "),
+            "LTE MIMO DL": lteComps.map((c) => perCcText(c.combo_dl_mimo_per_cc_layers)).join(" + "),
             "NR DL": nrComps.map((c) => `${c.band}${c.class_letter}`).join(" + "),
             "NR MIMO DL": joinMimo(nrComps, "combo_dl_mimo_per_cc_layers") || "2",
             "NR BW DL (MHz)": joinMimo(nrComps, "combo_dl_bw_per_cc_mhz"),
             "LTE UL": lteUl.length
               ? lteUl.map((c) => `${c.band}${c.ul_class_letter || "A"}`).join(" + ")
               : "",
-            "LTE MIMO UL": lteUl.length ? lteUl.map(() => "1").join(" + ") : "",
+            "LTE MIMO UL": lteUl.length ? lteUl.map((c) => perCcText(c.combo_ul_mimo_per_cc_layers)).join(" + ") : "",
             "NR UL": nrUl.length
               ? nrUl.map((c) => `${c.band}${c.ul_class_letter || "A"}`).join(" + ")
               : "",
@@ -1259,8 +1351,8 @@ function nrRecords(bank, wire, category, source) {
             dl_bw_per_cc: isNr ? wire.bandwidth(c.combo_dl_bw_per_cc_mhz ?? []) : 0,
             ul_bw_class: ulClass,
             ul_bw_per_cc: isNr && ulClass ? wire.bandwidth(c.combo_ul_bw_per_cc_mhz ?? []) : 0,
-            dl_max_antennas_index: isNr ? wire.antenna(c.combo_dl_mimo_per_cc_layers ?? []) : 0,
-            ul_max_antennas_index: isNr && ulClass ? wire.antenna(c.combo_ul_mimo_per_cc_layers ?? []) : 0,
+            dl_max_antennas_index: wire.antenna(c.combo_dl_mimo_per_cc_layers ?? []),
+            ul_max_antennas_index: ulClass ? wire.antenna(c.combo_ul_mimo_per_cc_layers ?? []) : 0,
             ul_qam_cap_index: 0,
           });
         }
