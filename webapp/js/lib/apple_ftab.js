@@ -117,9 +117,10 @@ async function asZipSource(bytesOrSource, readFn) {
 // (case-insensitive substring). Mirrors Python unwrap_archive's discovery
 // order: nested .bbfw members first (either a raw FTAB at +0x20 or a nested
 // zip holding an ftab member), then direct ftab members with Python's
-// c40/cellular/centauri priority sort. Returns parseFtabEntries output for
-// the ftab member; Error if absent.
-export async function findFtabInBbfw(bytesOrVFile, readFn = null) {
+// c40/cellular/centauri priority sort. Returns { data, memberName, descriptors }
+// where data is the inflated ftab member bytes (descriptors index into them)
+// and memberName is the zip member the ftab came from; Error if absent.
+export async function findFtabMemberInBbfw(bytesOrVFile, readFn = null) {
   const source = await asZipSource(bytesOrVFile, readFn);
   const entries = await zipEntries(source);
 
@@ -133,11 +134,12 @@ export async function findFtabInBbfw(bytesOrVFile, readFn = null) {
       continue; // unreadable member: try the next one like Python's try/except
     }
     if (nested.length >= 0x28 && isFtab(nested)) {
-      return parseFtabEntries(nested);
+      return { data: nested, memberName: entry.name, descriptors: parseFtabEntries(nested) };
     }
     if (nested.length >= 4 && nested[0] === 0x50 && nested[1] === 0x4b && nested[2] === 0x03 && nested[3] === 0x04) {
       try {
-        return await findFtabInBbfw(nested);
+        const found = await findFtabMemberInBbfw(nested);
+        return { ...found, memberName: `${entry.name}!${found.memberName}` };
       } catch {
         // no ftab in this nested archive: keep looking
       }
@@ -158,8 +160,77 @@ export async function findFtabInBbfw(bytesOrVFile, readFn = null) {
     } catch {
       continue;
     }
-    if (isFtab(data) && ftabHasCrEntries(data)) return parseFtabEntries(data);
+    if (isFtab(data) && ftabHasCrEntries(data)) {
+      return { data, memberName: entry.name, descriptors: parseFtabEntries(data) };
+    }
   }
 
   throw new Error("apple ftab: no valid cellular modem FTAB or CR banks found inside archive");
+}
+
+// parseFtabEntries output for the ftab member; Error if absent.
+export async function findFtabInBbfw(bytesOrVFile, readFn = null) {
+  return (await findFtabMemberInBbfw(bytesOrVFile, readFn)).descriptors;
+}
+
+// Source-based FTAB entry walk for the fast scan path: reads only the 64 KiB
+// header window (entry table lives in it, like Python is_ftab_stream_with_cr)
+// plus one 12-byte envelope per CR entry — the compressed streams are read
+// separately by the caller, per descriptor. Same walk rules as
+// parseFtabEntries (non-ASCII tag or reserved != 0 ends the walk; CR entries
+// with size - 12 != comp are skipped).
+export async function parseFtabEntriesFromSource(source) {
+  const window = await source.read(0, Math.min(FTAB_SNIFF_WINDOW, source.size));
+  if (!isFtab(window)) {
+    throw new Error(`apple ftab: expected FTAB magic '${FTAB_MAGIC}' at +0x20`);
+  }
+  const dv = new DataView(window.buffer, window.byteOffset, window.byteLength);
+  const entries = [];
+  let off = FTAB_TABLE_OFF;
+  while (off + ENTRY_STRIDE <= window.length) {
+    let printable = true;
+    for (let i = 0; i < 4; i++) {
+      const c = window[off + i];
+      if (c < 32 || c >= 127) {
+        printable = false;
+        break;
+      }
+    }
+    if (!printable) break;
+    const tag = String.fromCharCode(window[off], window[off + 1], window[off + 2], window[off + 3]);
+    const eoff = dv.getUint32(off + 4, true);
+    const size = dv.getUint32(off + 8, true);
+    const res = dv.getUint32(off + 12, true);
+    if (res !== 0 || eoff > source.size || eoff + size > source.size) break;
+    if (tag.startsWith("CR")) {
+      if (eoff + ENVELOPE_SIZE > source.size) {
+        off += ENTRY_STRIDE;
+        continue;
+      }
+      const env = await source.read(eoff, ENVELOPE_SIZE);
+      const edv = new DataView(env.buffer, env.byteOffset, env.byteLength);
+      const profileId = edv.getUint32(0, true);
+      const uncompSize = edv.getUint32(4, true);
+      const compSize = edv.getUint32(8, true);
+      if (size - ENVELOPE_SIZE !== compSize) {
+        off += ENTRY_STRIDE;
+        continue;
+      }
+      entries.push({
+        name: tag,
+        tag,
+        profileId,
+        offset: eoff,
+        compSize,
+        uncompSize,
+        streamStart: eoff + ENVELOPE_SIZE,
+      });
+    }
+    off += ENTRY_STRIDE;
+  }
+  return entries.sort((a, b) => {
+    const an = a.name.toLowerCase();
+    const bn = b.name.toLowerCase();
+    return an < bn ? -1 : an > bn ? 1 : 0;
+  });
 }

@@ -1,0 +1,257 @@
+// Apple C-series integration tests (plan Task 4): scanSource FTAB/bbfw branch,
+// the card-open blob path (slice compressed stream -> lzfseDecode -> parse ->
+// audit -> tables), and the export dispatch shapes the worker produces.
+import test from "node:test";
+import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { CORPUS_DIR, deepEqualOrdered } from "./helpers.mjs";
+import { scanSource } from "../js/lib/analyzer.js";
+import { toCsvText } from "../js/lib/analyzer.js";
+import { NodeFileSource } from "../js/lib/source.js";
+import { lzfseDecode } from "../js/lib/lzfse.js";
+import {
+  parseAppleBank,
+  requireValidBank,
+  generateAppleTables,
+  exportAppleDiag,
+} from "../js/lib/apple_cr.js";
+import { isFtab } from "../js/lib/apple_ftab.js";
+
+const REF = join(CORPUS_DIR, "apple-c-modem-parser");
+const corpusAvailableForApple = () =>
+  existsSync(join(REF, "c1", "ftab.bin")) && existsSync(join(REF, "c2", "ftab_cr_banks"));
+const sha256Hex = (u8) => createHash("sha256").update(u8).digest("hex");
+const loadGolden = (name) => readFile(new URL(`../goldens/apple/${name}.json`, import.meta.url)).then(JSON.parse);
+
+test("apple integration: scanSource on golden c2 ftab -> 37 records, deferred counts", { skip: !corpusAvailableForApple() }, async () => {
+  const src = await NodeFileSource.open(join(REF, "c2", "ftab.bin"));
+  const { records, warnings } = await scanSource(src, "ftab.bin");
+  assert.equal(records.length, 37);
+  assert.deepEqual(warnings, []);
+  const first = records[0];
+  assert.ok(first.name.startsWith("CR04 (profile 0x1f2126)"), first.name);
+  assert.equal(first.inner_path, "CR04");
+  assert.equal(first.lte_combos, null);
+  assert.equal(first.nr_combos, null);
+  assert.equal(first.combo_counts_deferred, true);
+  assert.equal(first.size, 0x590d00);
+  // sha256 = COMPRESSED stream: compute inline from the ftab like the scan does.
+  const ftab = await readFile(join(REF, "c2", "ftab.bin"));
+  const dv = new DataView(ftab.buffer, ftab.byteOffset, ftab.byteLength);
+  assert.equal(first.apple.offset, 0x66b9228);
+  const comp = dv.getUint32(first.apple.offset + 8, true);
+  const stream = ftab.subarray(first.apple.offset + 12, first.apple.offset + 12 + comp);
+  assert.equal(first.apple.compSize, comp);
+  assert.equal(first.sha256, sha256Hex(stream));
+  for (const r of records) {
+    assert.ok(r.apple, `${r.name}: apple block`);
+    assert.equal(r.apple.layout, null);
+    assert.match(r.name, /^CR\d+ \(profile 0x[0-9a-f]{6}\)$/);
+  }
+});
+
+test("apple integration: scanSource on golden c1 ftab -> 21 records, first CR11", { skip: !corpusAvailableForApple() }, async () => {
+  const src = await NodeFileSource.open(join(REF, "c1", "ftab.bin"));
+  const { records } = await scanSource(src, "ftab.bin");
+  assert.equal(records.length, 21);
+  assert.ok(records[0].name.startsWith("CR11 (profile 0x10548c)"), records[0].name);
+  assert.equal(records[0].size, 0x5776e0);
+});
+
+test("apple integration: full open path (blob -> parse -> audit -> tables) for all 58 banks", { skip: !corpusAvailableForApple() }, async () => {
+  const golden = await loadGolden("tables");
+  let checked = 0;
+  for (const layout of ["c1", "c2"]) {
+    const src = await NodeFileSource.open(join(REF, layout, "ftab.bin"));
+    const { records } = await scanSource(src, "ftab.bin");
+    for (const record of records) {
+      // The worker's apple blob path: slice the compressed stream from the
+      // source (offset+12, compSize), decode with the uncompSize hint, parse.
+      const comp = await src.read(record.apple.offset + 12, record.apple.compSize);
+      const bank = lzfseDecode(comp, record.apple.uncompSize);
+      assert.equal(bank.length, record.apple.uncompSize, `${record.inner_path}: decoded size`);
+      const parsed = parseAppleBank(bank, record.inner_path);
+      requireValidBank(parsed);
+      deepEqualOrdered(generateAppleTables(parsed), golden[`${layout}/${record.inner_path}`]);
+      checked++;
+    }
+  }
+  assert.equal(checked, 58);
+});
+
+test("apple integration: export dispatch — DIAG byte-equal + json shape (worker path)", { skip: !corpusAvailableForApple() }, async () => {
+  const golden = await loadGolden("diag");
+  const src = await NodeFileSource.open(join(REF, "c2", "ftab.bin"));
+  const { records } = await scanSource(src, "ftab.bin");
+  const record = records[0]; // CR04
+  const comp = await src.read(record.apple.offset + 12, record.apple.compSize);
+  const bank = lzfseDecode(comp, record.apple.uncompSize);
+  const parsed = parseAppleBank(bank, record.inner_path);
+  requireValidBank(parsed);
+  // b0cd/b826 -> exportAppleDiag texts, byte-equal goldens.
+  const [b0cd] = exportAppleDiag(parsed, "b0cd");
+  const [b826] = exportAppleDiag(parsed, "b826");
+  assert.equal(b0cd.text, golden["c2/CR04"].b0cd);
+  assert.equal(b826.text, golden["c2/CR04"].b826);
+  assert.equal(b0cd.filename, "CR04_0xB0CD_v41.txt");
+  assert.equal(b826.filename, "CR04_0xB826_v22.txt");
+  // json path: { name, profile_id, tables } — parseable, profile_id 0x1F2126.
+  const tables = generateAppleTables(parsed);
+  const jsonText = JSON.stringify({ name: record.name, profile_id: parsed.profile_id, tables }, null, 2) + "\n";
+  const back = JSON.parse(jsonText);
+  assert.equal(back.profile_id, 0x1f2126);
+  assert.equal(back.name, record.name);
+  assert.equal(back.tables.endc.length, tables.endc.length);
+  // csv/webcsv shape: per-table CSV text via the shared toCsvText writer.
+  const csv = toCsvText(tables.endc);
+  assert.ok(csv.startsWith("\uFEFF"));
+  assert.ok(csv.includes("LTE DL"));
+});
+
+// --- synthetic bbfw through scanSource (Task 2's hand-rolled zip) ------------------
+
+function crc32(u8) {
+  let table = crc32.table;
+  if (!table) {
+    table = crc32.table = new Int32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      table[n] = c;
+    }
+  }
+  let crc = -1;
+  for (let i = 0; i < u8.length; i++) crc = (crc >>> 8) ^ table[(crc ^ u8[i]) & 0xff];
+  return (crc ^ -1) >>> 0;
+}
+
+function storedZip(members) {
+  const enc = new TextEncoder();
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+  for (const { name, data } of members) {
+    const nameBytes = enc.encode(name);
+    const crc = crc32(data);
+    const local = new Uint8Array(30 + nameBytes.length);
+    const dv = new DataView(local.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(8, 0, true); // stored
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, data.length, true);
+    dv.setUint32(22, data.length, true);
+    dv.setUint16(26, nameBytes.length, true);
+    local.set(nameBytes, 30);
+    chunks.push(local, data);
+    const cen = new Uint8Array(46 + nameBytes.length);
+    const cv = new DataView(cen.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, data.length, true);
+    cv.setUint32(24, data.length, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint32(42, offset, true);
+    cen.set(nameBytes, 46);
+    central.push(cen);
+    offset += local.length + data.length;
+  }
+  const cdStart = offset;
+  const cdSize = central.reduce((n, c) => n + c.length, 0);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, members.length, true);
+  ev.setUint16(10, members.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, cdStart, true);
+  const all = [...chunks, ...central, eocd];
+  const out = new Uint8Array(all.reduce((n, c) => n + c.length, 0));
+  let p = 0;
+  for (const c of all) {
+    out.set(c, p);
+    p += c.length;
+  }
+  return out;
+}
+
+// Synthetic ftab whose CR stream carries the bvx2 magic so the scan enumerates
+// it (the scan checks the envelope magic only — no decompression happens).
+function syntheticFtabBytes() {
+  const stream = new Uint8Array(32);
+  const sv = new DataView(stream.buffer);
+  sv.setUint32(0, 0x32787662, true); // bvx2
+  const envOffset = 0x30 + 16;
+  const envSize = 12 + stream.length;
+  const ftab = new Uint8Array(envOffset + envSize);
+  const dv = new DataView(ftab.buffer);
+  ftab.set(new TextEncoder().encode("rkosftab"), 0x20);
+  ftab.set(new TextEncoder().encode("CR07"), 0x30);
+  dv.setUint32(0x34, envOffset, true);
+  dv.setUint32(0x38, envSize, true);
+  dv.setUint32(0x3c, 0, true);
+  dv.setUint32(envOffset, 0xabcdef, true);
+  dv.setUint32(envOffset + 4, 4096, true);
+  dv.setUint32(envOffset + 8, stream.length, true);
+  ftab.set(stream, envOffset + 12);
+  return ftab;
+}
+
+test("apple integration: synthetic bbfw through scanSource enumerates the inner ftab", async () => {
+  const ftab = syntheticFtabBytes();
+  const zip = storedZip([{ name: "022-22116-011__ftab.bin", data: ftab }]);
+  // wrap the zip bytes in a minimal File-like (slice + size), like a browser File
+  const fileLike = {
+    name: "baseband.bbfw",
+    size: zip.length,
+    slice: (a, b) => new Blob([zip.subarray(a, b)]),
+  };
+  const { BrowserFileSource } = await import("../js/lib/source.js");
+  const { records, warnings } = await scanSource(new BrowserFileSource(fileLike), "baseband.bbfw");
+  assert.equal(records.length, 1);
+  assert.equal(records[0].inner_path, "CR07");
+  assert.ok(records[0].name.startsWith("CR07 (profile 0xabcdef)"), records[0].name);
+  assert.equal(records[0].apple.profileId, 0xabcdef);
+  assert.equal(records[0].apple.uncompSize, 4096);
+  assert.deepEqual(warnings, []);
+});
+
+test("apple integration: non-bvx2 CR stream is skipped with a warning", async () => {
+  // raw ftab whose CR stream has a bogus magic
+  const stream = new Uint8Array(16);
+  const envOffset = 0x30 + 16;
+  const ftab = new Uint8Array(envOffset + 12 + stream.length);
+  const dv = new DataView(ftab.buffer);
+  ftab.set(new TextEncoder().encode("rkosftab"), 0x20);
+  ftab.set(new TextEncoder().encode("CR99"), 0x30);
+  dv.setUint32(0x34, envOffset, true);
+  dv.setUint32(0x38, 12 + stream.length, true);
+  dv.setUint32(envOffset, 1, true);
+  dv.setUint32(envOffset + 4, 16, true);
+  dv.setUint32(envOffset + 8, stream.length, true);
+  const fileLike = {
+    name: "ftab.bin",
+    size: ftab.length,
+    slice: (a, b) => new Blob([ftab.subarray(a, b)]),
+  };
+  const { BrowserFileSource } = await import("../js/lib/source.js");
+  const { records, warnings } = await scanSource(new BrowserFileSource(fileLike), "ftab.bin");
+  assert.equal(records.length, 0);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0].message, /CR99: unexpected compression magic/);
+});
+
+test("apple integration: non-apple inputs still scan unchanged", { skip: !corpusAvailableForApple() }, async () => {
+  // a tiny non-matching file: neither apple ftab nor anything else -> container
+  // path yields nothing (no apple records, no crash)
+  const { BrowserFileSource } = await import("../js/lib/source.js");
+  const blob = { name: "random.bin", size: 600, slice: (a, b) => new Blob([new Uint8Array(b - a)]) };
+  const { records } = await scanSource(new BrowserFileSource(blob), "random.bin");
+  assert.equal(records.length, 0);
+});

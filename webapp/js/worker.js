@@ -51,8 +51,18 @@ import {
   normalizeInnerPath,
   matchesCandidate,
   ScanCancelled,
+  ToolError,
+  toCsvText,
 } from "./lib/analyzer.js";
 import { extractContainer, discoverCandidates } from "./lib/extractor.js";
+import { zipEntryData, zipEntries } from "./lib/extractor.js";
+import { lzfseDecode } from "./lib/lzfse.js";
+import {
+  parseAppleBank,
+  requireValidBank,
+  generateAppleTables,
+  exportAppleDiag,
+} from "./lib/apple_cr.js";
 
 const cancelled = new Set();
 let session = null; // { scanId }
@@ -70,6 +80,11 @@ const fatMemo = new WeakMap(); // File -> Fat16Image | null (null = init failed:
 // release VFiles it returns (VFile.release drops consumed members), so the memo
 // harvests the extracted mbn bytes once and lets the virtual tree go.
 const containerMemo = new WeakMap();
+// Apple card-open memo (mirrors parseMemo): File -> Map<`${name}\u0000${sha256}`,
+// {bank, parsed}> where bank is the DECOMPRESSED CR bank. Zip/bbfw inputs also
+// memoize the inflated ftab member they were sliced from.
+const appleBankMemo = new WeakMap(); // File -> Map<key, {bank, parsed}>
+const appleMemberMemo = new WeakMap(); // File -> Map<memberName, Promise<Uint8Array>>
 
 function post(message, transfer = []) {
   self.postMessage(message, transfer);
@@ -185,6 +200,119 @@ async function ensureParsed(file, fileIndex, record) {
   return entry;
 }
 
+// --- Apple C-series card open / export ------------------------------------------
+//
+// record.apple carries the envelope of the COMPRESSED stream: for a raw ftab
+// input the stream is a file slice at offset+12; for a bbfw/zip input it is a
+// slice of the INFLATED ftab member (record.apple.member names it), which is
+// re-extracted and memoized per File. Decompression is deferred to card open
+// and memoized per File by (record name, sha256 of the compressed stream) —
+// the same content-addressing rule as parseMemo.
+
+async function appleFtabMember(file, record) {
+  let memo = appleMemberMemo.get(file);
+  if (!memo) {
+    memo = new Map();
+    appleMemberMemo.set(file, memo);
+  }
+  const memberName = record.apple.member;
+  let pending = memo.get(memberName);
+  if (!pending) {
+    pending = (async () => {
+      const source = sourceFor(file);
+      const entries = await zipEntries(source);
+      // record.apple.member may be "outer!inner" for nested bbfw zip members.
+      const names = memberName.split("!");
+      let data = null;
+      let scope = source;
+      for (const name of names) {
+        const entry = entries.find((e) => e.name === name);
+        if (!entry) throw new Error(`apple ftab member not found in source: ${name}`);
+        data = await zipEntryData(scope, entry);
+        // if the extracted member is itself a zip, descend (nested bbfw)
+        if (data.length >= 4 && data[0] === 0x50 && data[1] === 0x4b && data[2] === 0x03 && data[3] === 0x04) {
+          scope = {
+            size: data.length,
+            read: (o, l) => data.subarray(o, o + l),
+          };
+        } else {
+          scope = null;
+        }
+      }
+      return data;
+    })();
+    memo.set(memberName, pending);
+    pending.catch(() => memo.delete(memberName));
+  }
+  return pending;
+}
+
+async function ensureAppleBank(file, fileIndex, record) {
+  if (!file || typeof file.slice !== "function") {
+    throw new Error(`no File handle for record ${record.name} (fileIndex ${fileIndex})`);
+  }
+  let memo = appleBankMemo.get(file);
+  if (!memo) {
+    memo = new Map();
+    appleBankMemo.set(file, memo);
+  }
+  const key = `${record.name}\u0000${record.sha256 ?? ""}`;
+  let entry = memo.get(key);
+  if (!entry) {
+    const source = sourceFor(file);
+    const comp = record.apple.member
+      ? (await appleFtabMember(file, record)).subarray(record.apple.offset + 12, record.apple.offset + 12 + record.apple.compSize)
+      : await source.read(record.apple.offset + 12, record.apple.compSize);
+    const bank = lzfseDecode(comp, record.apple.uncompSize);
+    entry = { bank, parsed: null };
+    memo.set(key, entry);
+  }
+  return entry;
+}
+
+async function ensureAppleParsed(file, fileIndex, record) {
+  const entry = await ensureAppleBank(file, fileIndex, record);
+  if (!entry.parsed) {
+    entry.parsed = parseAppleBank(entry.bank, record.inner_path);
+    requireValidBank(entry.parsed); // main.py flow: parse_bank + require_valid_bank before any use
+  }
+  return entry;
+}
+
+// Export dispatch for apple records. mbn = the raw decompressed bank (pure
+// dump, no parse); json/csv/webcsv/b0cd/b826 go through the parsed bank.
+async function exportAppleFiles(file, fileIndex, record, format) {
+  const stem = record.inner_path;
+  if (format === "mbn") {
+    const { bank } = await ensureAppleBank(file, fileIndex, record);
+    return [{ filename: `${stem}.bin`, bytes: bank }];
+  }
+  const { parsed } = await ensureAppleParsed(file, fileIndex, record);
+  if (format === "json") {
+    const text =
+      JSON.stringify({ name: record.name, profile_id: parsed.profile_id, tables: generateAppleTables(parsed) }, null, 2) + "\n";
+    return [{ filename: `${stem}_all_combos.json`, text }];
+  }
+  if (format === "csv" || format === "webcsv") {
+    // The qcom csv exporter is parser-coupled (combinations/components); apple
+    // banks have viewer tables only, so both formats write the four viewer
+    // tables through the shared toCsvText writer (same file shape).
+    const tables = generateAppleTables(parsed);
+    const names = { lte_ca: "lteca", nr_ca: "nrca", endc: "endc", nrdc: "nrdc" };
+    const files = [];
+    for (const table of ["lte_ca", "nr_ca", "endc", "nrdc"]) {
+      if (!tables[table] || tables[table].length === 0) continue;
+      const text = toCsvText(tables[table]);
+      if (text !== null) files.push({ filename: `${stem}_${names[table]}.csv`, text });
+    }
+    return files;
+  }
+  if (format === "b0cd" || format === "b826") {
+    return exportAppleDiag(parsed, format);
+  }
+  throw new ToolError(`Unsupported export format: ${format}`);
+}
+
 async function handleScan(msg) {
   resetSession();
   session = { scanId: msg.id };
@@ -214,6 +342,14 @@ async function handleScan(msg) {
 }
 
 async function handleParseCard(msg) {
+  if (msg.record.apple) {
+    // Apple CR bank: parse + audit + viewer tables (same reply shape as qcom;
+    // cardcache validates the shape the same way).
+    const { parsed } = await ensureAppleParsed(msg.file, msg.fileIndex, msg.record);
+    const tables = generateAppleTables(parsed);
+    post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables });
+    return;
+  }
   const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
   const tables = generateWebTables(parsed.combinations, parsed.components);
   post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables });
@@ -221,7 +357,9 @@ async function handleParseCard(msg) {
 
 async function handleExport(msg) {
   let files;
-  if (msg.format === "mbn") {
+  if (msg.record.apple) {
+    files = await exportAppleFiles(msg.file, msg.fileIndex, msg.record, msg.format);
+  } else if (msg.format === "mbn") {
     // Raw .mbn dump (Python export_module "mbn"): the untouched blob under
     // record.name — byte-for-byte, no parse, no text encoding. Reuses the
     // ensureBlob path incl. the per-File memo, so a batch that also exports
@@ -262,14 +400,24 @@ async function handleExport(msg) {
 // exportBlob shape (files as text), so the existing waiter/error/clear
 // plumbing applies unchanged.
 async function handleImportCards(msg) {
-  const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
   const files = [];
   for (const format of ["b0cd", "b826"]) {
-    if (!Array.isArray(parsed.diag?.[format]) || parsed.diag[format].length === 0) {
-      continue; // empty packet set — omit this format from the import payload
-    }
     try {
-      const produced = exportModule(msg.record, parsed, format);
+      // Apple records export DIAG texts from the parsed CR bank; qcom records
+      // through the analyzer exporter. The filename tails are identical
+      // (`_0xB0CD_v41.txt` / `_0xB826_v22.txt`), so the main thread's textFor
+      // lookups and the uecaps upload flow work unchanged for both.
+      let produced;
+      if (msg.record.apple) {
+        const { parsed } = await ensureAppleParsed(msg.file, msg.fileIndex, msg.record);
+        produced = exportAppleDiag(parsed, format);
+      } else {
+        const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
+        if (!Array.isArray(parsed.diag?.[format]) || parsed.diag[format].length === 0) {
+          continue; // empty packet set — omit this format from the import payload
+        }
+        produced = exportModule(msg.record, parsed, format);
+      }
       files.push(...produced.map((f) => ({ filename: f.filename, text: f.text })));
     } catch {
       // Belt-and-braces: a ToolError here also means "omit this set".

@@ -17,6 +17,7 @@ import { hex } from "./bytes.js";
 import { Fat16Image } from "./fat16.js";
 import { Elf32Image, ParseError } from "./elf.js";
 import { extractContainer, discoverCandidates, sidecarsInDirectory } from "./extractor.js";
+import { isFtab, parseFtabEntriesFromSource, findFtabMemberInBbfw } from "./apple_ftab.js";
 import {
   rfcardNameFromSymbols,
   findDescriptors,
@@ -232,6 +233,82 @@ function buildRecord(base, lte, nr) {
   };
 }
 
+// --- Apple C-series FTAB / bbfw branch (fast scan: no decompression) -----------
+//
+// One card record per CR bank. Card identity = sha256 of the COMPRESSED
+// stream (the cardcache key); bank decompression is deferred to card open
+// (worker appleBankMemo). Records stay unsorted/deduped here: descriptors are
+// already name-sorted like Python, and identical streams dedupe naturally
+// downstream (name\0sha256 card keys).
+
+const APPLE_CR_MAGIC = 0x32787662; // bvx2
+
+function isZipHead(head) {
+  return head.length >= 4 && head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04;
+}
+
+async function scanAppleFtab(source, name, cancelled) {
+  const head = await source.read(0, Math.min(0x30, source.size));
+  let descriptors = null;
+  let ftabData = null; // inflated ftab member bytes (bbfw) or null (raw ftab)
+  let memberName = null;
+  if (isFtab(head)) {
+    descriptors = await parseFtabEntriesFromSource(source);
+  } else if (isZipHead(head)) {
+    // bbfw/zip: reuse the container path's central-directory read to find the
+    // ftab member, then slice streams from the inflated member bytes.
+    ({ data: ftabData, memberName, descriptors } = await findFtabMemberInBbfw(source));
+  } else {
+    return null;
+  }
+  if (!descriptors.length) return null;
+
+  const records = [];
+  const warnings = [];
+  for (const desc of descriptors) {
+    if (cancelled()) throw new ScanCancelled();
+    const stream = ftabData
+      ? ftabData.subarray(desc.streamStart, desc.streamStart + desc.compSize)
+      : await source.read(desc.streamStart, desc.compSize);
+    const dv = new DataView(stream.buffer, stream.byteOffset, stream.byteLength);
+    if (stream.length < 4 || dv.getUint32(0, true) !== APPLE_CR_MAGIC) {
+      warnings.push({
+        tool: "apple",
+        message: `apple CR bank ${desc.name}: unexpected compression magic — skipped`,
+      });
+      continue;
+    }
+    const digest = await sha256HexAsync(stream);
+    records.push({
+      inner_path: desc.name,
+      name: `${desc.name} (profile 0x${desc.profileId.toString(16).padStart(6, "0")})`,
+      generation: "Apple CR",
+      size: desc.uncompSize,
+      hwid: 0,
+      fsid: 0,
+      bid: 0,
+      external: true,
+      source_path: name,
+      sidecars: {},
+      sha256: digest,
+      lte_combos: null,
+      nr_combos: null,
+      apple: {
+        profileId: desc.profileId,
+        offset: desc.offset,
+        compSize: desc.compSize,
+        uncompSize: desc.uncompSize,
+        // member-relative offsets when the ftab came from a zip (bbfw)
+        member: memberName,
+        layout: null, // decided at open from the bank size
+      },
+      combo_counts_deferred: true,
+    });
+  }
+  if (!records.length && !warnings.length) return null;
+  return { records, warnings };
+}
+
 export async function scanSource(source, name, { shouldCancel } = {}) {
   const cancelled = shouldCancel ?? (() => false);
   if (cancelled()) throw new ScanCancelled();
@@ -260,6 +337,11 @@ export async function scanSource(source, name, { shouldCancel } = {}) {
     const [lte, nr] = comboCounts(base, blob);
     return { records: deduplicateRecords([buildRecord(base, lte, nr)]), warnings: [] };
   }
+
+  // Apple C-series FTAB / bbfw inputs: one card per CR bank, no decompression
+  // during the scan (tried before the FAT/container dispatch).
+  const appleScan = await scanAppleFtab(source, name, cancelled);
+  if (appleScan) return appleScan;
 
   const fat = new Fat16Image(source);
   try {
