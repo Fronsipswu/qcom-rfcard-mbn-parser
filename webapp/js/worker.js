@@ -156,6 +156,7 @@ function dispatchScanPool() {
 // message.
 function inspectBankInPool(streamBuffer, uncompSize) {
   return new Promise((resolve, reject) => {
+    scanPoolFor(); // lazily create the pool on the first bank — dispatchScanPool iterates it, so it must exist before the first dispatch
     scanPoolQueue.push({
       stream: streamBuffer,
       uncompSize,
