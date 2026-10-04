@@ -221,6 +221,24 @@ function renderCardList() {
     tdCheck.appendChild(checkbox);
     tr.appendChild(tdCheck);
 
+    // Apple CR rows keep their scan-time counts in record.apple.counts (their
+    // lte_combos/nr_combos stay null: combo-table parsing is deferred to card
+    // open). When such rows render under the qcom column layout (mixed
+    // imports), derive the combo cells from the scan counts instead of showing
+    // "—": LTE as a plain count and NR as the qcom endc+nrca+nrdc=total
+    // format (NSA=EN-DC, SA=NR-CA, NR-DC=NRDC).
+    const appleCounts = record.apple ? record.apple.counts : null;
+    const lteCell = appleCounts
+      ? appleCounts.lte.toLocaleString("en-US")
+      : record.lte_combos == null
+        ? "—"
+        : record.lte_combos.toLocaleString("en-US");
+    const nrCell = appleCounts
+      ? `${appleCounts.endc}+${appleCounts.nrca}+${appleCounts.nrdc}=${
+          appleCounts.endc + appleCounts.nrca + appleCounts.nrdc
+        }`
+      : String(record.nr_combos ?? "");
+
     const cells = allApple
       ? [
           [record.inner_path, "cell-name"],
@@ -243,8 +261,8 @@ function renderCardList() {
           // card open — `null >= 0` is true in JS (null coerces to 0), so a plain
           // >= check would reach null.toLocaleString() and abort the whole list
           // render. Guard on the actual null/undefined instead.
-          [record.lte_combos == null ? "—" : record.lte_combos.toLocaleString("en-US"), "cell-lte"],
-          [String(record.nr_combos ?? ""), "cell-nr"],
+          [lteCell, "cell-lte"],
+          [nrCell, "cell-nr"],
         ];
     for (const [value, cls] of cells) {
       const td = document.createElement("td");
