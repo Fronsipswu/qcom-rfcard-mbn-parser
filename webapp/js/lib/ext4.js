@@ -13,6 +13,7 @@
 // stay in the leaf blocks).
 import { StructReader } from "./bytes.js";
 import { ParseError } from "./fat16.js";
+import { bump } from "./debug.js";
 
 const EXT2_SUPER_MAGIC = 0xef53;
 const EXT4_EXTENTS_FL = 0x80000;
@@ -30,9 +31,14 @@ const FT_DIR = 2;
 export class Ext4Image {
   constructor(source) {
     this.source = source;
+    // Step 3: walk() is a pure read over the read-only image after init();
+    // memoizing the entry list stops findFile from re-traversing the whole
+    // filesystem for every record. Cleared by init().
+    this.walkMemo = null;
   }
 
   async init() {
+    this.walkMemo = null;
     // Superblock lives 1024 bytes into the device.
     let sb;
     try {
@@ -173,6 +179,8 @@ export class Ext4Image {
   // as soon as it is seen; only files are yielded; paths start with "/".
   async walk() {
     this.#assertInit();
+    if (this.walkMemo) return this.walkMemo;
+    bump("ext4Walk");
     const out = [];
     const visit = async (dirIno, parent) => {
       const inodeStruct = await this.readInodeStruct(dirIno);
@@ -204,6 +212,7 @@ export class Ext4Image {
       }
     };
     await visit(2, "");
+    this.walkMemo = out;
     return out;
   }
 
@@ -225,5 +234,13 @@ export class Ext4Image {
     if (entry.isDir) throw new ParseError(`Path is a directory inside the ext4 filesystem: ${entry.path ?? entry.name}`);
     if (entry.size === 0) return new Uint8Array(0);
     return this.readInodeRange(entry.inode, 0, entry.size);
+  }
+
+  // Ranged read over an entry, mirroring Fat16Image.readFileRange so the
+  // container walker (extractor.headOf) can sniff a file's 4 KB header without
+  // materializing it. Reads exactly through the extent map (holes read zeros).
+  async readFileRange(entry, offset, length) {
+    if (entry.isDir) throw new ParseError(`Path is a directory inside the ext4 filesystem: ${entry.path ?? entry.name}`);
+    return this.readInodeRange(entry.inode, offset, length);
   }
 }

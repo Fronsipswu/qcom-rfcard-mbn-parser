@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { BrowserFileSource } from "../js/lib/source.js";
-import { extractContainer, discoverCandidates, RFCARD_RE, SIDECAR_RES } from "../js/lib/extractor.js";
+import { extractContainer, discoverCandidates, headOf, RFCARD_RE, SIDECAR_RES, VFile } from "../js/lib/extractor.js";
 import { normalizeInnerPath } from "../js/lib/analyzer.js";
 import { hexToBytes } from "../js/lib/bytes.js";
 import { zipSync, strToU8 } from "../lib/vendor/fflate.js";
@@ -362,11 +362,12 @@ test("tar -> lz4 -> FAT16 chain lands under fat_<n>/ (Samsung miniature)", async
   assert.equal(mbns[0].path, "fat_2/image/rf_config_1181_0_306.mbn");
   assert.equal(normalizeInnerPath(mbns[0].path), "fat/image/rf_config_1181_0_306.mbn");
   assert.deepEqual(await mbns[0].vfile.read(), card);
-  // The consumed tar member's bytes are dropped once the lz4 output exists:
-  // peak RSS must not carry the compressed member underneath the decompressed
-  // FAT16 tree (the Samsung member alone is ~97MB).
+  // Step 7: tar members are now region-backed, so there is no materialized
+  // compressed member to release — extractLz4's release() is a no-op and the
+  // member stays readable on demand (it was never eagerly read).
   const lz4Member = outputs[0].files().find((f) => f.path.endsWith("modem.bin.lz4")).vfile;
-  assert.throws(() => lz4Member.read(), /released/);
+  assert.ok(lz4Member.region, "the tar member must be a zero-copy region");
+  assert.deepEqual(await lz4Member.read(), lz4FrameAllLiterals(buildFat16Miniature(card)));
 });
 
 // --- zip64 ------------------------------------------------------------------------
@@ -490,13 +491,13 @@ test("zip: member declaring >=2GiB uncompressed is refused before any read", asy
   const data = new Uint8Array(600).fill(0x5a);
   // 2**31 declared uncompressed (no zip64 sentinel needed, it fits a u32):
   // Node's handle.read would overflow on such lengths (native abort), so the
-  // guard must throw a catchable ExtractionError before the data read.
+  // guard must refuse it before the data read — now via the whole-buffer cap.
   const zip = buildZip64({ data, entry: { uncompressed: 2 ** 31, compressed: data.length, offset: 0 } });
   const { root, warnings } = await openContainer(zip, "bomb.zip");
   assert.deepEqual(root.files(), []);
   assert.equal(warnings.length, 1);
   assert.equal(warnings[0].tool, "zip");
-  assert.match(warnings[0].message, /2GiB/);
+  assert.match(warnings[0].message, /whole-buffer limit|2GiB/);
 });
 
 // --- tar PAX -----------------------------------------------------------------------
@@ -553,4 +554,97 @@ test("tar size field with leading spaces parses like tarfile.nti", async () => {
   const files = root.files();
   assert.deepEqual(files.map((f) => f.path), ["tar_0/spaced.bin"]);
   assert.equal(files[0].vfile.size, 640);
+});
+
+// --- header sniffing (Step 1: ranged readers never materialize a tree file) -----
+
+test("headOf prefers a ranged reader over the full-file loader", async () => {
+  const size = 0x4000;
+  const bytes = new Uint8Array(size);
+  for (let i = 0; i < size; i++) bytes[i] = (i * 5 + 1) & 0xff;
+  let fullLoads = 0;
+  let rangeCalls = 0;
+  const vfile = new VFile(
+    "tree.bin",
+    () => {
+      fullLoads += 1;
+      return bytes;
+    },
+    size,
+    null,
+    async (offset, length) => {
+      rangeCalls += 1;
+      assert.equal(offset, 0);
+      return bytes.subarray(offset, offset + length);
+    },
+  );
+  const head = await headOf(vfile);
+  assert.equal(head.length, 4096);
+  assert.deepEqual(head, bytes.subarray(0, 4096));
+  assert.equal(rangeCalls, 1, "the ranged reader must serve the sniff");
+  assert.equal(fullLoads, 0, "the whole-file loader must not run for a header sniff");
+});
+
+test("headOf falls back to a region window and then to the whole-file loader", async () => {
+  const size = 8192;
+  const bytes = new Uint8Array(size);
+  for (let i = 0; i < size; i++) bytes[i] = i & 0xff;
+  const base = {
+    size,
+    async read(offset, length) {
+      return bytes.subarray(offset, offset + length);
+    },
+  };
+  const regionFile = VFile.slice("region.bin", base, 1024, 4096);
+  assert.deepEqual(await headOf(regionFile), bytes.subarray(1024, 1024 + 4096));
+
+  const small = VFile.mem("small.bin", bytes.subarray(0, 100));
+  assert.deepEqual(await headOf(small), bytes.subarray(0, 100));
+});
+
+// --- large-archive handling (Step 7) --------------------------------------------
+
+test("tar members are zero-copy regions of the archive source", async () => {
+  const payload = strToU8("rf_config_1306_0_0.mbn-contents");
+  const tar = buildUstar([{ name: "nested/rf_config_1306_0_0.mbn", data: payload }]);
+  const { root, warnings } = await openContainer(tar, "archive.tar");
+  assert.deepEqual(warnings, []);
+  const files = root.files();
+  assert.equal(files.length, 1);
+  const vfile = files[0].vfile;
+  assert.ok(vfile.region, "tar members must stay region-backed (no eager materialization)");
+  assert.equal(vfile.size, payload.length);
+  assert.deepEqual(await vfile.read(), payload);
+  // release() is a no-op for region-backed files: the bytes stay readable.
+  vfile.release();
+  assert.deepEqual(await vfile.read(), payload);
+});
+
+test("oversized whole-buffer containers warn instead of throwing", async () => {
+  const { gzipSync } = await import("node:zlib");
+  const gz = gzipSync(randomBytes(2000)); // incompressible -> > MIN_CONTAINER_SIZE
+  // Compressed input over the limit: the gzip member is skipped with a warning.
+  const skipped = await extractContainer(new BrowserFileSource(new Blob([gz])), "big.gz", { wholeBufferLimit: 4 });
+  assert.equal(skipped.outputs.length, 0);
+  assert.ok(
+    skipped.warnings.some((w) => w.tool === "gzip" && /whole-buffer limit/.test(w.message)),
+    JSON.stringify(skipped.warnings),
+  );
+  // Compressed input is fine but the decompressed output is over the limit: the
+  // capped stream reader aborts it as a decompress failure, not a crash.
+  const block = randomBytes(700);
+  const payload = Buffer.alloc(100000);
+  for (let i = 0; i < payload.length; i += block.length) block.copy(payload, i);
+  const bomb = gzipSync(payload);
+  assert.ok(bomb.length >= 512, "the compressed input must pass the container floor");
+  const capped = await extractContainer(new BrowserFileSource(new Blob([bomb])), "bomb.gz", { wholeBufferLimit: bomb.length });
+  assert.equal(capped.outputs.length, 0);
+  assert.ok(
+    capped.warnings.some((w) => w.tool === "gzip" && /exceeds|failed/.test(w.message)),
+    JSON.stringify(capped.warnings),
+  );
+  // Default limit: the same input extracts normally.
+  const ok = await openContainer(gz, "small.gz");
+  assert.deepEqual(ok.warnings, []);
+  assert.ok(ok.root.files().length >= 1, "the gzip output file must exist");
 });

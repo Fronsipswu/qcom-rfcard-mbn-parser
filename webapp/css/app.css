@@ -466,18 +466,23 @@ body.dragging {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  /* The virtualized tbody is rebuilt on scroll; scroll anchoring must not
+     "correct" scrollTop against rows that were just replaced. */
+  overflow-anchor: none;
   border: 1px solid var(--border);
   border-radius: 0 6px 6px 6px;
 }
 
-/* Windowed (stacked layout) tail marker: more filtered rows exist than are
-   painted; scrolling grows the painted window. */
-.cv tr.cv-more td {
-  text-align: center;
-  color: var(--muted);
-  font-size: 12px;
-  padding: 8px;
-  white-space: nowrap;
+/* Viewport virtualization (Step 4): only the rows near the viewport are in the
+   DOM, with padded spacer rows above and below. Rows have uniform height
+   (nowrap + table-layout: fixed + monospace), so a plain height on the spacer
+   cell covers the off-screen rows. */
+.cv tr.cv-spacer td {
+  padding: 0;
+  border: 0;
+  line-height: 0;
+  font-size: 0;
+  background: transparent;
 }
 
 .cv table {
@@ -556,12 +561,61 @@ body.dragging {
   border-right: 1px solid #eef1f4;
 }
 
-.cv tbody tr:nth-child(odd) { background: #ffffff; }   /* evenrow: idx % 2 == 0 */
-.cv tbody tr:nth-child(even) { background: #f7f9fa; }  /* oddrow */
+/* Zebra stripes are class-based, not :nth-child, so the virtualization spacer
+   rows cannot shift parity and stripes stay stable while scrolling. Mirrors
+   viewer.py's evenrow/oddrow by FILTERED index (idx % 2). */
+.cv tbody tr.cv-row-even { background: #ffffff; }
+.cv tbody tr.cv-row-odd { background: #f7f9fa; }
 .cv tbody tr.sel { background: var(--accent); color: #ffffff; }
 .cv tbody tr.sel td { border-right-color: rgba(255, 255, 255, 0.25); }
 
 .cv-band { font-weight: 600; }
+
+/* Band colors as palette classes (Step 4/A1): generated 1:1 from PALETTE in
+   lib/bandcolors.js by palette index (memoBandIndex). Passing the class index
+   avoids tens of thousands of inline style attributes in a large tbody; the
+   rendered colors are identical to bandColor(canonical). Keep in sync with
+   PALETTE — tests/bandcolors.test.mjs asserts every rule matches. */
+.cv .band-c0 { color: #B71C1C; }
+.cv .band-c1 { color: #D32F2F; }
+.cv .band-c2 { color: #C2185B; }
+.cv .band-c3 { color: #AD1457; }
+.cv .band-c4 { color: #880E4F; }
+.cv .band-c5 { color: #7B1FA2; }
+.cv .band-c6 { color: #9C27B0; }
+.cv .band-c7 { color: #6A1B9A; }
+.cv .band-c8 { color: #512DA8; }
+.cv .band-c9 { color: #4527A0; }
+.cv .band-c10 { color: #3949AB; }
+.cv .band-c11 { color: #303F9F; }
+.cv .band-c12 { color: #283593; }
+.cv .band-c13 { color: #1A237E; }
+.cv .band-c14 { color: #1565C0; }
+.cv .band-c15 { color: #0D47A1; }
+.cv .band-c16 { color: #0277BD; }
+.cv .band-c17 { color: #01579B; }
+.cv .band-c18 { color: #00838F; }
+.cv .band-c19 { color: #006064; }
+.cv .band-c20 { color: #00796B; }
+.cv .band-c21 { color: #00695C; }
+.cv .band-c22 { color: #004D40; }
+.cv .band-c23 { color: #2E7D32; }
+.cv .band-c24 { color: #1B5E20; }
+.cv .band-c25 { color: #33691E; }
+.cv .band-c26 { color: #827717; }
+.cv .band-c27 { color: #8D6E63; }
+.cv .band-c28 { color: #795548; }
+.cv .band-c29 { color: #6D4C41; }
+.cv .band-c30 { color: #5D4037; }
+.cv .band-c31 { color: #4E342E; }
+.cv .band-c32 { color: #5F6368; }
+.cv .band-c33 { color: #455A64; }
+.cv .band-c34 { color: #37474F; }
+.cv .band-c35 { color: #263238; }
+.cv .band-c36 { color: #BF360C; }
+.cv .band-c37 { color: #D84315; }
+.cv .band-c38 { color: #E64A19; }
+.cv .band-c39 { color: #8E24AA; }
 
 /* --- context menu ----------------------------------------------------------------- */
 

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { NodeFileSource, BrowserFileSource, sourceFor } from "../js/lib/source.js";
+import { NodeFileSource, BrowserFileSource, CachedSource, sourceFor } from "../js/lib/source.js";
 
 const SIZE = 64 * 1024;
 const pattern = (i) => i & 0xff;
@@ -111,4 +111,93 @@ test("sourceFor routes strings to Node and File/Blob to browser sources", async 
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+// --- CachedSource: aligned page cache for tiny browser reads (Step 6) ------------
+
+function memorySource(size) {
+  const bytes = new Uint8Array(size);
+  for (let i = 0; i < size; i++) bytes[i] = (i * 3 + 1) & 0xff;
+  const source = {
+    bytes,
+    reads: 0,
+    size,
+    async read(offset, length) {
+      source.reads += 1;
+      return bytes.subarray(offset, offset + length);
+    },
+  };
+  return source;
+}
+
+test("CachedSource returns exact bytes within a page and across page boundaries", async () => {
+  const base = memorySource(3 * 512 + 100);
+  const src = new CachedSource(base, { pageSize: 512, maxPages: 4 });
+  assert.equal(src.size, base.size);
+  const probes = [
+    [0, 0],
+    [0, 1],
+    [0, 512],
+    [511, 2],
+    [512, 1],
+    [1023, 3],
+    [1024, 600],
+    [base.size - 3, 3],
+    [4, 1200],
+  ];
+  for (const [offset, length] of probes) {
+    const got = await src.read(offset, length);
+    assert.deepEqual(got, base.bytes.subarray(offset, offset + length), `read(${offset}, ${length})`);
+  }
+  // A fresh source proves repeated same-page reads share one base fetch.
+  const base2 = memorySource(3 * 512 + 100);
+  const src2 = new CachedSource(base2, { pageSize: 512, maxPages: 4 });
+  await src2.read(10, 8);
+  await src2.read(20, 8);
+  await src2.read(500, 4);
+  assert.equal(base2.reads, 1, "three reads inside one page fetch it once");
+});
+
+test("CachedSource bypasses the cache for reads larger than a page", async () => {
+  const base = memorySource(4096);
+  const src = new CachedSource(base, { pageSize: 100, maxPages: 4 });
+  const got = await src.read(0, 250); // > pageSize
+  assert.deepEqual(got, base.bytes.subarray(0, 250));
+  assert.equal(base.reads, 1, "an oversized read goes straight to the base");
+});
+
+test("CachedSource evicts the least-recently-used page", async () => {
+  const base = memorySource(3 * 100);
+  const src = new CachedSource(base, { pageSize: 100, maxPages: 2 });
+  await src.read(0, 1); // page 0
+  await src.read(100, 1); // page 1
+  await src.read(200, 1); // page 2: evicts page 0
+  assert.equal(base.reads, 3);
+  await src.read(100, 1); // page 1 still hot
+  assert.equal(base.reads, 3);
+  await src.read(0, 1); // page 0 was evicted -> refetch
+  assert.equal(base.reads, 4);
+});
+
+test("CachedSource keeps the RangeError short-read contract", async () => {
+  const base = memorySource(1000);
+  const src = new CachedSource(base, { pageSize: 256, maxPages: 2 });
+  await assert.rejects(() => src.read(995, 10), RangeError);
+  await assert.rejects(() => src.read(-1, 4), RangeError);
+  await assert.rejects(() => src.read(base.size, 1), RangeError);
+});
+
+test("CachedSource does not cache a failed page read", async () => {
+  let calls = 0;
+  const base = {
+    size: 300,
+    async read(offset, length) {
+      calls += 1;
+      if (calls === 1) throw new Error("boom");
+      return new Uint8Array(length);
+    },
+  };
+  const src = new CachedSource(base, { pageSize: 100, maxPages: 2 });
+  await assert.rejects(() => src.read(0, 10), /boom/);
+  assert.deepEqual(await src.read(0, 10), new Uint8Array(10));
 });

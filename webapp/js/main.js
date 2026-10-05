@@ -13,7 +13,6 @@ import {
   dedupeFilenames,
 } from "./exportplan.js";
 import { zipSync } from "../lib/vendor/fflate.js";
-import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
 import { uniqueFileNames } from "./loadedfiles.js";
 import { PARSER_BASE, buildImportEntries, resultUrl } from "./importparser.js";
 import {
@@ -30,12 +29,15 @@ import { recordIdentity, normalizeInnerPath } from "./lib/analyzer.js";
 
 const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
 
-// IndexedDB may be unavailable (private mode etc.); fall back to per-page memory.
-const cardCache = createCardCache(
-  typeof indexedDB !== "undefined"
-    ? idbBackend()
-    : memoryBackend(),
-);
+// ?debug turns on the worker's Step 0 instrumentation counters: every reply then
+// carries a debugCounters snapshot, so a Chrome/Firefox console can assert that
+// extraction/parsing happens once per source. No effect without the query flag.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).has("debug")) {
+  worker.postMessage({ type: "debug", enabled: true, reset: true });
+}
+
+// IndexedDB no longer lives on the main thread: the worker owns the parsed-table
+// cache (Step 5) so multi-MB tables are never structured-cloned here.
 
 const els = {
   dropzone: document.getElementById("dropzone"),
@@ -74,11 +76,19 @@ const els = {
 
 const GENERATION_DISPLAY = { "DAT/protobuf": "XML DAT" }; // gui_version/main.py:480
 
-const cards = []; // { record, file, fileIndex, key }; file is THE source File
+const cards = []; // { record, sourceId, fileIndex, key }; sourceId identifies the File in the worker
 const cardKeys = new Set(); // name\0sha256 dedupe across imports (main.py:249-254)
+const cardsByKey = new Map(); // card key -> card (row clicks / dedupe)
 const checked = new Set(); // card keys (compare selection)
 const loadedFiles = []; // distinct source-file names, first appearance first (chips)
-let scanFiles = []; // FileList snapshot of the scan in flight/last completed
+let scanEntries = []; // [{ sourceId, file }] snapshot of the scan in flight/last completed
+let nextSourceId = 1; // monotonically increasing; NEVER reused (cards accumulate across imports)
+// Incremental card list: rows are keyed by card key and only appended; the
+// header/rows are rebuilt only when the all-Apple vs mixed/Qualcomm layout
+// flips. Progressive Apple batches coalesce into one requestAnimationFrame.
+const cardRows = new Map(); // card key -> HTMLTableRowElement
+let cardListLayout = null; // "apple" | "qcom" currently rendered
+let cardListRaf = null;
 let sessionEpoch = 0; // bumped by Clear; worker replies from an earlier epoch are dropped
 let scanEpoch = 0; // epoch of the scan whose replies are currently arriving
 let currentScanId = 0;
@@ -103,10 +113,6 @@ let exportStatusTimer = null; // export bar flash hide timer
 
 function cardKeyOf(record) {
   return `${record.name}\u0000${record.sha256 ?? ""}`;
-}
-
-function cardByKey(key) {
-  return cards.find((c) => c.key === key) ?? null;
 }
 
 function addWarning(tool, message, source) {
@@ -206,100 +212,150 @@ const CARDLIST_HEAD_QCOM =
 const CARDLIST_HEAD_APPLE =
   '<th></th><th>CR Bank</th><th>Layout</th><th>Profile ID</th><th>LTE</th><th>EN-DC</th><th>NR-CA</th><th>NRDC</th><th>File Size</th><th>Source Path</th>';
 
+function buildCardRow(card, layout) {
+  const record = card.record;
+  const tr = document.createElement("tr");
+  tr.className = card.key === (selectedCard && selectedCard.key) ? "selected" : "";
+  tr.dataset.cardKey = card.key;
+  const identity = recordIdentity(record.name);
+  const tdCheck = document.createElement("td");
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = checked.has(card.key);
+  checkbox.setAttribute("aria-label", `Select ${identity || record.name} (compare & export)`);
+  tdCheck.appendChild(checkbox);
+  tr.appendChild(tdCheck);
+
+  // Apple CR rows keep their scan-time counts in record.apple.counts (their
+  // lte_combos/nr_combos stay null: combo-table parsing is deferred to card
+  // open). When such rows render under the qcom column layout (mixed imports),
+  // derive the combo cells from the scan counts instead of showing "—": LTE as
+  // a plain count and NR as the qcom endc+nrca+nrdc=total format (NSA=EN-DC,
+  // SA=NR-CA, NR-DC=NRDC).
+  const appleCounts = record.apple ? record.apple.counts : null;
+  const lteCell = appleCounts
+    ? appleCounts.lte.toLocaleString("en-US")
+    : record.lte_combos == null
+      ? "—"
+      : record.lte_combos.toLocaleString("en-US");
+  const nrCell = appleCounts
+    ? `${appleCounts.endc}+${appleCounts.nrca}+${appleCounts.nrdc}=${
+        appleCounts.endc + appleCounts.nrca + appleCounts.nrdc
+      }`
+    : String(record.nr_combos ?? "");
+
+  const cells = layout === "apple"
+    ? [
+        [record.inner_path, "cell-name"],
+        [APPLE_LAYOUT_DESC[record.apple.layout] ?? record.apple.layout ?? "—", "cell-identity"],
+        [record.apple.profileId == null ? "—" : `0x${record.apple.profileId.toString(16).toUpperCase().padStart(6, "0")}`, "cell-generation"],
+        // Apple counts are the expanded pre-dedupe numbers from the scan inspect
+        // (null-safe: a bank skipped at scan has no counts).
+        [record.apple.counts == null ? "—" : record.apple.counts.lte.toLocaleString("en-US"), "cell-lte"],
+        [record.apple.counts == null ? "—" : record.apple.counts.endc.toLocaleString("en-US"), "cell-lte"],
+        [record.apple.counts == null ? "—" : record.apple.counts.nrca.toLocaleString("en-US"), "cell-lte"],
+        [record.apple.counts == null ? "—" : record.apple.counts.nrdc.toLocaleString("en-US"), "cell-lte"],
+        [humanSize(record.size), "cell-nr"],
+        [String(record.source_path ?? ""), "cell-nr"],
+      ]
+    : [
+        [record.name, "cell-name"],
+        [identity, "cell-identity"],
+        [GENERATION_DISPLAY[record.generation] ?? record.generation, "cell-generation"],
+        // lte_combos is null while an apple CR card's counts are deferred to card
+        // open — `null >= 0` is true in JS (null coerces to 0), so a plain >=
+        // check would reach null.toLocaleString() and abort the whole list
+        // render. Guard on the actual null/undefined instead.
+        [lteCell, "cell-lte"],
+        [nrCell, "cell-nr"],
+      ];
+  for (const [value, cls] of cells) {
+    const td = document.createElement("td");
+    td.className = cls;
+    td.textContent = value;
+    tr.appendChild(td);
+  }
+  return tr;
+}
+
+// Incremental list render: append only cards that have no row yet. A layout
+// flip (all-Apple vs mixed/Qualcomm; the row cell sets and header differ) is the
+// only case that rebuilds the already-rendered rows.
 function renderCardList() {
-  els.cardBody.innerHTML = "";
-  els.cardsEmpty.hidden = cards.length > 0;
   const allApple = cards.length > 0 && cards.every((c) => c.record.apple);
-  els.cardHead.innerHTML = allApple ? CARDLIST_HEAD_APPLE : CARDLIST_HEAD_QCOM;
+  const layout = allApple ? "apple" : "qcom";
+  if (cardListLayout !== layout) {
+    cardListLayout = layout;
+    els.cardHead.innerHTML = allApple ? CARDLIST_HEAD_APPLE : CARDLIST_HEAD_QCOM;
+    cardRows.clear();
+    els.cardBody.replaceChildren();
+  }
+  els.cardsEmpty.hidden = cards.length > 0;
   for (const card of cards) {
-    const record = card.record;
-    const tr = document.createElement("tr");
-    tr.className = card.key === (selectedCard && selectedCard.key) ? "selected" : "";
-    tr.dataset.cardKey = card.key;
-    const identity = recordIdentity(record.name);
-    const tdCheck = document.createElement("td");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = checked.has(card.key);
-    checkbox.setAttribute("aria-label", `Select ${identity || record.name} (compare & export)`);
-    checkbox.addEventListener("change", () => {
-      if (checkbox.checked) checked.add(card.key);
-      else checked.delete(card.key);
-      els.compareBtn.disabled = checked.size < 2;
-      updateImportParserBtn();
-    });
-    tdCheck.appendChild(checkbox);
-    tr.appendChild(tdCheck);
-
-    // Apple CR rows keep their scan-time counts in record.apple.counts (their
-    // lte_combos/nr_combos stay null: combo-table parsing is deferred to card
-    // open). When such rows render under the qcom column layout (mixed
-    // imports), derive the combo cells from the scan counts instead of showing
-    // "—": LTE as a plain count and NR as the qcom endc+nrca+nrdc=total
-    // format (NSA=EN-DC, SA=NR-CA, NR-DC=NRDC).
-    const appleCounts = record.apple ? record.apple.counts : null;
-    const lteCell = appleCounts
-      ? appleCounts.lte.toLocaleString("en-US")
-      : record.lte_combos == null
-        ? "—"
-        : record.lte_combos.toLocaleString("en-US");
-    const nrCell = appleCounts
-      ? `${appleCounts.endc}+${appleCounts.nrca}+${appleCounts.nrdc}=${
-          appleCounts.endc + appleCounts.nrca + appleCounts.nrdc
-        }`
-      : String(record.nr_combos ?? "");
-
-    const cells = allApple
-      ? [
-          [record.inner_path, "cell-name"],
-          [APPLE_LAYOUT_DESC[record.apple.layout] ?? record.apple.layout ?? "—", "cell-identity"],
-          [record.apple.profileId == null ? "—" : `0x${record.apple.profileId.toString(16).toUpperCase().padStart(6, "0")}`, "cell-generation"],
-          // Apple counts are the expanded pre-dedupe numbers from the scan
-          // inspect (null-safe: a bank skipped at scan has no counts).
-          [record.apple.counts == null ? "—" : record.apple.counts.lte.toLocaleString("en-US"), "cell-lte"],
-          [record.apple.counts == null ? "—" : record.apple.counts.endc.toLocaleString("en-US"), "cell-lte"],
-          [record.apple.counts == null ? "—" : record.apple.counts.nrca.toLocaleString("en-US"), "cell-lte"],
-          [record.apple.counts == null ? "—" : record.apple.counts.nrdc.toLocaleString("en-US"), "cell-lte"],
-          [humanSize(record.size), "cell-nr"],
-          [String(record.source_path ?? ""), "cell-nr"],
-        ]
-      : [
-          [record.name, "cell-name"],
-          [identity, "cell-identity"],
-          [GENERATION_DISPLAY[record.generation] ?? record.generation, "cell-generation"],
-          // lte_combos is null while an apple CR card's counts are deferred to
-          // card open — `null >= 0` is true in JS (null coerces to 0), so a plain
-          // >= check would reach null.toLocaleString() and abort the whole list
-          // render. Guard on the actual null/undefined instead.
-          [lteCell, "cell-lte"],
-          [nrCell, "cell-nr"],
-        ];
-    for (const [value, cls] of cells) {
-      const td = document.createElement("td");
-      td.className = cls;
-      td.textContent = value;
-      tr.appendChild(td);
-    }
-    tr.addEventListener("click", (event) => {
-      if (event.target === checkbox) return;
-      // Row click opens the viewer only; ticking stays a checkbox-only action
-      // (sole ownership in the change handler above).
-      selectedCard = card;
-      for (const other of els.cardBody.children) other.classList.remove("selected");
-      tr.classList.add("selected");
-      openCard(card);
-    });
+    if (cardRows.has(card.key)) continue;
+    const tr = buildCardRow(card, layout);
+    cardRows.set(card.key, tr);
     els.cardBody.appendChild(tr);
   }
+  for (const [key, tr] of cardRows) {
+    tr.classList.toggle("selected", selectedCard != null && key === selectedCard.key);
+  }
 }
+
+function scheduleCardListRender() {
+  if (cardListRaf !== null) return;
+  cardListRaf = requestAnimationFrame(() => {
+    cardListRaf = null;
+    renderCardList();
+  });
+}
+
+// Full reset for Clear: forget rows/layout and re-render the (empty) list.
+function resetCardList() {
+  if (cardListRaf !== null) {
+    cancelAnimationFrame(cardListRaf);
+    cardListRaf = null;
+  }
+  cardRows.clear();
+  cardListLayout = null;
+  els.cardBody.replaceChildren();
+  renderCardList();
+}
+
+// One delegated change listener for every row's checkbox (rows are created
+// incrementally, so per-row listeners would leak and defeat the point).
+els.cardBody.addEventListener("change", (event) => {
+  const checkbox = event.target.closest("input[type=checkbox]");
+  if (!checkbox) return;
+  const tr = checkbox.closest("tr[data-card-key]");
+  if (!tr) return;
+  if (checkbox.checked) checked.add(tr.dataset.cardKey);
+  else checked.delete(tr.dataset.cardKey);
+  els.compareBtn.disabled = checked.size < 2;
+  updateImportParserBtn();
+});
+
+// One delegated click listener: row click opens the viewer only; ticking stays
+// a checkbox-only action (owned by the change handler above).
+els.cardBody.addEventListener("click", (event) => {
+  if (event.target.closest("input[type=checkbox]")) return;
+  const tr = event.target.closest("tr[data-card-key]");
+  if (!tr) return;
+  const card = cardsByKey.get(tr.dataset.cardKey);
+  if (!card) return;
+  selectedCard = card;
+  for (const other of cardRows.values()) other.classList.remove("selected");
+  tr.classList.add("selected");
+  openCard(card);
+});
 
 // Reflect the checked set into the listed rows' checkboxes + the compare button
 // (Select all / Deselect all mutate the set in bulk; re-rendering the list
 // would drop the viewer's selected-row state for no benefit).
 function syncChecks() {
-  for (const tr of els.cardBody.children) {
+  for (const [key, tr] of cardRows) {
     const checkbox = tr.querySelector("input[type=checkbox]");
-    if (checkbox && tr.dataset.cardKey) checkbox.checked = checked.has(tr.dataset.cardKey);
+    if (checkbox) checkbox.checked = checked.has(key);
   }
   els.compareBtn.disabled = checked.size < 2;
   updateImportParserBtn();
@@ -338,21 +394,17 @@ function renderViewer(card, tables) {
 }
 
 function openCard(card) {
-  pendingView = { cardKey: card.key };
-  const cached = cardCache.get(card.record).then((hit) => {
-    if (!pendingView || pendingView.cardKey !== card.key) return;
-    if (hit) {
-      renderViewer(card, hit.tables);
-      return;
-    }
-    const id = nextMessageId++;
-    pendingReplies.set(id, card);
-    // `fast` sends the open down the worker's parse lane (not serialized
-    // behind the running scan) in the stacked layout only; desktop keeps the
-    // fully serialized chain.
-    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, file: card.file, record: card.record, fast: isMobileLayout() });
-  });
-  return cached;
+  // A new open supersedes a still-pending one: cancel the old worker request so
+  // it does not parse or reply (the worker drops an id that was cancelled before
+  // its handler dequeues). Compare requests are never cancelled this way.
+  if (pendingView && pendingView.id !== undefined) {
+    worker.postMessage({ type: "cancel", id: pendingView.id });
+    pendingReplies.delete(pendingView.id); // nothing waits on the superseded reply
+  }
+  const id = nextMessageId++;
+  pendingView = { cardKey: card.key, id };
+  pendingReplies.set(id, card);
+  worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record });
 }
 
 // --- compare view (compare.js) ----------------------------------------------------
@@ -360,24 +412,13 @@ function openCard(card) {
 async function openCompare() {
   const selected = cards.filter((c) => checked.has(c.key));
   if (selected.length < 2) return;
-  const have = [];
-  const missing = new Set();
+  // No main-thread cache to precheck: ask the worker for every selected card.
+  // Cache hits (worker-side) reply immediately; the rest parse once each.
+  pendingCompare = { want: selected.length, have: [], missing: new Set(selected.map((c) => c.key)) };
   for (const card of selected) {
-    const hit = await cardCache.get(card.record);
-    if (hit) have.push({ label: recordIdentity(card.record.name) || card.record.name, tables: hit.tables });
-    else missing.add(card.key);
-  }
-  if (!missing.size) {
-    renderCompare(have);
-    return;
-  }
-  pendingCompare = { want: selected.length, have, missing };
-  for (const key of missing) {
-    const card = cardByKey(key);
-    if (!card) continue;
     const id = nextMessageId++;
     pendingReplies.set(id, card);
-    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, file: card.file, record: card.record, fast: isMobileLayout() });
+    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record });
   }
 }
 
@@ -448,7 +489,7 @@ function requestExport(card, format) {
     const id = nextMessageId++;
     pendingReplies.set(id, card);
     exportWaiters.set(id, { resolve, reject });
-    worker.postMessage({ type: "export", id, fileIndex: card.fileIndex, file: card.file, record: card.record, format });
+    worker.postMessage({ type: "export", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record, format });
   });
 }
 
@@ -567,7 +608,7 @@ function requestImportTexts(card) {
     const id = nextMessageId++;
     pendingReplies.set(id, card);
     exportWaiters.set(id, { resolve, reject });
-    worker.postMessage({ type: "importCards", id, fileIndex: card.fileIndex, file: card.file, record: card.record });
+    worker.postMessage({ type: "importCards", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record });
   });
 }
 
@@ -654,10 +695,14 @@ els.importParserBtn.addEventListener("click", () => {
 
 function importFiles(files) {
   if (!files.length) return;
-  scanFiles = [...files];
+  // Assign a stable sourceId per File (never reused: cards accumulate across
+  // imports). The worker registers each {sourceId, file} once during the scan
+  // and resolves every later parseCard/export/importCards from the id, which is
+  // what makes its per-source memos hit across messages.
+  scanEntries = [...files].map((file) => ({ sourceId: nextSourceId++, file }));
   // Chip row: one pill per distinct source file, first appearance wins —
   // re-importing the same file leaves the chips unchanged.
-  const names = uniqueFileNames([...loadedFiles, ...scanFiles.map((f) => f.name)]);
+  const names = uniqueFileNames([...loadedFiles, ...scanEntries.map((e) => e.file.name)]);
   loadedFiles.length = 0;
   loadedFiles.push(...names);
   renderLoadedFiles();
@@ -665,7 +710,7 @@ function importFiles(files) {
   scanEpoch = sessionEpoch;
   els.cancelBtn.hidden = false;
   setProgress(0, files.length, files[0].name);
-  worker.postMessage({ type: "scan", id: currentScanId, files: scanFiles });
+  worker.postMessage({ type: "scan", id: currentScanId, files: scanEntries });
 }
 
 // --- worker messages ----------------------------------------------------------------
@@ -684,23 +729,27 @@ worker.onmessage = (event) => {
         const key = cardKeyOf(record);
         if (cardKeys.has(key)) continue; // main.py:348-363 dedupe
         cardKeys.add(key);
-        // The File handle lives on the card: every parseCard/export sends it,
-        // so the worker resolves bytes from THIS file no matter how many
-        // scans ran since the import.
-        cards.push({ record, file: scanFiles[msg.fileIndex] ?? null, fileIndex: msg.fileIndex, key });
+        // The sourceId registered at scan time identifies the File inside the
+        // worker; every parseCard/export sends it, so the worker resolves bytes
+        // from THIS file no matter how many scans ran since the import.
+        const card = { record, sourceId: scanEntries[msg.fileIndex]?.sourceId ?? null, fileIndex: msg.fileIndex, key };
+        cards.push(card);
+        cardsByKey.set(key, card);
       }
       for (const warning of msg.warnings ?? []) {
         addWarning(warning.tool ?? "warning", warning.message, msg.source);
       }
-      renderCardList();
+      // Progressive Apple batches coalesce into one rAF; only new rows append.
+      scheduleCardListRender();
       break;
     }
     case "tables": {
       const card = pendingReplies.get(msg.id);
       if (!card) break; // unknown/stale request id
       pendingReplies.delete(msg.id);
-      cardCache.put(card.record, msg.tables);
-      if (pendingView && pendingView.cardKey === card.key) {
+      // Only the current pending view renders; a superseded open's late reply
+      // (id mismatch) is dropped. The worker already owns the cache.
+      if (pendingView && pendingView.cardKey === card.key && pendingView.id === msg.id) {
         pendingView = null;
         renderViewer(card, msg.tables);
       }
@@ -726,6 +775,10 @@ worker.onmessage = (event) => {
       break;
     }
     case "error": {
+      // An id-bearing error nobody is waiting for (a superseded open, or a
+      // request orphaned by Clear failing on its released source) is stale:
+      // surfacing it would put a warning into a view that no longer asked.
+      if (msg.id !== undefined && !pendingReplies.has(msg.id)) break;
       if (msg.id !== undefined) {
         pendingReplies.delete(msg.id);
         const waiter = exportWaiters.get(msg.id);
@@ -784,8 +837,9 @@ async function clearAll() {
   const cardCount = cards.length;
   cards.length = 0;
   cardKeys.clear();
+  cardsByKey.clear();
   checked.clear();
-  scanFiles = [];
+  scanEntries = [];
   loadedFiles.length = 0;
   pendingView = null;
   pendingCompare = null;
@@ -799,9 +853,13 @@ async function clearAll() {
   els.warnings.hidden = true;
   destroyViewer();
   els.viewerHost.replaceChildren(els.viewerPlaceholder);
-  renderCardList();
+  resetCardList();
   renderLoadedFiles();
-  await cardCache.clearAll();
+  // Drop the worker's registered sources and memos. A new scan must NOT do this
+  // (cards accumulate and keep referencing older sourceIds); only Clear does.
+  worker.postMessage({ type: "release" });
+  // And wipe the worker-side parsed-table cache.
+  worker.postMessage({ type: "clearCache" });
   exportStatus(`Cleared ${cardCount.toLocaleString("en-US")} card(s) and the parse cache.`);
 }
 

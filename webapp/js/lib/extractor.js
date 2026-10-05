@@ -28,6 +28,13 @@ import { inflateSync } from "../../lib/vendor/fflate.js";
 const MAGIC_MAX = 4096;
 const MAX_RECURSION_DEPTH = 8;
 const MIN_CONTAINER_SIZE = 512;
+// Whole-buffer extractors (gzip/lz4/zip member/raw sparse fallback) allocate
+// the compressed input AND the decompressed output at once. Past this budget the
+// container is skipped with a warning instead of aborting the tab/process on an
+// ArrayBuffer allocation (the 12.7 GB Xiaomi .tgz used to do exactly that).
+// 1 GiB still admits the corpus' biggest real case (the Samsung .tar.md5's
+// ~97 MB lz4 member -> ~190 MB FAT16 image).
+const MAX_WHOLE_BUFFER_BYTES = 1 << 30;
 
 // RFCARD_PATTERN / SIDECAR_PATTERNS (image_extractor.py:37-53): the candidate
 // filter discover_candidates applies; the analyzer's stricter
@@ -48,12 +55,16 @@ export class ExtractionError extends Error {
 // by a region of a RandomAccessSource (zero-copy slices; large containers are
 // never materialized unless an extractor must own the bytes).
 export class VFile {
-  // load: () => Promise<Uint8Array>; region: { source, offset, size } | null
-  constructor(name, load, size, region = null) {
+  // load: () => Promise<Uint8Array>; region: { source, offset, size } | null;
+  // readRange: ((offset, length) => Promise<Uint8Array>) | null — a ranged
+  // reader over the backing filesystem (tree files), used by headOf so sniffing
+  // a file's magic never materializes the whole file.
+  constructor(name, load, size, region = null, readRange = null) {
     this.name = name;
     this.#load = load;
     this.size = size;
     this.region = region;
+    this.readRange = readRange;
   }
 
   #load;
@@ -162,11 +173,19 @@ export class VDir {
 
 // mkdtemp(prefix=f"{tag}_", dir=ctx.workdir): sibling workdirs under one root.
 class ExtractContext {
-  constructor() {
+  constructor({ wholeBufferLimit = MAX_WHOLE_BUFFER_BYTES } = {}) {
     this.root = new VDir("");
     this.outputs = [];
     this.warnings = [];
     this.counter = 0;
+    this.wholeBufferLimit = wholeBufferLimit;
+  }
+
+  warnWholeBuffer(tool, name, size) {
+    this.warnings.push({
+      tool,
+      message: `${name}: size ${size} exceeds the ${this.wholeBufferLimit}-byte whole-buffer limit — skipped instead of risking an out-of-memory failure`,
+    });
   }
 
   newWorkdir(tag) {
@@ -213,6 +232,9 @@ export async function unwrap(vfile, ctx, depth = 0) {
 }
 
 async function maybeUnwrapChild(vfile, ctx, depth) {
+  // Files below the container floor cannot unwrap (unwrap would return at its
+  // size check) — skip the header read entirely.
+  if (vfile.size < MIN_CONTAINER_SIZE) return;
   // Only recurse into children whose magic clearly identifies a container.
   const tag = detect(await headOf(vfile), vfile.name);
   if (SUPPORTED_TAGS.has(tag) || UNSUPPORTED_TAGS[tag]) {
@@ -231,8 +253,15 @@ async function unwrapEmbeddedContainers(vfile, ctx, depth) {
   }
 }
 
-async function headOf(vfile) {
+// Exported for the header-sniffing unit test: headOf must use vfile.readRange
+// (tree-backed files) without ever calling the full-file loader.
+export async function headOf(vfile) {
   const n = Math.min(MAGIC_MAX, vfile.size);
+  if (n <= 0) return new Uint8Array(0);
+  // Prefer a ranged reader (tree-backed files): the 4 KB sniff must not read
+  // the whole file. Then a region window (zero-copy slice), then the whole-file
+  // fallback (mem/text files, e.g. extracted archive members).
+  if (typeof vfile.readRange === "function") return vfile.readRange(0, n);
   if (vfile.region) return vfile.region.source.read(vfile.region.offset, n);
   return (await vfile.read()).subarray(0, n);
 }
@@ -286,7 +315,19 @@ async function placeTree(dir, image, label, ctx) {
   try {
     await image.init();
     for (const entry of await image.walk()) {
-      dir.addFile(entry.path.replace(/^\//, ""), new VFile(entry.path.split("/").pop(), () => image.readFile(entry), entry.size));
+      // A ranged reader lets headOf sniff the magic without reading the file in
+      // full (both images expose readFileRange; the full readFile loader stays
+      // for actual content reads).
+      dir.addFile(
+        entry.path.replace(/^\//, ""),
+        new VFile(
+          entry.path.split("/").pop(),
+          () => image.readFile(entry),
+          entry.size,
+          null,
+          (offset, length) => image.readFileRange(entry, offset, length),
+        ),
+      );
     }
     return dir;
   } catch (err) {
@@ -312,12 +353,19 @@ async function extractSparse(vfile, ctx) {
   if (inner === "ext4") return placeTree(dir, new Ext4Image(reader), "ext4", ctx);
   if (inner === "fat" || inner === "fat_or_mbr") return placeTree(dir, new Fat16Image(reader), inner, ctx);
   const rawName = `${pyStem(vfile.name) || "inner"}.raw`;
+  // Raw fallback must be materialized to recurse; skip oversized payloads with a
+  // warning rather than allocating the whole (often multi-GB) unsparsed image.
+  if (reader.size > ctx.wholeBufferLimit) {
+    ctx.warnWholeBuffer("sparse", `${vfile.name} -> ${rawName}`, reader.size);
+    return null;
+  }
   dir.addFile(rawName, new VFile(rawName, () => streamSource(reader), reader.size, { source: reader, offset: 0, size: reader.size }));
   return dir;
 }
 
 // Reads a whole source into memory (used for raw sparse fallbacks that are
-// small enough to unwrap further).
+// small enough to unwrap further). The caller has already applied the
+// whole-buffer size cap.
 async function streamSource(source) {
   const out = new Uint8Array(source.size);
   let done = 0;
@@ -345,8 +393,12 @@ async function extractExt4(vfile, ctx) {
 // gzip workdir; the FILE is returned so unwrap recurses into it (the workdir
 // itself is not an output, exactly like Python).
 async function extractGzip(vfile, ctx) {
+  if (vfile.size > ctx.wholeBufferLimit) {
+    ctx.warnWholeBuffer("gzip", vfile.name, vfile.size);
+    return null;
+  }
   try {
-    const data = await gunzipStream(await vfile.read());
+    const data = await gunzipStream(await vfile.read(), ctx.wholeBufferLimit);
     const name = `${pyStem(vfile.name) || "inner.bin"}`;
     const dir = ctx.newWorkdir("gzip");
     const out = VFile.mem(name, data);
@@ -359,28 +411,62 @@ async function extractGzip(vfile, ctx) {
   }
 }
 
+// Reads a ReadableStream fully but aborts once `cap` bytes accumulate, so a
+// decompression bomb / oversized member warns instead of allocating without
+// bound. (`Response.arrayBuffer()` would happily try to allocate everything.)
+async function readStreamCapped(stream, cap) {
+  const reader = stream.getReader();
+  const parts = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > cap) throw new Error(`decompressed output exceeds the ${cap}-byte limit`);
+      parts.push(value);
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // already closed / cancelled
+    }
+  }
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const part of parts) {
+    out.set(part, off);
+    off += part.byteLength;
+  }
+  return out;
+}
+
 // Multi-member tolerant gzip via DecompressionStream ("gzip" handles
 // concatenated members like the gzip module does).
-async function gunzipStream(data) {
+async function gunzipStream(data, cap = MAX_WHOLE_BUFFER_BYTES) {
   const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("gzip"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  return readStreamCapped(stream, cap);
 }
 
 // extract_lz4 (:414-432) via the in-house frame decoder. Memory: the Samsung
-// member is 101,488,514 bytes compressed and 199,233,005 bytes (~190MB) out,
-// and extract_tar materializes the compressed member eagerly - so once the
-// lz4 output exists the consumed member is released (VFile.release) and the
-// steady state carries the decompressed output only. Measured on the real
-// CP_F976...tar.md5 with /usr/bin/time -v over scanSource: peak RSS
-// 610,924-672,840 KiB before the release, 498,956-560,152 KiB after (the
-// released member is provably collected: external memory after the scan
-// drops ~97MB); the remaining peak is the compressed+decompressed decode
-// overlap plus the analyzer's record-parsing heap, not container retention.
+// member is 101,488,514 bytes compressed and 199,233,005 bytes (~190MB) out.
+// Tar members are now region-backed (step 7), so the compressed bytes are read
+// on demand here and nothing is materialized before this call; the output is
+// the only steady-state allocation.
 // (The radio.img sparse is NOT materialized at all - SparseReader resolves
 // it chunk-wise.)
 async function extractLz4(vfile, ctx) {
+  if (vfile.size > ctx.wholeBufferLimit) {
+    ctx.warnWholeBuffer("lz4", vfile.name, vfile.size);
+    return null;
+  }
   try {
     const data = decompressLz4Frame(await vfile.read());
+    if (data.length > ctx.wholeBufferLimit) {
+      ctx.warnWholeBuffer("lz4", `${vfile.name} (decompressed)`, data.length);
+      return null;
+    }
     const name = `${pyStem(vfile.name) || "inner.bin"}`;
     const dir = ctx.newWorkdir("lz4");
     const out = VFile.mem(name, data);
@@ -443,7 +529,11 @@ async function extractTar(vfile, ctx) {
       pendingName = null;
       const memberName = tarMemberPath(pax.get("path") ?? ustarName);
       if (type === "0" || type === "\0") {
-        out.addFile(memberName, VFile.mem(memberName.split("/").pop(), await source.read(pos, size)));
+        // tar is uncompressed: keep members as zero-copy regions of the source
+        // instead of materializing each one. The ~97 MB Samsung modem member is
+        // then read only if an extractor actually consumes it, and release() is
+        // a no-op for region-backed files (nothing was materialized to drop).
+        out.addFile(memberName, VFile.slice(memberName.split("/").pop(), source, pos, size));
       } else if (type === "5") {
         let dir = out;
         for (const part of memberName.split("/")) dir = dir.dir(part);
@@ -544,6 +634,12 @@ async function extractZip(vfile, ctx) {
       // required for extraction); never emit ciphertext as payload.
       if (entry.flags & 0x1) {
         ctx.warnings.push({ tool: "zip", message: `${entry.name}: encrypted zip member skipped, password required for extraction` });
+        continue;
+      }
+      // Zip members must be inflated in memory; skip oversized ones with a
+      // warning instead of letting the allocation fail.
+      if (entry.compressedSize > ctx.wholeBufferLimit || entry.uncompressedSize > ctx.wholeBufferLimit) {
+        ctx.warnWholeBuffer("zip", entry.name, Math.max(entry.compressedSize, entry.uncompressedSize));
         continue;
       }
       const data = await zipEntryData(source, entry);
@@ -683,6 +779,10 @@ function u64leAt(u8, off) {
 
 // extract_bbcfg (:523-600): iphone card recovery + the EFS pathname scan.
 async function extractBbcfg(vfile, ctx) {
+  if (vfile.size > ctx.wholeBufferLimit) {
+    ctx.warnWholeBuffer("bbcfg", vfile.name, vfile.size);
+    return null;
+  }
   const out = ctx.newWorkdir("bbcfg");
   const blob = await vfile.read();
   let cards = [];
@@ -705,12 +805,12 @@ async function extractBbcfg(vfile, ctx) {
 // scan_container (:777-805): recursively unwrap and return the virtual tree.
 // Hard failures (not a file-like source, below the size floor) throw like
 // ExtractionError; per-container problems accumulate in warnings.
-export async function extractContainer(source, name) {
+export async function extractContainer(source, name, options = {}) {
   if (typeof source.size !== "number") throw new ExtractionError(`Not a readable source: ${name}`);
   if (source.size < MIN_CONTAINER_SIZE) {
     throw new ExtractionError(`File too small to be a container: ${name}`);
   }
-  const ctx = new ExtractContext();
+  const ctx = new ExtractContext(options);
   await unwrap(VFile.slice(name, source, 0, source.size), ctx);
   return { root: ctx.root, outputs: ctx.outputs, warnings: ctx.warnings };
 }

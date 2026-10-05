@@ -44,6 +44,7 @@ import {
   b826V22Packets,
   b826V22Component,
   pyCasefold,
+  pyNdInt,
 } from "../js/lib/modern_parser.js";
 import { sha256Hex } from "../js/lib/hash.js";
 import { ToolError } from "../js/lib/legacy_parser.js";
@@ -320,6 +321,12 @@ test("protobuf field walker matches Python", () => {
   assert.equal(protoUint(fields, 99), 0);
   assert.deepEqual(protoBytes(fields, 99), new Uint8Array(0));
   assert.deepEqual(protoRepeatedUint(fields, 99), []);
+  // Single length-delimited field: no copy, the stored view is returned as-is
+  // (multi-field still concatenates in order).
+  const single = new Map([[7, [[2, new Uint8Array([1, 2, 3])]]]]);
+  const view = protoBytes(single, 7);
+  assert.equal(view, single.get(7)[0][1]);
+  assert.deepEqual([...protoBytes(fields, 9)], [0x96, 0x01, 0xac, 0x02]);
 
   assert.throws(() => protobufFields(new Uint8Array([0x00])), /Invalid protobuf field zero/);
   assert.throws(() => protobufFields(new Uint8Array([0x36])), /Unsupported protobuf wire type 6/);
@@ -603,6 +610,21 @@ test("pyCasefold matches Python str.casefold on probe chars", () => {
   assert.ok(pyCasefold("x_reſ.dat").endsWith("_res.dat"));
   assert.ok(pyCasefold("x_ﬁ_res.dat").endsWith("_res.dat"));
   assert.ok(!pyCasefold("x_reẞ.dat").endsWith("_res.dat"));
+});
+
+test("pyCasefold/pyNdInt ASCII fast paths agree with the Unicode paths", () => {
+  // ASCII: casefold == lower; the regex fast path must not skip the non-ASCII
+  // cases above (they are covered by the test above).
+  assert.equal(pyCasefold("ABC abc 123 !@#"), "abc abc 123 !@#");
+  assert.equal(pyCasefold(""), "");
+  // Nd digits: ASCII, a 15-digit exact double, a 16-digit value that must stay
+  // a BigInt, and a non-ASCII Nd run through the table path.
+  assert.equal(pyNdInt("42"), 42);
+  assert.equal(pyNdInt("000015"), 15);
+  assert.equal(pyNdInt("999999999999999"), 999999999999999);
+  assert.equal(pyNdInt("9007199254740993"), 9007199254740993n);
+  assert.equal(pyNdInt("\u0661\u0662\u0663"), 123); // Arabic-Indic ١٢٣
+  assert.equal(pyNdInt("\u0660"), 0);
 });
 
 // Valid res DAT payload: field 7 (rrc) containing field 1 (two bytes "te").

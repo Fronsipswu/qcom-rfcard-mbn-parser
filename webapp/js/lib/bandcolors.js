@@ -94,11 +94,19 @@ export function md5IntMod(s, m) {
   return Number(BigInt("0x" + md5Hex(new TextEncoder().encode(s))) % BigInt(m));
 }
 
-export function bandColor(canonical) {
+// Palette index for a canonical band. The HTML viewer renders colors through
+// CSS classes `.band-c<index>` (viewer.js memoBandIndex) so large tbodies carry
+// no inline style attributes; bandColor keeps returning the hex for the Tk
+// parity tests and any non-class consumer.
+export function bandColorIndex(canonical) {
   if (typeof canonical !== "string") {
     throw new TypeError(`bandColor: canonical must be a string, got ${typeof canonical}`);
   }
-  return PALETTE[md5IntMod(canonical, PALETTE.length)];
+  return md5IntMod(canonical, PALETTE.length);
+}
+
+export function bandColor(canonical) {
+  return PALETTE[bandColorIndex(canonical)];
 }
 
 export function bandColorFromCell(cell, header) {

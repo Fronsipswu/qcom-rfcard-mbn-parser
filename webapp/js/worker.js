@@ -1,17 +1,24 @@
 // Parse worker (Task 11 Step 1). Message protocol, exactly per the plan:
 //
 // main -> worker
-//   { type: "scan",      id, files: [File, ...] }   File handles pass through
-//                                                   structured clone, zero-copy
-//   { type: "parseCard", id, file, fileIndex?, record, fast? }   file is THE
-//                                                   File the card came from;
-//                                                   fileIndex is bookkeeping
-//                                                   only; fast routes to the
-//                                                   parse lane (not queued
-//                                                   behind a running scan)
-//   { type: "export",    id, file, fileIndex?, record, format }  mbn|json|csv|
+//   { type: "scan",      id, files: [{ sourceId, file }, ...] }  File handles
+//                                                   pass through structured
+//                                                   clone ONCE and are held in
+//                                                   the worker's `sources` map;
+//                                                   sourceId is a stable,
+//                                                   never-reused id assigned by
+//                                                   main.js per imported File
+//   { type: "parseCard", id, sourceId, fileIndex?, record }  sourceId resolves
+//                                                   bytes; fileIndex is
+//                                                   bookkeeping only; always
+//                                                   routed to the priority parse
+//                                                   lane (never queued behind a
+//                                                   running scan)
+//   { type: "export",    id, sourceId, fileIndex?, record, format }  mbn|json|csv|
 //                                                   webcsv|b0cd|b826
-//   { type: "importCards", id, file, fileIndex?, record } -> both DIAG texts
+//   { type: "importCards", id, sourceId, fileIndex?, record } -> both DIAG texts
+//   { type: "release" }  drop every registered source + memo (Clear button)
+//   { type: "clearCache" }  wipe the worker-side parsed-table cache
 //   { type: "cancel",    id }
 // worker -> main
 //   { type: "progress",  phase, source, done, total, currentFile, detail? }
@@ -25,6 +32,14 @@
 //   { type: "tables",    id, fileIndex, recordName, tables }
 //   { type: "exportBlob", id, files: [{ filename, bytes } | { filename, text }, ...] }
 //   { type: "error",     id?, message, source? }
+//   { type: "debug",     enabled, reset? } -> { type: "debug", enabled, debugCounters }
+//                                                   (Step 0 instrumentation)
+//
+// Debug counters: when enabled (main.js posts {type:"debug",enabled:true} from
+// `?debug`, or a test calls setDebugCounters(true)), every reply additionally
+// carries `debugCounters` — extraction/parse/table/walk/post counters used by
+// the performance work. Disabled by default; reply shapes are otherwise
+// unchanged, so the UI ignores the extra field.
 //
 // Additive protocol details (documented deviations, needed by the UI layer):
 // - "records" carries an optional `warnings` array ({tool, message}) so the
@@ -35,27 +50,27 @@
 //   "records" reply (progressive card list). The final full "records" reply is
 //   still sent (main.js dedupes by card key, so partials are idempotent);
 //   warnings are split so they are never delivered twice.
-// - parseCard/export MUST carry the card's own File handle: the worker resolves
-//   bytes from that file, never from a session fileIndex. Session state resets
-//   on every scan while cards accumulate across imports, so a fileIndex alone
-//   can point at the wrong file (wrong tables rendered AND cached under the
-//   card's sha256 key). Replies carry the request `id`; the main thread
-//   correlates on it. `fileIndex` stays on the messages for bookkeeping only.
+// - parseCard/export/importCards reference the card by its stable `sourceId`,
+//   never by a session fileIndex. main.js registers each File once at scan time
+//   and the worker keeps it in `sources`; a fileIndex alone can point at the
+//   wrong file (cards accumulate across imports and session state resets on
+//   every scan). Replies carry the request `id`; the main thread correlates on
+//   it. `fileIndex` stays on the messages for bookkeeping only.
 // - errors for an id-bearing op echo that `id` so pending replies can be
 //   released; `source` names the record or file instead of being undefined.
 //
-// Per-card parseCard re-slices only the MBN buffer: re-read via a
-// BrowserFileSource kept per File (WeakMap), direct MBNs read the whole file,
-// FAT16 records use an exact-path Fat16Image.findFile lookup, container
+// Per-card parseCard re-slices only the MBN buffer: re-read via the
+// BrowserFileSource registered for the sourceId, direct MBNs read the whole
+// file, FAT16 records use an exact-path Fat16Image.findFile lookup, container
 // records re-extract and match by normalized inner_path (scratch-dir tags
-// differ between runs). Blobs + parsed modules are memoized per File, then by
-// (record name, sha256): a different import's File is a different WeakMap key,
-// so a stale fileIndex or colliding card name can never hit another card's
-// memo entry, and equal (name, sha256) pairs are content-identical by
+// differ between runs). Blobs + parsed modules are memoized per sourceId, then
+// by (record name, sha256): a different import's File gets a different
+// sourceId, so a stale fileIndex or colliding card name can never hit another
+// card's memo entry, and equal (name, sha256) pairs are content-identical by
 // construction. Cancellation: a cancelled flag checked between files and, via
 // the scanSource shouldCancel hook, inside the FAT walk loop; {type:"cancel"}
 // also resets scan state.
-import { BrowserFileSource } from "./lib/source.js";
+import { BrowserFileSource, CachedSource } from "./lib/source.js";
 import { Fat16Image } from "./lib/fat16.js";
 import {
   scanSource,
@@ -77,6 +92,25 @@ import {
   generateAppleTables,
   exportAppleDiag,
 } from "./lib/apple_cr.js";
+import {
+  bump,
+  snapshotDebugCounters,
+  resetDebugCounters,
+  debugCounters,
+} from "./lib/debug.js";
+import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
+
+// Debug counters (Step 0 instrumentation): attached to every reply only when
+// enabled. Off by default so replies and timings are unchanged; toggle from the
+// page with `?debug` (main.js posts {type:"debug"}) or from a Node protocol test
+// via setDebugCounters(). Re-exported here so the test can import them.
+export { debugCounters };
+export let DEBUG_COUNTERS = false;
+export const setDebugCounters = (enabled) => {
+  DEBUG_COUNTERS = !!enabled;
+};
+export const getDebugCounters = () => snapshotDebugCounters();
+export { resetDebugCounters };
 
 const cancelled = new Set();
 let session = null; // { scanId }
@@ -84,22 +118,133 @@ let chain = Promise.resolve(); // serialize scan/parseCard/export handling
 let parseChain = Promise.resolve(); // fast lane for mobile parseCard (see onmessage)
 let currentOp = null;
 
-// Parse memo + RandomAccessSource per File handle. Keyed by the File itself:
-// cards from different imports never share memo entries even when their
-// records collide on name and fileIndex; within one File the (name, sha256)
-// pair content-addresses the entry. Entries die with their File.
-const parseMemo = new WeakMap(); // File -> Map<`${name}\u0000${sha256}`, {blob, parsed}>
-const sourceMemo = new WeakMap(); // File -> BrowserFileSource
-const fatMemo = new WeakMap(); // File -> Fat16Image | null (null = init failed: not FAT16)
-// File -> Promise<Map<`${name}\u0000${inner_path}`, Uint8Array>>: extraction may
-// release VFiles it returns (VFile.release drops consumed members), so the memo
-// harvests the extracted mbn bytes once and lets the virtual tree go.
-const containerMemo = new WeakMap();
-// Apple card-open memo (mirrors parseMemo): File -> Map<`${name}\u0000${sha256}`,
+// Stable source registry (Step 2). A File posted to a worker is structured-
+// cloned into a NEW wrapper on every message, so a WeakMap keyed by the File
+// object never hits across requests (measured: the same Blob sent twice is not
+// `===`). main.js therefore assigns a monotonically increasing `sourceId` per
+// imported File (never reused — cards accumulate across imports) and sends the
+// File exactly once in the scan registration; every parseCard/export/
+// importCards afterwards carries only the id. `sources` holds the registered
+// BrowserFileSource until Clear posts {type:"release"}.
+const sources = new Map(); // sourceId -> { file, source: BrowserFileSource }
+// Every memo below is keyed by sourceId (content-addressed by name/sha256 within
+// a source). Cards from different imports never collide; within one source the
+// (name, sha256) pair is content-identical by construction.
+const parseMemo = new Map(); // sourceId -> Map<`${name}\u0000${sha256}`, {blob, parsed}>
+const fatMemo = new Map(); // sourceId -> Fat16Image | null (null = init failed: not FAT16)
+// sourceId -> Promise<Map<`${name}\u0000${inner_path}`, Uint8Array>>: extraction
+// may release VFiles it returns (VFile.release drops consumed members), so the
+// memo harvests the extracted mbn bytes once and lets the virtual tree go.
+const containerMemo = new Map();
+// Apple card-open memo (mirrors parseMemo): sourceId -> Map<`${name}\u0000${sha256}`,
 // {bank, parsed}> where bank is the DECOMPRESSED CR bank. Zip/bbfw inputs also
 // memoize the inflated ftab member they were sliced from.
-const appleBankMemo = new WeakMap(); // File -> Map<key, {bank, parsed}>
-const appleMemberMemo = new WeakMap(); // File -> Map<memberName, Promise<Uint8Array>>
+const appleBankMemo = new Map(); // sourceId -> Map<key, {bank, parsed}>
+const appleMemberMemo = new Map(); // sourceId -> Map<memberName, Promise<Uint8Array>>
+
+// Step 3: retained scan-time candidate bytes. The scan already read (and
+// hashed) every candidate; seeding parseMemo with those exact bytes means the
+// first card open/export never re-reads or re-extracts them. Bounded so a huge
+// multi-file import cannot pin unbounded memory: past the budget we stop
+// seeding and fall back to on-demand reads (correct, just slower). 256 MB total
+// is deliberately generous — the biggest single corpus card is a few MB — while
+// still capping pathological inputs.
+const RETAINED_CANDIDATE_BUDGET = 256 * 1024 * 1024;
+const retainedBytes = new Map(); // sourceId -> approximate bytes retained
+
+// blob memo key within a source: (record name, sha256). Matches ensureBlob.
+const blobMemoKey = (record) => record.name + String.fromCharCode(0) + (record.sha256 ?? "");
+
+// Seeds parseMemo with the bytes the scan hashed. Called from scanSource's
+// onCandidate hook for direct/FAT16/container candidates.
+function seedCandidateBlob(sourceId, record, blob) {
+  const used = retainedBytes.get(sourceId) ?? 0;
+  if (used + blob.byteLength > RETAINED_CANDIDATE_BUDGET) return; // over budget: on-demand fallback
+  let memo = parseMemo.get(sourceId);
+  if (!memo) {
+    memo = new Map();
+    parseMemo.set(sourceId, memo);
+  }
+  const key = blobMemoKey(record);
+  if (memo.has(key)) return; // deduplicated record already seeded
+  memo.set(key, { blob, parsed: null });
+  retainedBytes.set(sourceId, used + blob.byteLength);
+}
+
+// Seeds appleMemberMemo with the ftab member already inflated during a bbfw
+// scan, so opening a card from that zip does not re-read/re-inflate it.
+function seedAppleMember(sourceId, data, memberName) {
+  const used = retainedBytes.get(sourceId) ?? 0;
+  if (used + data.byteLength > RETAINED_CANDIDATE_BUDGET) return;
+  let memo = appleMemberMemo.get(sourceId);
+  if (!memo) {
+    memo = new Map();
+    appleMemberMemo.set(sourceId, memo);
+  }
+  if (memo.has(memberName)) return;
+  memo.set(memberName, Promise.resolve(data));
+  retainedBytes.set(sourceId, used + data.byteLength);
+}
+
+// --- parsed-table cache + in-flight parse coalescing (Step 5) ----------------------
+//
+// The parsed-tables cache lives in the worker (IndexedDB here, memory fallback)
+// so a main-thread open no longer structured-clones a multi-MB table through
+// IndexedDB. handleParseCard checks it before parsing and answers from it on a
+// hit; reads/writes never block the reply.
+const tableCache = createCardCache(
+  typeof indexedDB !== "undefined" ? idbBackend() : memoryBackend(),
+);
+
+// (sourceId, record name, sha) -> Promise<entry>: in-flight parses. The
+// completed-result memo (entry.parsed) only coalesces after the first parse
+// finishes; this coalesces simultaneous requests (a fast-lane open racing a
+// chain export of the same card) so parseModule runs once.
+const parsedInflight = new Map();
+const parseJobKey = (sourceId, record) =>
+  `${sourceId}${String.fromCharCode(0)}${record.name}${String.fromCharCode(0)}${record.sha256 ?? ""}`;
+
+function parsedFor(sourceId, fileIndex, record) {
+  const key = parseJobKey(sourceId, record);
+  let pending = parsedInflight.get(key);
+  if (!pending) {
+    pending = record.apple ? ensureAppleParsed(sourceId, fileIndex, record) : ensureParsed(sourceId, fileIndex, record);
+    parsedInflight.set(key, pending);
+    // In-flight only: drop the promise once it settles either way. Keeping a
+    // fulfilled promise would pin its parse forever and bypass the retention
+    // cap below (later hits go through the bounded memos instead).
+    const settled = () => {
+      if (parsedInflight.get(key) === pending) parsedInflight.delete(key);
+    };
+    pending.then(settled, settled);
+  }
+  return pending;
+}
+
+// Bounded parse retention. A parsed card costs ~4-10 MB of worker heap
+// (measured: 83 MB for the 8 cards of modem_X-FLASH-ALL-B083.img) and an Apple
+// entry adds its ~5.7 MB decompressed bank. Only the most recently used parses
+// stay resident; older ones release their heavy part and re-parse on demand
+// from the retained (small) MBN bytes. Re-opening a card normally hits the
+// table cache anyway, so the parse is only needed again for exports/imports.
+// 2 covers every access pattern: batch export and import run card-major (all
+// formats of one card, then the next), and card opens hit the table cache.
+let maxRetainedParses = 2;
+// Node protocol tests shrink the cap to exercise eviction on a small corpus.
+export const setMaxRetainedParses = (n) => {
+  maxRetainedParses = n;
+};
+const retainedParses = new Map(); // parseJobKey -> release() (insertion = LRU order)
+
+function retainParse(key, release) {
+  retainedParses.delete(key);
+  retainedParses.set(key, release);
+  while (retainedParses.size > maxRetainedParses) {
+    const [oldest, drop] = retainedParses.entries().next().value;
+    retainedParses.delete(oldest);
+    drop();
+  }
+}
 
 // --- apple scan pool --------------------------------------------------------------
 //
@@ -184,7 +329,10 @@ function drainScanPoolQueue() {
 }
 
 function post(message, transfer = []) {
-  self.postMessage(message, transfer);
+  bump("postMessage");
+  // Debug builds carry a counter snapshot on every reply; the spread keeps the
+  // message shape identical otherwise (receiver ignores the extra field).
+  self.postMessage(DEBUG_COUNTERS ? { ...message, debugCounters: snapshotDebugCounters() } : message, transfer);
 }
 
 function resetSession() {
@@ -192,32 +340,34 @@ function resetSession() {
   drainScanPoolQueue();
 }
 
-function sourceFor(file) {
-  let source = sourceMemo.get(file);
-  if (!source) {
-    source = new BrowserFileSource(file);
-    sourceMemo.set(file, source);
-  }
-  return source;
+// Registered source for a sourceId. main.js sends the File once at scan time;
+// every later request must reference the same id. A missing id means a stale or
+// malformed request — fail loudly so the reply carries an error instead of
+// silently reading the wrong bytes.
+function sourceEntry(sourceId) {
+  const entry = sources.get(sourceId);
+  if (!entry) throw new Error(`unknown sourceId ${sourceId} (source was never registered)`);
+  return entry;
 }
 
-async function fatFor(source, file) {
-  if (fatMemo.has(file)) return fatMemo.get(file);
+async function fatFor(sourceId, source) {
+  if (fatMemo.has(sourceId)) return fatMemo.get(sourceId);
   const fat = new Fat16Image(source);
   try {
     await fat.init();
   } catch {
-    fatMemo.set(file, null); // not FAT16; do not re-init per record
+    fatMemo.set(sourceId, null); // not FAT16; do not re-init per record
     return null;
   }
-  fatMemo.set(file, fat);
+  fatMemo.set(sourceId, fat);
   return fat;
 }
 
-function extractContainerMemoized(source, file, fallbackName) {
-  let pending = containerMemo.get(file);
+function extractContainerMemoized(sourceId, source, fallbackName) {
+  let pending = containerMemo.get(sourceId);
   if (!pending) {
     pending = (async () => {
+      bump("extractContainer");
       const { outputs } = await extractContainer(source, fallbackName);
       const { mbns } = discoverCandidates(outputs);
       const blobs = new Map();
@@ -235,8 +385,8 @@ function extractContainerMemoized(source, file, fallbackName) {
       }
       return blobs;
     })();
-    containerMemo.set(file, pending);
-    pending.catch(() => containerMemo.delete(file)); // failed extraction is not memoized
+    containerMemo.set(sourceId, pending);
+    pending.catch(() => containerMemo.delete(sourceId)); // failed extraction is not memoized
   }
   return pending;
 }
@@ -244,11 +394,11 @@ function extractContainerMemoized(source, file, fallbackName) {
 // Blob for a record: direct MBN (whole file) / FAT16 cluster chain / container
 // re-extraction, in that order. `file` supplies the display label for
 // container extraction; bytes always come from `source`.
-async function readRecordBlob(source, file, record) {
+async function readRecordBlob(sourceId, file, source, record) {
   if (record.external && record.inner_path === record.name && matchesCandidate(record.name)) {
     return source.read(0, source.size);
   }
-  const fat = await fatFor(source, file);
+  const fat = await fatFor(sourceId, source);
   if (fat) {
     try {
       const entry = await fat.findFile(record.inner_path);
@@ -262,40 +412,47 @@ async function readRecordBlob(source, file, record) {
       // exactly like the unmemoized base worker did.
     }
   }
-  const blobs = await extractContainerMemoized(source, file, file && file.name ? file.name : record.name);
+  const blobs = await extractContainerMemoized(sourceId, source, file && file.name ? file.name : record.name);
   const blob = blobs.get(`${record.name}\u0000${normalizeInnerPath(record.inner_path)}`);
   if (blob !== undefined) return blob;
   throw new Error(`record not found in source: ${record.name} (${record.inner_path})`);
 }
 
-// Blob + memo entry for a record: extracts the raw blob once per File via the
+// Blob + memo entry for a record: extracts the raw blob once per sourceId via the
 // (name, sha256) memo key. No parsing happens here — a pure "mbn" export must
 // be a byte-for-byte extraction that never invokes the parser
 // (qualcomm_rf_combo_analyzer.py export_module: a pure MBN dump "must not
 // invoke either the legacy or modern parser").
-async function ensureBlob(file, fileIndex, record) {
-  if (!file || typeof file.slice !== "function") {
-    throw new Error(`no File handle for record ${record.name} (fileIndex ${fileIndex})`);
-  }
-  let memo = parseMemo.get(file);
+async function ensureBlob(sourceId, fileIndex, record) {
+  const { file, source } = sourceEntry(sourceId);
+  let memo = parseMemo.get(sourceId);
   if (!memo) {
     memo = new Map();
-    parseMemo.set(file, memo);
+    parseMemo.set(sourceId, memo);
   }
   const key = `${record.name}\u0000${record.sha256 ?? ""}`;
   let entry = memo.get(key);
   if (!entry) {
-    const blob = await readRecordBlob(sourceFor(file), file, record);
+    const blob = await readRecordBlob(sourceId, file, source, record);
     entry = { blob, parsed: null };
     memo.set(key, entry);
   }
   return entry;
 }
 
-async function ensureParsed(file, fileIndex, record) {
-  const entry = await ensureBlob(file, fileIndex, record);
-  if (!entry.parsed) entry.parsed = parseModule(record, entry.blob);
-  return entry;
+// Returns a snapshot ({blob, parsed}), not the memo entry: retainParse may
+// null entry.parsed while the caller's continuation is still queued.
+async function ensureParsed(sourceId, fileIndex, record) {
+  const entry = await ensureBlob(sourceId, fileIndex, record);
+  if (!entry.parsed) {
+    bump("parseModule");
+    entry.parsed = parseModule(record, entry.blob);
+  }
+  const { parsed } = entry;
+  retainParse(parseJobKey(sourceId, record), () => {
+    entry.parsed = null; // keep the small MBN bytes, drop the heavy parse
+  });
+  return { blob: entry.blob, parsed };
 }
 
 // --- Apple C-series card open / export ------------------------------------------
@@ -303,15 +460,15 @@ async function ensureParsed(file, fileIndex, record) {
 // record.apple carries the envelope of the COMPRESSED stream: for a raw ftab
 // input the stream is a file slice at offset+12; for a bbfw/zip input it is a
 // slice of the INFLATED ftab member (record.apple.member names it), which is
-// re-extracted and memoized per File. Decompression is deferred to card open
-// and memoized per File by (record name, sha256 of the compressed stream) —
-// the same content-addressing rule as parseMemo.
+// re-extracted and memoized per sourceId. Decompression is deferred to card
+// open and memoized per sourceId by (record name, sha256 of the compressed
+// stream) — the same content-addressing rule as parseMemo.
 
-async function appleFtabMember(file, record) {
-  let memo = appleMemberMemo.get(file);
+async function appleFtabMember(sourceId, record) {
+  let memo = appleMemberMemo.get(sourceId);
   if (!memo) {
     memo = new Map();
-    appleMemberMemo.set(file, memo);
+    appleMemberMemo.set(sourceId, memo);
   }
   const memberName = record.apple.member;
   let pending = memo.get(memberName);
@@ -319,7 +476,7 @@ async function appleFtabMember(file, record) {
     pending = (async () => {
       // record.apple.member may be "outer!inner" for nested bbfw zip members;
       // extractFtabMember re-reads the member list per zip scope.
-      return extractFtabMember(sourceFor(file), memberName);
+      return extractFtabMember(sourceEntry(sourceId).source, memberName);
     })();
     memo.set(memberName, pending);
     pending.catch(() => memo.delete(memberName));
@@ -327,47 +484,51 @@ async function appleFtabMember(file, record) {
   return pending;
 }
 
-async function ensureAppleBank(file, fileIndex, record) {
-  if (!file || typeof file.slice !== "function") {
-    throw new Error(`no File handle for record ${record.name} (fileIndex ${fileIndex})`);
-  }
-  let memo = appleBankMemo.get(file);
+async function ensureAppleBank(sourceId, fileIndex, record) {
+  const { source } = sourceEntry(sourceId);
+  let memo = appleBankMemo.get(sourceId);
   if (!memo) {
     memo = new Map();
-    appleBankMemo.set(file, memo);
+    appleBankMemo.set(sourceId, memo);
   }
   const key = `${record.name}\u0000${record.sha256 ?? ""}`;
   let entry = memo.get(key);
   if (!entry) {
-    const source = sourceFor(file);
     const comp = record.apple.member
-      ? (await appleFtabMember(file, record)).subarray(record.apple.offset + 12, record.apple.offset + 12 + record.apple.compSize)
+      ? (await appleFtabMember(sourceId, record)).subarray(record.apple.offset + 12, record.apple.offset + 12 + record.apple.compSize)
       : await source.read(record.apple.offset + 12, record.apple.compSize);
     const bank = lzfseDecode(comp, record.apple.uncompSize);
     entry = { bank, parsed: null };
     memo.set(key, entry);
   }
+  // The decompressed bank is the heavy part here (~5.7 MB): releasing drops the
+  // whole entry, and a later open re-decodes it from the compressed stream.
+  const retained = entry;
+  retainParse(parseJobKey(sourceId, record), () => {
+    if (memo.get(key) === retained) memo.delete(key);
+  });
   return entry;
 }
 
-async function ensureAppleParsed(file, fileIndex, record) {
-  const entry = await ensureAppleBank(file, fileIndex, record);
+async function ensureAppleParsed(sourceId, fileIndex, record) {
+  const entry = await ensureAppleBank(sourceId, fileIndex, record);
   if (!entry.parsed) {
+    bump("parseAppleBank");
     entry.parsed = parseAppleBank(entry.bank, record.inner_path);
     requireValidBank(entry.parsed); // main.py flow: parse_bank + require_valid_bank before any use
   }
-  return entry;
+  return { bank: entry.bank, parsed: entry.parsed };
 }
 
 // Export dispatch for apple records. mbn = the raw decompressed bank (pure
 // dump, no parse); json/csv/webcsv/b0cd/b826 go through the parsed bank.
-async function exportAppleFiles(file, fileIndex, record, format) {
+async function exportAppleFiles(sourceId, fileIndex, record, format) {
   const stem = record.inner_path;
   if (format === "mbn") {
-    const { bank } = await ensureAppleBank(file, fileIndex, record);
+    const { bank } = await ensureAppleBank(sourceId, fileIndex, record);
     return [{ filename: `${stem}.bin`, bytes: bank }];
   }
-  const { parsed } = await ensureAppleParsed(file, fileIndex, record);
+  const { parsed } = await parsedFor(sourceId, fileIndex, record);
   if (format === "json") {
     const text =
       JSON.stringify({ name: record.name, profile_id: parsed.profile_id, tables: generateAppleTables(parsed) }, null, 2) + "\n";
@@ -400,11 +561,17 @@ async function handleScan(msg) {
   const total = files.length;
   for (let fileIndex = 0; fileIndex < total; fileIndex++) {
     if (cancelled.has(id)) break;
-    const file = files[fileIndex];
+    // Registration: each entry is { sourceId, file }. The File is structured-
+    // cloned once here and kept in `sources`; every later request carries only
+    // the stable id, so the per-source memos actually hit across messages.
+    const entry = files[fileIndex];
+    const sourceId = entry.sourceId;
+    const file = entry.file;
+    sources.set(sourceId, { file, source: new CachedSource(new BrowserFileSource(file)) });
     post({ type: "progress", phase: "scan", source: file.name, done: fileIndex, total, currentFile: file.name });
     try {
       let postedWarnings = 0; // partial batches already delivered these
-      const source = new BrowserFileSource(file);
+      const source = sources.get(sourceId).source;
       const { records, warnings } = await scanSource(source, file.name, {
         shouldCancel: () => cancelled.has(id),
         // Fan the ftab's banks out to the scan pool (measured: 99% of apple
@@ -437,6 +604,11 @@ async function handleScan(msg) {
             : info.stage === "extract" ? "extracting" : "";
           post({ type: "progress", phase: "scan", source: file.name, done: fileIndex, total, currentFile: file.name, detail });
         },
+        // Step 3: retain the bytes the scan already read/hashed. Card open and
+        // export then resolve from these memos instead of re-reading the MBN,
+        // re-walking FAT/ext4, or re-extracting the container.
+        onCandidate: (record, blob) => seedCandidateBlob(sourceId, record, blob),
+        onAppleMember: (data, memberName) => seedAppleMember(sourceId, data, memberName),
       });
       if (cancelled.has(id)) break;
       post({ type: "records", fileIndex, records, warnings: warnings.slice(postedWarnings) });
@@ -453,32 +625,59 @@ async function handleScan(msg) {
 }
 
 async function handleParseCard(msg) {
-  if (msg.record.apple) {
-    // Apple CR bank: parse + audit + viewer tables (same reply shape as qcom;
-    // cardcache validates the shape the same way).
-    const { parsed } = await ensureAppleParsed(msg.file, msg.fileIndex, msg.record);
-    const tables = generateAppleTables(parsed);
-    post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables });
+  // Superseded open: main.js posts {type:"cancel", id} synchronously when a newer
+  // open replaces this one, and cancel is handled immediately (never queued), so
+  // the id is already in `cancelled` by dequeue time. Drop the request without
+  // parsing and without a reply.
+  if (cancelled.has(msg.id)) {
+    cancelled.delete(msg.id);
     return;
   }
-  const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
-  const tables = generateWebTables(parsed.combinations, parsed.components);
+  // Persistent worker-side cache: a hit skips parsing AND table formatting.
+  const hit = await tableCache.get(msg.record);
+  if (cancelled.has(msg.id)) {
+    cancelled.delete(msg.id);
+    return;
+  }
+  if (hit) {
+    post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables: hit.tables });
+    return;
+  }
+  const tables = msg.record.apple
+    ? await (async () => {
+        const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
+        bump("generateAppleTables");
+        return generateAppleTables(parsed);
+      })()
+    : await (async () => {
+        const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
+        bump("generateWebTables");
+        return generateWebTables(parsed.combinations, parsed.components);
+      })();
+  if (cancelled.has(msg.id)) {
+    cancelled.delete(msg.id); // cancelled while parsing: no reply
+    return;
+  }
   post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables });
+  // Cache write is fire-and-forget: never block the reply on IndexedDB.
+  Promise.resolve(tableCache.put(msg.record, tables)).catch(() => {});
 }
 
 async function handleExport(msg) {
   let files;
   if (msg.record.apple) {
-    files = await exportAppleFiles(msg.file, msg.fileIndex, msg.record, msg.format);
+    files = await exportAppleFiles(msg.sourceId, msg.fileIndex, msg.record, msg.format);
   } else if (msg.format === "mbn") {
     // Raw .mbn dump (Python export_module "mbn"): the untouched blob under
     // record.name — byte-for-byte, no parse, no text encoding. Reuses the
-    // ensureBlob path incl. the per-File memo, so a batch that also exports
+    // ensureBlob path incl. the per-source memo, so a batch that also exports
     // text formats extracts the container exactly once.
-    const { blob } = await ensureBlob(msg.file, msg.fileIndex, msg.record);
+    const { blob } = await ensureBlob(msg.sourceId, msg.fileIndex, msg.record);
     files = [{ filename: msg.record.name, bytes: blob }];
   } else {
-    const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
+    // Shares the in-flight parse with a concurrent card open (same sourceId +
+    // record), so an export batch and a click coalesce into one parseModule.
+    const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
     files = exportModule(msg.record, parsed, msg.format);
   }
   // One reply per export request: every file the format produced travels
@@ -520,7 +719,7 @@ async function handleImportCards(msg) {
       // lookups and the uecaps upload flow work unchanged for both.
       let produced;
       if (msg.record.apple) {
-        const { parsed } = await ensureAppleParsed(msg.file, msg.fileIndex, msg.record);
+        const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
         produced = exportAppleDiag(parsed, format);
         // A bank with zero packets for this format yields a header-only text
         // (no "Payload:" blocks) — omit it, same rule as the qcom empty-set
@@ -528,7 +727,7 @@ async function handleImportCards(msg) {
         // must not change.)
         if (!produced.some((f) => f.text.includes("Payload:"))) continue;
       } else {
-        const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
+        const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
         if (!Array.isArray(parsed.diag?.[format]) || parsed.diag[format].length === 0) {
           continue; // empty packet set — omit this format from the import payload
         }
@@ -542,11 +741,44 @@ async function handleImportCards(msg) {
   post({ type: "exportBlob", id: msg.id, files }, []);
 }
 
+function handleRelease() {
+  // Clear button: drop every registered source and memo. A new scan must NOT do
+  // this (cards accumulate across imports and keep referencing earlier
+  // sourceIds); only an explicit release does. Source closes are best-effort:
+  // BrowserFileSource.close is a no-op and CachedSource.close just drops its
+  // page cache.
+  for (const { source } of sources.values()) {
+    try {
+      source.close();
+    } catch {
+      // releasing the UI must never fail on a broken source
+    }
+  }
+  sources.clear();
+  parseMemo.clear();
+  fatMemo.clear();
+  containerMemo.clear();
+  appleBankMemo.clear();
+  appleMemberMemo.clear();
+  retainedBytes.clear();
+  parsedInflight.clear();
+  retainedParses.clear();
+  cancelled.clear(); // Clear invalidates every pending request anyway
+  resetSession();
+}
+
+// Clear button, cache half: wipe the worker-side parsed-table cache.
+function handleClearCache() {
+  return tableCache.clearAll();
+}
+
 function handle(msg) {
   if (msg.type === "scan") return handleScan(msg);
   if (msg.type === "parseCard") return handleParseCard(msg);
   if (msg.type === "export") return handleExport(msg);
   if (msg.type === "importCards") return handleImportCards(msg);
+  if (msg.type === "release") return handleRelease();
+  if (msg.type === "clearCache") return handleClearCache();
   throw new Error(`unknown message type: ${msg.type}`);
 }
 
@@ -564,14 +796,23 @@ self.onmessage = (event) => {
     return;
   }
 
-  // Mobile fast lane (main.js sets `fast` in the stacked layout): a card open
-  // must not queue behind the running scan of the whole file batch — on a
-  // phone that is seconds x N files, which made clicks appear dead. parseCard
-  // is a pure read over msg.file + the per-File memos (it never touches
-  // session state, the cancelled set or currentOp), so running it alongside
-  // the scan is safe; the lane is still serialized against other fast opens.
-  // Desktop omits `fast` and keeps the fully serialized chain byte-identical.
-  if (msg.type === "parseCard" && msg.fast) {
+  // Debug instrumentation toggle (Step 0): flips counter attachment on replies
+  // and resets to a known state so a session can measure a single window.
+  if (msg.type === "debug") {
+    DEBUG_COUNTERS = !!msg.enabled;
+    if (msg.reset) resetDebugCounters();
+    post({ type: "debug", enabled: DEBUG_COUNTERS, debugCounters: snapshotDebugCounters() });
+    return;
+  }
+
+  // Priority parse lane: a card open must not queue behind the running scan of
+  // the whole file batch — on a phone that is seconds x N files, which made
+  // clicks appear dead, and on desktop a batch import felt like slow parsing.
+  // parseCard is a pure read over the registered source + the per-sourceId
+  // memos (it never touches scan/session state or currentOp), so running it
+  // alongside the scan is safe. It is serialized only against other parseCard
+  // opens; exports stay on the main chain and share the in-flight parse memo.
+  if (msg.type === "parseCard") {
     const op = msg;
     parseChain = parseChain
       .then(() => handle(op))

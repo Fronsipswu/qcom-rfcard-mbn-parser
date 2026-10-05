@@ -257,3 +257,28 @@ test("ext4 straddling reads across extent boundaries are exact", async () => {
     assert.deepEqual(window, inodeData.subarray(off, off + 100), `offset ${off}`);
   }
 });
+
+test("ext4 walk() is memoized after init and cleared by a re-init", async () => {
+  const bytes = buildExt4Fixture();
+  let reads = 0;
+  const counting = {
+    size: bytes.length,
+    async read(offset, length) {
+      reads += 1;
+      return bytes.subarray(offset, offset + length);
+    },
+  };
+  const fs = new Ext4Image(counting);
+  await fs.init();
+  reads = 0;
+  const first = await fs.walk();
+  const readsAfterFirst = reads;
+  assert.ok(readsAfterFirst > 0, "the first walk reads directories");
+  const second = await fs.walk();
+  assert.equal(reads, readsAfterFirst, "the second walk must not read");
+  assert.equal(second, first, "the memoized entry array is returned as-is");
+  await fs.init(); // clears the memo
+  reads = 0;
+  await fs.walk();
+  assert.ok(reads > 0, "init() must drop the memo");
+});

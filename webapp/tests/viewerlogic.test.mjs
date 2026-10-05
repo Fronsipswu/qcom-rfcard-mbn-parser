@@ -18,6 +18,7 @@ import {
   bandSortKey,
   columnSortKey,
   charCount,
+  createRowSearchIndex,
 } from "../js/viewer.js";
 import { bandColor } from "../js/lib/bandcolors.js";
 
@@ -66,6 +67,26 @@ test("filterRows uses Python casefold, not toLowerCase", () => {
   const rows = [{ v: "Straße" }];
   assert.deepEqual(filterRows(rows, "STRASSE"), rows); // casefold(ß)=ss
   assert.deepEqual(filterRows(rows, "STRASSE").length, 1);
+});
+
+test("an indexed filterRows matches the plain path (ASCII + non-ASCII + long tables)", () => {
+  const rows = [
+    ...ROWS,
+    { "LTE DL": "Straße\u0130\u017f", "LTE MIMO DL": "1", "SCS DL (kHz)": "15" },
+    { "LTE DL": "İstanbul", "LTE MIMO DL": "2", "SCS DL (kHz)": "30" },
+  ];
+  const index = createRowSearchIndex(rows);
+  for (const q of ["", "42e", "2 + 2", "1a+3a", "STRASSE", "strasse", "i\u0307stanbul", "zzz", "15"]) {
+    assert.deepEqual(
+      filterRows(rows, q, index),
+      filterRows(rows, q),
+      `indexed and plain filterRows disagree for ${JSON.stringify(q)}`,
+    );
+  }
+  // The index is lazy: rows are folded on first touch, then reused.
+  assert.equal(index.text(0), "1a + 3a 2 + 2 15");
+  assert.equal(index.nospace(0), "1a+3a2+215");
+  assert.equal(index.text(0), index.text(0));
 });
 
 // --- per-column filter helpers (second header row, 2026-10 spec) ------------------
