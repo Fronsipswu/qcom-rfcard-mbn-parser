@@ -3,6 +3,7 @@
 // Works on any RandomAccessSource (source.js): read(offset, length) -> Promise<Uint8Array>.
 import { StructReader } from "./bytes.js";
 import { cp437Decode } from "./cp437.js";
+import { bump } from "./debug.js";
 
 // Same role as ParseError in legacy_rf_parser.py.
 export class ParseError extends Error {
@@ -219,6 +220,7 @@ export class Fat16Image {
   // seen; only files are yielded. `seen` guards against directory loops.
   async walk() {
     if (!this.fat) throw new ParseError("Fat16Image not initialised: call await init() before walk().");
+    bump("fatWalk");
     const out = [];
     const seen = new Set();
     const visit = async (directoryCluster, parent) => {

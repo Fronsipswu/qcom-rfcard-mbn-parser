@@ -13,6 +13,7 @@
 // stay in the leaf blocks).
 import { StructReader } from "./bytes.js";
 import { ParseError } from "./fat16.js";
+import { bump } from "./debug.js";
 
 const EXT2_SUPER_MAGIC = 0xef53;
 const EXT4_EXTENTS_FL = 0x80000;
@@ -173,6 +174,7 @@ export class Ext4Image {
   // as soon as it is seen; only files are yielded; paths start with "/".
   async walk() {
     this.#assertInit();
+    bump("ext4Walk");
     const out = [];
     const visit = async (dirIno, parent) => {
       const inodeStruct = await this.readInodeStruct(dirIno);

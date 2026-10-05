@@ -30,6 +30,13 @@ import { recordIdentity, normalizeInnerPath } from "./lib/analyzer.js";
 
 const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
 
+// ?debug turns on the worker's Step 0 instrumentation counters: every reply then
+// carries a debugCounters snapshot, so a Chrome/Firefox console can assert that
+// extraction/parsing happens once per source. No effect without the query flag.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).has("debug")) {
+  worker.postMessage({ type: "debug", enabled: true, reset: true });
+}
+
 // IndexedDB may be unavailable (private mode etc.); fall back to per-page memory.
 const cardCache = createCardCache(
   typeof indexedDB !== "undefined"

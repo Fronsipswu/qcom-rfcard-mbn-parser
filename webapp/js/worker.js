@@ -25,6 +25,14 @@
 //   { type: "tables",    id, fileIndex, recordName, tables }
 //   { type: "exportBlob", id, files: [{ filename, bytes } | { filename, text }, ...] }
 //   { type: "error",     id?, message, source? }
+//   { type: "debug",     enabled, reset? } -> { type: "debug", enabled, debugCounters }
+//                                                   (Step 0 instrumentation)
+//
+// Debug counters: when enabled (main.js posts {type:"debug",enabled:true} from
+// `?debug`, or a test calls setDebugCounters(true)), every reply additionally
+// carries `debugCounters` — extraction/parse/table/walk/post counters used by
+// the performance work. Disabled by default; reply shapes are otherwise
+// unchanged, so the UI ignores the extra field.
 //
 // Additive protocol details (documented deviations, needed by the UI layer):
 // - "records" carries an optional `warnings` array ({tool, message}) so the
@@ -77,6 +85,24 @@ import {
   generateAppleTables,
   exportAppleDiag,
 } from "./lib/apple_cr.js";
+import {
+  bump,
+  snapshotDebugCounters,
+  resetDebugCounters,
+  debugCounters,
+} from "./lib/debug.js";
+
+// Debug counters (Step 0 instrumentation): attached to every reply only when
+// enabled. Off by default so replies and timings are unchanged; toggle from the
+// page with `?debug` (main.js posts {type:"debug"}) or from a Node protocol test
+// via setDebugCounters(). Re-exported here so the test can import them.
+export { debugCounters };
+export let DEBUG_COUNTERS = false;
+export const setDebugCounters = (enabled) => {
+  DEBUG_COUNTERS = !!enabled;
+};
+export const getDebugCounters = () => snapshotDebugCounters();
+export { resetDebugCounters };
 
 const cancelled = new Set();
 let session = null; // { scanId }
@@ -184,7 +210,10 @@ function drainScanPoolQueue() {
 }
 
 function post(message, transfer = []) {
-  self.postMessage(message, transfer);
+  bump("postMessage");
+  // Debug builds carry a counter snapshot on every reply; the spread keeps the
+  // message shape identical otherwise (receiver ignores the extra field).
+  self.postMessage(DEBUG_COUNTERS ? { ...message, debugCounters: snapshotDebugCounters() } : message, transfer);
 }
 
 function resetSession() {
@@ -218,6 +247,7 @@ function extractContainerMemoized(source, file, fallbackName) {
   let pending = containerMemo.get(file);
   if (!pending) {
     pending = (async () => {
+      bump("extractContainer");
       const { outputs } = await extractContainer(source, fallbackName);
       const { mbns } = discoverCandidates(outputs);
       const blobs = new Map();
@@ -294,7 +324,10 @@ async function ensureBlob(file, fileIndex, record) {
 
 async function ensureParsed(file, fileIndex, record) {
   const entry = await ensureBlob(file, fileIndex, record);
-  if (!entry.parsed) entry.parsed = parseModule(record, entry.blob);
+  if (!entry.parsed) {
+    bump("parseModule");
+    entry.parsed = parseModule(record, entry.blob);
+  }
   return entry;
 }
 
@@ -353,6 +386,7 @@ async function ensureAppleBank(file, fileIndex, record) {
 async function ensureAppleParsed(file, fileIndex, record) {
   const entry = await ensureAppleBank(file, fileIndex, record);
   if (!entry.parsed) {
+    bump("parseAppleBank");
     entry.parsed = parseAppleBank(entry.bank, record.inner_path);
     requireValidBank(entry.parsed); // main.py flow: parse_bank + require_valid_bank before any use
   }
@@ -457,11 +491,13 @@ async function handleParseCard(msg) {
     // Apple CR bank: parse + audit + viewer tables (same reply shape as qcom;
     // cardcache validates the shape the same way).
     const { parsed } = await ensureAppleParsed(msg.file, msg.fileIndex, msg.record);
+    bump("generateAppleTables");
     const tables = generateAppleTables(parsed);
     post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables });
     return;
   }
   const { parsed } = await ensureParsed(msg.file, msg.fileIndex, msg.record);
+  bump("generateWebTables");
   const tables = generateWebTables(parsed.combinations, parsed.components);
   post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables });
 }
@@ -561,6 +597,15 @@ self.onmessage = (event) => {
     if (msg.id !== undefined) cancelled.add(msg.id);
     else if (currentOp) cancelled.add(currentOp.id);
     if (msg.id === undefined || (currentOp && msg.id === currentOp.id)) resetSession();
+    return;
+  }
+
+  // Debug instrumentation toggle (Step 0): flips counter attachment on replies
+  // and resets to a known state so a session can measure a single window.
+  if (msg.type === "debug") {
+    DEBUG_COUNTERS = !!msg.enabled;
+    if (msg.reset) resetDebugCounters();
+    post({ type: "debug", enabled: DEBUG_COUNTERS, debugCounters: snapshotDebugCounters() });
     return;
   }
 
