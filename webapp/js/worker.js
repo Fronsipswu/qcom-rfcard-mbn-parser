@@ -68,7 +68,7 @@
 // construction. Cancellation: a cancelled flag checked between files and, via
 // the scanSource shouldCancel hook, inside the FAT walk loop; {type:"cancel"}
 // also resets scan state.
-import { BrowserFileSource } from "./lib/source.js";
+import { BrowserFileSource, CachedSource } from "./lib/source.js";
 import { Fat16Image } from "./lib/fat16.js";
 import {
   scanSource,
@@ -492,7 +492,7 @@ async function handleScan(msg) {
     const entry = files[fileIndex];
     const sourceId = entry.sourceId;
     const file = entry.file;
-    sources.set(sourceId, { file, source: new BrowserFileSource(file) });
+    sources.set(sourceId, { file, source: new CachedSource(new BrowserFileSource(file)) });
     post({ type: "progress", phase: "scan", source: file.name, done: fileIndex, total, currentFile: file.name });
     try {
       let postedWarnings = 0; // partial batches already delivered these
@@ -644,7 +644,16 @@ async function handleImportCards(msg) {
 function handleRelease() {
   // Clear button: drop every registered source and memo. A new scan must NOT do
   // this (cards accumulate across imports and keep referencing earlier
-  // sourceIds); only an explicit release does.
+  // sourceIds); only an explicit release does. Source closes are best-effort:
+  // BrowserFileSource.close is a no-op and CachedSource.close just drops its
+  // page cache.
+  for (const { source } of sources.values()) {
+    try {
+      source.close();
+    } catch {
+      // releasing the UI must never fail on a broken source
+    }
+  }
   sources.clear();
   parseMemo.clear();
   fatMemo.clear();
