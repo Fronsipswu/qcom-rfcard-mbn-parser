@@ -211,6 +211,16 @@ const MAX_COL_PX = 2400;
 // immediately would run the same O(n) pass the debounce exists to skip).
 const SEARCH_DEBOUNCE_MS = 150;
 
+// Mobile (stacked) layout windowing: only a prefix of the filtered rows is
+// painted and more are appended on scroll. Building one innerHTML string for
+// a 4-5k-row tab costs seconds of phone-class main thread (the 12k-row worst
+// case never finishes), so the stacked layout paints 500 rows up front and
+// 300 more as the sentinel row approaches the viewport. Filtering, sorting,
+// selection, copy and CSV keep operating on the FULL filtered array — only
+// the painted subset is windowed, so search reaches every row regardless.
+export const WINDOW_INITIAL_ROWS = 500;
+export const WINDOW_CHUNK_ROWS = 300;
+
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
 function bandCellHtml(cell, header) {
@@ -239,9 +249,13 @@ function measureCharWidth() {
 export class ComboViewer {
   // tables: {lte_ca, nr_ca, endc, nrdc} raw JSON rows; info: {identity, name,
   // generation, size, inner_path} for the banner + CSV default filename.
-  constructor(host, tables, info = {}) {
+  // opts.mobile enables the stacked-layout row windowing (see WINDOW_* above).
+  constructor(host, tables, info = {}, opts = {}) {
     this.host = host;
     this.info = info;
+    this.mobile = !!opts.mobile;
+    this.windowShown = 0;
+    this.appendTimer = null;
     this.showScs = false;
     this.filterTimer = null;
     this.filterRowEl = null;
@@ -379,10 +393,19 @@ export class ComboViewer {
       // Same key function as header-click sort (viewer 5319687 fix).
       state.filtered = sortRows(state.filtered, state.sortCol, state.sortReverse);
     }
+    this.resetWindow(state);
     this.layoutColumns(state);
     this.renderTable(state);
+    if (this.mobile) this.tableWrapEl.scrollTop = 0; // new result set: start at the top
     const hasColumnFilters = Object.values(state.colFilters).some((v) => String(v ?? "").trim() !== "");
     this.countEl.textContent = countLabelText(query, state.filtered.length, state.rows.length, hasColumnFilters);
+  }
+
+  // How much of state.filtered the next render paints. Desktop paints every
+  // filtered row (unchanged behavior); the stacked layout paints the initial
+  // window and grows it via appendWindowRows.
+  resetWindow(state) {
+    this.windowShown = this.mobile ? Math.min(WINDOW_INITIAL_ROWS, state.filtered.length) : state.filtered.length;
   }
 
   // The filter row is persistent DOM (one <input> per visible column of the
@@ -453,8 +476,59 @@ export class ComboViewer {
     state.filtered = sortRows(state.filtered, col, state.sortReverse);
     state.selected = new Set();
     state.anchor = null;
+    this.resetWindow(state);
     this.layoutColumns(state);
     this.renderTable(state);
+    if (this.mobile) this.tableWrapEl.scrollTop = 0;
+  }
+
+  rowHtml(row, visible) {
+    let tr = "<tr>";
+    for (const col of visible) {
+      const cell = String(row[col] ?? "");
+      tr += `<td>${BAND_COLUMN_SET.has(col) ? bandCellHtml(cell, col) : esc(cell)}</td>`;
+    }
+    return `${tr}</tr>`;
+  }
+
+  // Tail marker for a windowed tab: tells the user more rows exist and gives
+  // the scroll handler a visible "near the bottom" landmark. Never part of
+  // the selection index space (rowFromEvent rejects it).
+  appendMoreRow(state) {
+    const tr = document.createElement("tr");
+    tr.className = "cv-more";
+    const td = document.createElement("td");
+    td.colSpan = state.visible.length;
+    td.textContent = `Showing ${this.windowShown.toLocaleString("en-US")} of ${state.filtered.length.toLocaleString("en-US")} rows — scroll for more`;
+    tr.appendChild(td);
+    this.tbodyEl.appendChild(tr);
+  }
+
+  // Grows the painted window by WINDOW_CHUNK_ROWS. Row indices are prefix
+  // positions in state.filtered, so rendered-row order and the selection
+  // index space are unchanged by appends.
+  appendWindowRows() {
+    const state = this.tab();
+    if (!state || this.windowShown >= state.filtered.length) return;
+    const start = this.windowShown;
+    const end = Math.min(start + WINDOW_CHUNK_ROWS, state.filtered.length);
+    this.windowShown = end;
+    const html = [];
+    for (let i = start; i < end; i++) html.push(this.rowHtml(state.filtered[i], state.visible));
+    const more = this.tbodyEl.querySelector("tr.cv-more");
+    if (more) more.insertAdjacentHTML("beforebegin", html.join(""));
+    else this.tbodyEl.insertAdjacentHTML("beforeend", html.join(""));
+    if (more) more.remove();
+    if (end < state.filtered.length) this.appendMoreRow(state);
+    this.applySelection();
+  }
+
+  // Stacked-layout toggle while the viewer is open (phone rotation): switch
+  // the windowing mode and re-render through the normal filter path.
+  setMobile(mobile) {
+    if (this.mobile === mobile) return;
+    this.mobile = mobile;
+    if (this.tabs.size) this.applyFilter();
   }
 
   renderTable(state) {
@@ -483,16 +557,11 @@ export class ComboViewer {
     this.restoreFilterFocus(saved);
 
     const rowsHtml = [];
-    for (const row of state.filtered) {
-      let tr = "<tr>";
-      for (const col of state.visible) {
-        const cell = String(row[col] ?? "");
-        tr += `<td>${BAND_COLUMN_SET.has(col) ? bandCellHtml(cell, col) : esc(cell)}</td>`;
-      }
-      tr += "</tr>";
-      rowsHtml.push(tr);
+    for (let i = 0; i < this.windowShown; i++) {
+      rowsHtml.push(this.rowHtml(state.filtered[i], state.visible));
     }
     this.tbodyEl.innerHTML = rowsHtml.join("");
+    if (this.windowShown < state.filtered.length) this.appendMoreRow(state);
     this.applySelection();
     this.positionFilterRow();
   }
@@ -509,7 +578,7 @@ export class ComboViewer {
 
   rowFromEvent(event) {
     const tr = event.target.closest("tbody tr");
-    if (!tr) return -1;
+    if (!tr || tr.classList.contains("cv-more")) return -1; // the more-row is not a data row
     return Array.prototype.indexOf.call(this.tbodyEl.children, tr);
   }
 
@@ -683,6 +752,18 @@ export class ComboViewer {
       }
     });
     this.exportBtn.addEventListener("click", () => this.exportCurrentTabCsv());
+    // Windowed tabs grow as the viewport nears the bottom of the painted
+    // rows (rAF-coalesced; desktop short-circuits before any measuring).
+    this.tableWrapEl.addEventListener("scroll", () => {
+      if (!this.mobile) return;
+      if (this.appendTimer) return;
+      this.appendTimer = requestAnimationFrame(() => {
+        this.appendTimer = null;
+        const el = this.tableWrapEl;
+        if (el.scrollTop + el.clientHeight < el.scrollHeight - 400) return;
+        this.appendWindowRows();
+      });
+    });
     this.theadEl.addEventListener("click", (event) => {
       if (event.target.closest(".cv-filterrow")) return;
       const th = event.target.closest("th");
@@ -759,6 +840,7 @@ export class ComboViewer {
   destroy() {
     clearTimeout(this.statusTimer);
     clearTimeout(this.filterTimer);
+    if (this.appendTimer) cancelAnimationFrame(this.appendTimer);
     document.removeEventListener("keydown", this.onKeydown);
     document.removeEventListener("click", this.onDocumentClick);
     this.root.remove();

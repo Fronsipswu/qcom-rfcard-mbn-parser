@@ -470,6 +470,16 @@ body.dragging {
   border-radius: 0 6px 6px 6px;
 }
 
+/* Windowed (stacked layout) tail marker: more filtered rows exist than are
+   painted; scrolling grows the painted window. */
+.cv tr.cv-more td {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px;
+  white-space: nowrap;
+}
+
 .cv table {
   border-collapse: separate;
   border-spacing: 0;

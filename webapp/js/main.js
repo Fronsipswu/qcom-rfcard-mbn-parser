@@ -334,7 +334,7 @@ function renderViewer(card, tables) {
     size: record.size,
     // record_json-normalized path (scratch-dir tags are not user-meaningful).
     inner_path: normalizeInnerPath(record.inner_path),
-  });
+  }, { mobile: isMobileLayout() });
 }
 
 function openCard(card) {
@@ -347,7 +347,10 @@ function openCard(card) {
     }
     const id = nextMessageId++;
     pendingReplies.set(id, card);
-    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, file: card.file, record: card.record });
+    // `fast` sends the open down the worker's parse lane (not serialized
+    // behind the running scan) in the stacked layout only; desktop keeps the
+    // fully serialized chain.
+    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, file: card.file, record: card.record, fast: isMobileLayout() });
   });
   return cached;
 }
@@ -374,7 +377,7 @@ async function openCompare() {
     if (!card) continue;
     const id = nextMessageId++;
     pendingReplies.set(id, card);
-    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, file: card.file, record: card.record });
+    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, file: card.file, record: card.record, fast: isMobileLayout() });
   }
 }
 
@@ -982,6 +985,12 @@ const stackedMq = typeof window.matchMedia === "function"
   ? window.matchMedia(STACKED_MEDIA_QUERY)
   : null;
 
+// Mobile (stacked portrait) gate for the perf paths: windowed viewer rendering
+// and the worker's fast parse lane. Desktop (split layout) never takes them.
+function isMobileLayout() {
+  return !!(stackedMq && stackedMq.matches);
+}
+
 function handleStackedChange(stacked) {
   applyStackedState(stacked, {
     body: document.body,
@@ -990,6 +999,7 @@ function handleStackedChange(stacked) {
     containerWidth: els.workbench.clientWidth,
     applyWidth: applyCardPaneWidth,
   });
+  if (viewer && typeof viewer.setMobile === "function") viewer.setMobile(stacked); // rotation mid-view
   if (!stacked) syncSplitterAria();
 }
 

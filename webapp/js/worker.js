@@ -3,9 +3,12 @@
 // main -> worker
 //   { type: "scan",      id, files: [File, ...] }   File handles pass through
 //                                                   structured clone, zero-copy
-//   { type: "parseCard", id, file, fileIndex?, record }   file is THE File the
-//                                                   card came from; fileIndex
-//                                                   is bookkeeping only
+//   { type: "parseCard", id, file, fileIndex?, record, fast? }   file is THE
+//                                                   File the card came from;
+//                                                   fileIndex is bookkeeping
+//                                                   only; fast routes to the
+//                                                   parse lane (not queued
+//                                                   behind a running scan)
 //   { type: "export",    id, file, fileIndex?, record, format }  mbn|json|csv|
 //                                                   webcsv|b0cd|b826
 //   { type: "importCards", id, file, fileIndex?, record } -> both DIAG texts
@@ -78,6 +81,7 @@ import {
 const cancelled = new Set();
 let session = null; // { scanId }
 let chain = Promise.resolve(); // serialize scan/parseCard/export handling
+let parseChain = Promise.resolve(); // fast lane for mobile parseCard (see onmessage)
 let currentOp = null;
 
 // Parse memo + RandomAccessSource per File handle. Keyed by the File itself:
@@ -557,6 +561,28 @@ self.onmessage = (event) => {
     if (msg.id !== undefined) cancelled.add(msg.id);
     else if (currentOp) cancelled.add(currentOp.id);
     if (msg.id === undefined || (currentOp && msg.id === currentOp.id)) resetSession();
+    return;
+  }
+
+  // Mobile fast lane (main.js sets `fast` in the stacked layout): a card open
+  // must not queue behind the running scan of the whole file batch — on a
+  // phone that is seconds x N files, which made clicks appear dead. parseCard
+  // is a pure read over msg.file + the per-File memos (it never touches
+  // session state, the cancelled set or currentOp), so running it alongside
+  // the scan is safe; the lane is still serialized against other fast opens.
+  // Desktop omits `fast` and keeps the fully serialized chain byte-identical.
+  if (msg.type === "parseCard" && msg.fast) {
+    const op = msg;
+    parseChain = parseChain
+      .then(() => handle(op))
+      .catch((err) => {
+        post({
+          type: "error",
+          id: op.id,
+          message: err && err.message ? err.message : String(err),
+          source: (op.record && op.record.name) || (op.file && op.file.name) || op.source,
+        });
+      });
     return;
   }
 
