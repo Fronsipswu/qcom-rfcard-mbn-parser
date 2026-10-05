@@ -321,6 +321,12 @@ test("protobuf field walker matches Python", () => {
   assert.equal(protoUint(fields, 99), 0);
   assert.deepEqual(protoBytes(fields, 99), new Uint8Array(0));
   assert.deepEqual(protoRepeatedUint(fields, 99), []);
+  // Single length-delimited field: no copy, the stored view is returned as-is
+  // (multi-field still concatenates in order).
+  const single = new Map([[7, [[2, new Uint8Array([1, 2, 3])]]]]);
+  const view = protoBytes(single, 7);
+  assert.equal(view, single.get(7)[0][1]);
+  assert.deepEqual([...protoBytes(fields, 9)], [0x96, 0x01, 0xac, 0x02]);
 
   assert.throws(() => protobufFields(new Uint8Array([0x00])), /Invalid protobuf field zero/);
   assert.throws(() => protobufFields(new Uint8Array([0x36])), /Unsupported protobuf wire type 6/);

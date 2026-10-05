@@ -726,19 +726,29 @@ export function hasRealBcs(combos) {
 }
 
 export function normalizeLegacyComponent(comp) {
-  // Maps legacy parser sentinel values onto the modern component schema.
-  const out = { ...comp };
+  // Maps legacy parser sentinel values onto the modern component schema. The
+  // copy is lazy: components that are already modern (the overwhelming majority)
+  // are returned unchanged instead of being spread tens of thousands of times.
+  let out = null;
   for (const key of ["dl_bw_class", "ul_bw_class"]) {
-    if (out[key] === "NONE") out[key] = "-";
-  }
-  for (const key of ["dl_antenna", "ul_antenna"]) {
-    const ant = out[key];
-    if (typeof ant === "string") {
-      if (ant === "NONE") out[key] = "INDEX_0";
-      else if (ant.startsWith("ANTENNA_")) out[key] = ant.slice("ANTENNA_".length);
+    if (comp[key] === "NONE") {
+      if (out === null) out = { ...comp };
+      out[key] = "-";
     }
   }
-  return out;
+  for (const key of ["dl_antenna", "ul_antenna"]) {
+    const ant = comp[key];
+    if (typeof ant === "string") {
+      if (ant === "NONE") {
+        if (out === null) out = { ...comp };
+        out[key] = "INDEX_0";
+      } else if (ant.startsWith("ANTENNA_")) {
+        if (out === null) out = { ...comp };
+        out[key] = ant.slice("ANTENNA_".length);
+      }
+    }
+  }
+  return out ?? comp;
 }
 
 // --- generate_web_tables (analyzer.py:1325-1501) ---------------------------------

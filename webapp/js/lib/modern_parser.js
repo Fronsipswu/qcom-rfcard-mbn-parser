@@ -95,8 +95,11 @@ export function inflateZlibChecked(data) {
   const trailerOff = headerLen + Math.ceil(consumedBits / 8);
   if (trailerOff + 4 > data.length) throw new Error("incomplete or truncated stream");
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  if (adler32(concatBytes(outs)) !== dv.getUint32(trailerOff)) throw new Error("incorrect data check");
-  return { raw: concatBytes(outs), consumed: trailerOff + 4 };
+  // Concatenate once and validate that buffer (the old code concatenated twice:
+  // once for the Adler-32 and once for the return value).
+  const raw = concatBytes(outs);
+  if (adler32(raw) !== dv.getUint32(trailerOff)) throw new Error("incorrect data check");
+  return { raw, consumed: trailerOff + 4 };
 }
 
 function inflateZlibStrict(data) {
@@ -309,7 +312,16 @@ export function protobufFields(data) {
 }
 
 export function protoBytes(fields, number) {
-  return concatBytes((fields.get(number) ?? []).filter(([wire]) => wire === 2).map(([, value]) => value));
+  const values = [];
+  for (const [wire, value] of fields.get(number) ?? []) {
+    if (wire === 2) values.push(value);
+  }
+  // A single length-delimited field is already a view into the source buffer:
+  // return it directly instead of copying through concatBytes. Callers only read
+  // (hash / compare / slice), so aliasing is safe and saves the copy on the hot
+  // res_dat_sha256 path.
+  if (values.length === 1) return values[0];
+  return concatBytes(values);
 }
 
 export function protoUint(fields, number) {

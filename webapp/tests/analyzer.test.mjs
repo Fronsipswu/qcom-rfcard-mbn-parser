@@ -163,6 +163,9 @@ test("normalize legacy component maps NONE/ANTENNA_ sentinels", () => {
     dl_bw_class: "A",
     dl_antenna: "2_1",
   });
+  // ... and untouched means the SAME object (no copy for the common modern case)
+  const modern = { dl_bw_class: "A", dl_antenna: "2_1", band: 3 };
+  assert.equal(normalizeLegacyComponent(modern), modern);
 });
 
 test("_format_bw strips the MHz suffix after underscore replacement", () => {
