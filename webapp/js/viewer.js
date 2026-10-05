@@ -11,7 +11,7 @@
 // - Sorting/filtering run on the already-JSON table rows in the main thread;
 //   nothing here re-parses. The renderer touches the DOM only through the
 //   ComboViewer class, so the pure helpers stay unit-testable in Node.
-import { BAND_COLUMN_HEADERS, bandSegments, bandColor } from "./lib/bandcolors.js";
+import { BAND_COLUMN_HEADERS, bandSegments, bandColor, bandColorIndex } from "./lib/bandcolors.js";
 import { pyCasefold } from "./lib/modern_parser.js";
 import { toCsvText } from "./lib/analyzer.js";
 import { csvFilename, download } from "./exporter.js";
@@ -190,6 +190,7 @@ export function infoBannerParts(info) {
 // --- memoized band colors (viewer.py:433-437, one color per canonical band) -------
 
 const BAND_COLOR_MEMO = new Map();
+const BAND_INDEX_MEMO = new Map();
 
 export function memoBandColor(canonical) {
   let color = BAND_COLOR_MEMO.get(canonical);
@@ -198,6 +199,17 @@ export function memoBandColor(canonical) {
     BAND_COLOR_MEMO.set(canonical, color);
   }
   return color;
+}
+
+// Palette index for the `.band-c<index>` class; same md5 reduction as
+// memoBandColor, memoized the same way.
+export function memoBandIndex(canonical) {
+  let index = BAND_INDEX_MEMO.get(canonical);
+  if (index === undefined) {
+    index = bandColorIndex(canonical);
+    BAND_INDEX_MEMO.set(canonical, index);
+  }
+  return index;
 }
 
 // --- renderer ----------------------------------------------------------------------
@@ -211,15 +223,37 @@ const MAX_COL_PX = 2400;
 // immediately would run the same O(n) pass the debounce exists to skip).
 const SEARCH_DEBOUNCE_MS = 150;
 
-// Mobile (stacked) layout windowing: only a prefix of the filtered rows is
-// painted and more are appended on scroll. Building one innerHTML string for
-// a 4-5k-row tab costs seconds of phone-class main thread (the 12k-row worst
-// case never finishes), so the stacked layout paints 500 rows up front and
-// 300 more as the sentinel row approaches the viewport. Filtering, sorting,
-// selection, copy and CSV keep operating on the FULL filtered array — only
-// the painted subset is windowed, so search reaches every row regardless.
-export const WINDOW_INITIAL_ROWS = 500;
-export const WINDOW_CHUNK_ROWS = 300;
+// Viewport virtualization (Step 4). A table above the threshold paints only
+// the rows intersecting the viewport (plus OVERSCAN_ROWS either side) with a
+// top/bottom spacer row; small tables keep the simple full render. Rows are
+// uniform height (nowrap + table-layout: fixed + monospace), so
+// visibleRange/spacerHeights are pure integer math over the full filtered
+// array — selection indices, shift-click ranges, copy and CSV export keep
+// referring to filtered-array indices, never DOM positions.
+export const VIRTUALIZE_THRESHOLD = 300;
+export const OVERSCAN_ROWS = 8;
+// Fallback before the first row is measured (converges after one render).
+export const DEFAULT_ROW_HEIGHT = 24;
+
+export function visibleRange(total, scrollTop, viewportHeight, rowHeight, overscan = OVERSCAN_ROWS) {
+  if (total <= VIRTUALIZE_THRESHOLD || rowHeight <= 0) return { start: 0, end: total };
+  const first = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+  const last = Math.min(total, Math.ceil((scrollTop + viewportHeight) / rowHeight) + overscan);
+  return { start: first, end: Math.max(last, first + 1) };
+}
+
+export function spacerHeights(total, start, end, rowHeight) {
+  return {
+    top: Math.max(0, start * rowHeight),
+    bottom: Math.max(0, (total - end) * rowHeight),
+  };
+}
+
+// Zebra stripe class by FILTERED index (viewer.py: evenrow when idx % 2 == 0).
+// Class-based so the virtualization spacer rows cannot shift parity.
+export function rowStripeClass(index) {
+  return index % 2 === 0 ? "cv-row-even" : "cv-row-odd";
+}
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
@@ -227,7 +261,7 @@ function bandCellHtml(cell, header) {
   const segments = bandSegments(cell, header);
   if (!segments.length) return esc(cell);
   return segments
-    .map((seg) => (seg.canonical ? `<span class="cv-band" style="color:${memoBandColor(seg.canonical)}">${esc(seg.text)}</span>` : esc(seg.text)))
+    .map((seg) => (seg.canonical ? `<span class="cv-band band-c${memoBandIndex(seg.canonical)}">${esc(seg.text)}</span>` : esc(seg.text)))
     .join(" + ");
 }
 
@@ -249,13 +283,15 @@ function measureCharWidth() {
 export class ComboViewer {
   // tables: {lte_ca, nr_ca, endc, nrdc} raw JSON rows; info: {identity, name,
   // generation, size, inner_path} for the banner + CSV default filename.
-  // opts.mobile enables the stacked-layout row windowing (see WINDOW_* above).
+  // opts.mobile records the stacked layout (used for the layout flag only;
+  // virtualization applies to every layout).
   constructor(host, tables, info = {}, opts = {}) {
     this.host = host;
     this.info = info;
     this.mobile = !!opts.mobile;
-    this.windowShown = 0;
-    this.appendTimer = null;
+    this.virtual = false; // current tab paints a viewport window
+    this.rowHeight = 0; // measured from the first rendered row
+    this.renderRaf = null; // scroll re-render coalescing
     this.showScs = false;
     this.filterTimer = null;
     this.filterRowEl = null;
@@ -263,6 +299,7 @@ export class ComboViewer {
     this.tabs = new Map();
     this.activeKey = null;
     this.charW = measureCharWidth();
+    this.widthCache = new Map(); // `${tblKey}\u0001${showScs}` -> {visible, widths}
     this.pendingResize = null;
 
     const root = document.createElement("div");
@@ -357,17 +394,29 @@ export class ComboViewer {
     }
   }
 
-  layoutColumns(state) {
+  // Column widths are computed from state.rows (invariant under filtering and
+  // sorting) once per (tab, showScs) and cached; applyFilter/sortBy re-apply the
+  // cache plus any drag overrides instead of rescanning every cell.
+  layoutColumns(state, tblKey = this.activeKey) {
+    const key = `${tblKey}\u0001${this.showScs}`;
+    let measured = this.widthCache.get(key);
+    if (!measured) {
+      measured = this.#measureColumns(state);
+      this.widthCache.set(key, measured);
+    }
+    state.visible = measured.visible;
+    state.widths = measured.visible.map((col, i) => {
+      const override = state.overrides[col];
+      return override !== undefined ? Math.max(1, override) : measured.widths[i];
+    });
+  }
+
+  #measureColumns(state) {
     const visible = visibleColumns(state.columns, this.showScs);
     const padChars = Math.max(2, Math.round(16 / this.charW));
     const minChars = Math.max(4, Math.round(45 / this.charW));
     const widths = [];
     for (const col of visible) {
-      const override = state.overrides[col];
-      if (override !== undefined) {
-        widths.push(Math.max(1, override)); // pixel override from a drag
-        continue;
-      }
       // Reserve room for the sort indicator like viewer.py _layout_columns;
       // Tk measures characters, the HTML colgroup needs pixels.
       const headerLen = charCount(col) + 2;
@@ -378,8 +427,7 @@ export class ComboViewer {
       }
       widths.push(Math.ceil((Math.max(minChars, headerLen, contentLen) + padChars) * this.charW));
     }
-    state.visible = visible;
-    state.widths = widths;
+    return { visible, widths };
   }
 
   applyFilter() {
@@ -393,19 +441,20 @@ export class ComboViewer {
       // Same key function as header-click sort (viewer 5319687 fix).
       state.filtered = sortRows(state.filtered, state.sortCol, state.sortReverse);
     }
-    this.resetWindow(state);
     this.layoutColumns(state);
+    this.resetScroll(state);
     this.renderTable(state);
-    if (this.mobile) this.tableWrapEl.scrollTop = 0; // new result set: start at the top
     const hasColumnFilters = Object.values(state.colFilters).some((v) => String(v ?? "").trim() !== "");
     this.countEl.textContent = countLabelText(query, state.filtered.length, state.rows.length, hasColumnFilters);
   }
 
-  // How much of state.filtered the next render paints. Desktop paints every
-  // filtered row (unchanged behavior); the stacked layout paints the initial
-  // window and grows it via appendWindowRows.
-  resetWindow(state) {
-    this.windowShown = this.mobile ? Math.min(WINDOW_INITIAL_ROWS, state.filtered.length) : state.filtered.length;
+  // A new result set restarts at the top: virtualized spacers are positioned
+  // from scrollTop, so an old offset would paint the wrong window. Small
+  // (non-virtual) tables keep their scroll position as before.
+  resetScroll(state) {
+    if (state.filtered.length > VIRTUALIZE_THRESHOLD && this.tableWrapEl.scrollTop !== 0) {
+      this.tableWrapEl.scrollTop = 0;
+    }
   }
 
   // The filter row is persistent DOM (one <input> per visible column of the
@@ -476,14 +525,13 @@ export class ComboViewer {
     state.filtered = sortRows(state.filtered, col, state.sortReverse);
     state.selected = new Set();
     state.anchor = null;
-    this.resetWindow(state);
     this.layoutColumns(state);
+    this.resetScroll(state);
     this.renderTable(state);
-    if (this.mobile) this.tableWrapEl.scrollTop = 0;
   }
 
-  rowHtml(row, visible) {
-    let tr = "<tr>";
+  rowHtml(row, visible, index) {
+    let tr = `<tr data-i="${index}" class="${rowStripeClass(index)}">`;
     for (const col of visible) {
       const cell = String(row[col] ?? "");
       tr += `<td>${BAND_COLUMN_SET.has(col) ? bandCellHtml(cell, col) : esc(cell)}</td>`;
@@ -491,40 +539,43 @@ export class ComboViewer {
     return `${tr}</tr>`;
   }
 
-  // Tail marker for a windowed tab: tells the user more rows exist and gives
-  // the scroll handler a visible "near the bottom" landmark. Never part of
-  // the selection index space (rowFromEvent rejects it).
-  appendMoreRow(state) {
-    const tr = document.createElement("tr");
-    tr.className = "cv-more";
-    const td = document.createElement("td");
-    td.colSpan = state.visible.length;
-    td.textContent = `Showing ${this.windowShown.toLocaleString("en-US")} of ${state.filtered.length.toLocaleString("en-US")} rows — scroll for more`;
-    tr.appendChild(td);
-    this.tbodyEl.appendChild(tr);
-  }
-
-  // Grows the painted window by WINDOW_CHUNK_ROWS. Row indices are prefix
-  // positions in state.filtered, so rendered-row order and the selection
-  // index space are unchanged by appends.
-  appendWindowRows() {
-    const state = this.tab();
-    if (!state || this.windowShown >= state.filtered.length) return;
-    const start = this.windowShown;
-    const end = Math.min(start + WINDOW_CHUNK_ROWS, state.filtered.length);
-    this.windowShown = end;
+  // Paints the rows intersecting the viewport (plus overscan) into tbody, with
+  // padded spacer rows covering the off-screen rows. Scroll re-renders call this
+  // alone, so the header/colgroup are never rebuilt while scrolling.
+  renderRows(state) {
+    const total = state.filtered.length;
+    const virtual = total > VIRTUALIZE_THRESHOLD;
+    const rowHeight = this.rowHeight || DEFAULT_ROW_HEIGHT;
+    const viewport = this.tableWrapEl.clientHeight || 600;
+    const range = virtual
+      ? visibleRange(total, this.tableWrapEl.scrollTop, viewport, rowHeight)
+      : { start: 0, end: total };
+    const colspan = Math.max(1, state.visible.length);
     const html = [];
-    for (let i = start; i < end; i++) html.push(this.rowHtml(state.filtered[i], state.visible));
-    const more = this.tbodyEl.querySelector("tr.cv-more");
-    if (more) more.insertAdjacentHTML("beforebegin", html.join(""));
-    else this.tbodyEl.insertAdjacentHTML("beforeend", html.join(""));
-    if (more) more.remove();
-    if (end < state.filtered.length) this.appendMoreRow(state);
-    this.applySelection();
+    if (virtual) {
+      const { top } = spacerHeights(total, range.start, range.end, rowHeight);
+      if (top > 0) html.push(`<tr class="cv-spacer" aria-hidden="true"><td colspan="${colspan}" style="height:${top}px"></td></tr>`);
+    }
+    for (let i = range.start; i < range.end; i++) html.push(this.rowHtml(state.filtered[i], state.visible, i));
+    if (virtual) {
+      const { bottom } = spacerHeights(total, range.start, range.end, rowHeight);
+      if (bottom > 0) html.push(`<tr class="cv-spacer" aria-hidden="true"><td colspan="${colspan}" style="height:${bottom}px"></td></tr>`);
+    }
+    this.tbodyEl.innerHTML = html.join("");
+    this.virtual = virtual;
+    // Measure the uniform row height once, then re-render with exact spacers.
+    if (virtual && this.rowHeight === 0) {
+      const tr = this.tbodyEl.querySelector("tr[data-i]");
+      const measured = tr ? tr.offsetHeight : 0;
+      if (measured > 0) {
+        this.rowHeight = measured;
+        this.renderRows(state);
+      }
+    }
   }
 
-  // Stacked-layout toggle while the viewer is open (phone rotation): switch
-  // the windowing mode and re-render through the normal filter path.
+  // Layout toggle (phone rotation): virtualization is layout-agnostic now, but
+  // the wrap's client height changes, so re-render the visible window.
   setMobile(mobile) {
     if (this.mobile === mobile) return;
     this.mobile = mobile;
@@ -556,12 +607,7 @@ export class ComboViewer {
     this.attachFilterRow();
     this.restoreFilterFocus(saved);
 
-    const rowsHtml = [];
-    for (let i = 0; i < this.windowShown; i++) {
-      rowsHtml.push(this.rowHtml(state.filtered[i], state.visible));
-    }
-    this.tbodyEl.innerHTML = rowsHtml.join("");
-    if (this.windowShown < state.filtered.length) this.appendMoreRow(state);
+    this.renderRows(state);
     this.applySelection();
     this.positionFilterRow();
   }
@@ -569,17 +615,15 @@ export class ComboViewer {
   applySelection() {
     const state = this.tab();
     if (!state) return;
-    let i = 0;
-    for (const tr of this.tbodyEl.children) {
-      tr.classList.toggle("sel", state.selected.has(i));
-      i++;
+    for (const tr of this.tbodyEl.querySelectorAll("tr[data-i]")) {
+      tr.classList.toggle("sel", state.selected.has(Number(tr.dataset.i)));
     }
   }
 
   rowFromEvent(event) {
-    const tr = event.target.closest("tbody tr");
-    if (!tr || tr.classList.contains("cv-more")) return -1; // the more-row is not a data row
-    return Array.prototype.indexOf.call(this.tbodyEl.children, tr);
+    const tr = event.target.closest("tbody tr[data-i]");
+    if (!tr) return -1; // spacer rows are not in the selection index space
+    return Number(tr.dataset.i);
   }
 
   onRowClick(event) {
@@ -743,8 +787,8 @@ export class ComboViewer {
     this.scsCheck.addEventListener("change", () => {
       this.showScs = this.scsCheck.checked;
       // viewer.py _on_scs_toggle: re-layout + re-render every tab, keep selection.
-      for (const state of this.tabs.values()) {
-        this.layoutColumns(state);
+      for (const [tblKey, state] of this.tabs) {
+        this.layoutColumns(state, tblKey);
         if (state === this.tab()) {
           this.renderTable(state);
           this.applySelection();
@@ -752,16 +796,18 @@ export class ComboViewer {
       }
     });
     this.exportBtn.addEventListener("click", () => this.exportCurrentTabCsv());
-    // Windowed tabs grow as the viewport nears the bottom of the painted
-    // rows (rAF-coalesced; desktop short-circuits before any measuring).
+    // Viewport virtualization: scrolling repaints only the visible row window,
+    // rAF-coalesced. Non-virtual (small) tables never rebuild on scroll.
     this.tableWrapEl.addEventListener("scroll", () => {
-      if (!this.mobile) return;
-      if (this.appendTimer) return;
-      this.appendTimer = requestAnimationFrame(() => {
-        this.appendTimer = null;
-        const el = this.tableWrapEl;
-        if (el.scrollTop + el.clientHeight < el.scrollHeight - 400) return;
-        this.appendWindowRows();
+      const state = this.tab();
+      if (!state || state.filtered.length <= VIRTUALIZE_THRESHOLD) return;
+      if (this.renderRaf) return;
+      this.renderRaf = requestAnimationFrame(() => {
+        this.renderRaf = null;
+        const active = this.tab();
+        if (!active) return;
+        this.renderRows(active);
+        this.applySelection();
       });
     });
     this.theadEl.addEventListener("click", (event) => {
@@ -840,7 +886,7 @@ export class ComboViewer {
   destroy() {
     clearTimeout(this.statusTimer);
     clearTimeout(this.filterTimer);
-    if (this.appendTimer) cancelAnimationFrame(this.appendTimer);
+    if (this.renderRaf) cancelAnimationFrame(this.renderRaf);
     document.removeEventListener("keydown", this.onKeydown);
     document.removeEventListener("click", this.onDocumentClick);
     this.root.remove();
