@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Fat16Image } from "../js/lib/fat16.js";
 import { BrowserFileSource, sourceFor } from "../js/lib/source.js";
+import { scanSource } from "../js/lib/analyzer.js";
+import { sha256HexAsync } from "../js/lib/hash.js";
 import { CORPUS_DIR, corpusAvailable } from "./helpers.mjs";
 
 // --- synthetic FAT16 fixture -------------------------------------------------
@@ -285,6 +287,38 @@ test("readFileRange reads only the needed bytes and rejects out-of-range/dir rea
     () => fat.readFileRange({ path: "/RF_CARDS", firstCluster: 2, size: 0, isDir: true }, 0, 1),
     /Path is a directory/,
   );
+});
+
+// --- scan artifacts + walk memo (Step 3) --------------------------------------
+
+test("scanSource onCandidate hands back the exact bytes that were hashed", async () => {
+  const source = new BrowserFileSource(new Blob([buildFat16Fixture()]));
+  const seen = [];
+  const { records } = await scanSource(source, "fixture.img", {
+    onCandidate: (record, blob) => seen.push({ record, blob }),
+  });
+  assert.equal(records.length, 1, "only the modern root candidate survives the path gates");
+  assert.equal(seen.length, records.length, "one hook call per record");
+  for (const { record, blob } of seen) {
+    assert.equal(await sha256HexAsync(blob), record.sha256, record.name);
+  }
+});
+
+test("walk() is memoized after init and cleared by a re-init", async () => {
+  const counting = new CountingSource(new BrowserFileSource(new Blob([buildFat16Fixture()])));
+  const fat = new Fat16Image(counting);
+  await fat.init();
+  counting.reads.length = 0;
+  const first = await fat.walk();
+  const readsAfterFirst = counting.reads.length;
+  assert.ok(readsAfterFirst > 0, "the first walk reads directories");
+  const second = await fat.walk();
+  assert.equal(counting.reads.length, readsAfterFirst, "the second walk must not read");
+  assert.equal(second, first, "the memoized entry array is returned as-is");
+  await fat.init(); // clears the memo
+  counting.reads.length = 0;
+  await fat.walk();
+  assert.ok(counting.reads.length > 0, "init() must drop the memo");
 });
 
 // --- golden (corpus-gated) ---------------------------------------------------

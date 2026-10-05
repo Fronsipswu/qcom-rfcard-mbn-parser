@@ -16,10 +16,15 @@ export class ParseError extends Error {
 export class Fat16Image {
   constructor(source) {
     this.source = source;
+    // Step 3: walk() is a pure read over the read-only image after init();
+    // memoizing the entry list stops findFile from re-traversing the whole
+    // filesystem for every record. Cleared by init().
+    this.walkMemo = null;
   }
 
   // Reads boot sector (512B) + first FAT table only; constructors cannot await.
   async init() {
+    this.walkMemo = null;
     let boot;
     try {
       boot = await this.source.read(0, 512);
@@ -253,6 +258,7 @@ export class Fat16Image {
   // seen; only files are yielded. `seen` guards against directory loops.
   async walk() {
     if (!this.fat) throw new ParseError("Fat16Image not initialised: call await init() before walk().");
+    if (this.walkMemo) return this.walkMemo;
     bump("fatWalk");
     const out = [];
     const seen = new Set();
@@ -269,6 +275,7 @@ export class Fat16Image {
       }
     };
     await visit(null, "");
+    this.walkMemo = out;
     return out;
   }
 

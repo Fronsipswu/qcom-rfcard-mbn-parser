@@ -264,7 +264,7 @@ function isZipHead(head) {
 //   (0, total) once the descriptor count is known, then after every bank
 //   settles (records AND warned banks count as settled) with the running
 //   settled count. Informational only; never affects scan outcomes.
-async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, onAppleBatch, onAppleProgress } = {}) {
+async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, onAppleBatch, onAppleProgress, onAppleMember } = {}) {
   const head = await source.read(0, Math.min(0x30, source.size));
   let descriptors = null;
   let ftabData = null; // inflated ftab member bytes (bbfw) or null (raw ftab)
@@ -286,6 +286,10 @@ async function scanAppleFtab(source, name, cancelled, { inspectAppleBankAsync, o
     return null;
   }
   if (!descriptors.length) return null;
+  // Step 3: hand the inflated ftab member back to the scanner so a bbfw card
+  // open does not re-read/re-inflate the same zip member (worker seeds
+  // appleMemberMemo with it). Only the zip/bbfw path has a member.
+  if (ftabData && memberName) onAppleMember?.(ftabData, memberName);
   onAppleProgress?.(0, descriptors.length);
 
   const inspectBank = inspectAppleBankAsync ?? defaultInspectAppleBank;
@@ -408,7 +412,7 @@ function defaultInspectAppleBank(stream, uncompSize) {
   };
 }
 
-export async function scanSource(source, name, { shouldCancel, inspectAppleBankAsync, onAppleBatch, onScanProgress } = {}) {
+export async function scanSource(source, name, { shouldCancel, inspectAppleBankAsync, onAppleBatch, onScanProgress, onCandidate, onAppleMember } = {}) {
   const cancelled = shouldCancel ?? (() => false);
   const reportProgress = onScanProgress ?? (() => {});
   if (cancelled()) throw new ScanCancelled();
@@ -435,7 +439,11 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
       sha256: digest,
     };
     const [lte, nr] = comboCounts(base, blob);
-    return { records: deduplicateRecords([buildRecord(base, lte, nr)]), warnings: [] };
+    const record = buildRecord(base, lte, nr);
+    // Step 3: expose the exact bytes that were hashed so the worker can seed
+    // its per-source blob memo and skip re-reading on the first card open.
+    onCandidate?.(record, blob);
+    return { records: deduplicateRecords([record]), warnings: [] };
   }
 
   // Apple C-series FTAB / bbfw inputs: one card per CR bank, decompressed +
@@ -444,6 +452,7 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
   const appleScan = await scanAppleFtab(source, name, cancelled, {
     inspectAppleBankAsync,
     onAppleBatch,
+    onAppleMember,
     onAppleProgress: (done, total) => reportProgress({ stage: "apple", done, total }),
   });
   if (appleScan) return appleScan;
@@ -455,7 +464,7 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
     // Not FAT16: the universal container extractor (analyzer.py:209-231,
     // image_extractor.scan_container + _records_from_extraction :268-321).
     try {
-      return await scanExtracted(source, name, cancelled, reportProgress);
+      return await scanExtracted(source, name, cancelled, reportProgress, onCandidate);
     } catch (extractErr) {
       if (extractErr instanceof ScanCancelled) throw extractErr;
       return {
@@ -516,7 +525,11 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
       sha256: digest,
     };
     const [lte, nr] = comboCounts(base, raw);
-    records.push(buildRecord(base, lte, nr));
+    const record = buildRecord(base, lte, nr);
+    records.push(record);
+    // Step 3: the exact cluster-chain bytes that were hashed become the
+    // worker's per-source blob memo entry (no second read on card open).
+    onCandidate?.(record, raw);
     reportProgress({ stage: "count", done: i + 1, total: targets.length });
   }
   return { records: deduplicateRecords(sortRecords(records)), warnings: [] };
@@ -524,7 +537,7 @@ export async function scanSource(source, name, { shouldCancel, inspectAppleBankA
 
 // --- container fallback (_records_from_extraction, analyzer.py:268-321) ---------
 
-async function scanExtracted(source, name, cancelled = () => false, onScanProgress = () => {}) {
+async function scanExtracted(source, name, cancelled = () => false, onScanProgress = () => {}, onCandidate = null) {
   if (cancelled()) throw new ScanCancelled();
   // Extraction is the uncountable phase (a black-box unpacker with no known
   // output count); report it as its own stage so the UI can label the wait.
@@ -571,7 +584,10 @@ async function scanExtracted(source, name, cancelled = () => false, onScanProgre
       sha256: digest,
     };
     const [lte, nr] = comboCounts(base, blob);
-    records.push(buildRecord(base, lte, nr));
+    const record = buildRecord(base, lte, nr);
+    records.push(record);
+    // Step 3: seed the worker's per-source blob memo with the extracted bytes.
+    onCandidate?.(record, blob);
     onScanProgress?.({ stage: "count", done: index + 1, total: targets.length });
   }
   // Python returns the records in discovery order unsorted; the sorted order is

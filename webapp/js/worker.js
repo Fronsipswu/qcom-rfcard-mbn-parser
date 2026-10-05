@@ -139,6 +139,50 @@ const containerMemo = new Map();
 const appleBankMemo = new Map(); // sourceId -> Map<key, {bank, parsed}>
 const appleMemberMemo = new Map(); // sourceId -> Map<memberName, Promise<Uint8Array>>
 
+// Step 3: retained scan-time candidate bytes. The scan already read (and
+// hashed) every candidate; seeding parseMemo with those exact bytes means the
+// first card open/export never re-reads or re-extracts them. Bounded so a huge
+// multi-file import cannot pin unbounded memory: past the budget we stop
+// seeding and fall back to on-demand reads (correct, just slower). 256 MB total
+// is deliberately generous — the biggest single corpus card is a few MB — while
+// still capping pathological inputs.
+const RETAINED_CANDIDATE_BUDGET = 256 * 1024 * 1024;
+const retainedBytes = new Map(); // sourceId -> approximate bytes retained
+
+// blob memo key within a source: (record name, sha256). Matches ensureBlob.
+const blobMemoKey = (record) => record.name + String.fromCharCode(0) + (record.sha256 ?? "");
+
+// Seeds parseMemo with the bytes the scan hashed. Called from scanSource's
+// onCandidate hook for direct/FAT16/container candidates.
+function seedCandidateBlob(sourceId, record, blob) {
+  const used = retainedBytes.get(sourceId) ?? 0;
+  if (used + blob.byteLength > RETAINED_CANDIDATE_BUDGET) return; // over budget: on-demand fallback
+  let memo = parseMemo.get(sourceId);
+  if (!memo) {
+    memo = new Map();
+    parseMemo.set(sourceId, memo);
+  }
+  const key = blobMemoKey(record);
+  if (memo.has(key)) return; // deduplicated record already seeded
+  memo.set(key, { blob, parsed: null });
+  retainedBytes.set(sourceId, used + blob.byteLength);
+}
+
+// Seeds appleMemberMemo with the ftab member already inflated during a bbfw
+// scan, so opening a card from that zip does not re-read/re-inflate it.
+function seedAppleMember(sourceId, data, memberName) {
+  const used = retainedBytes.get(sourceId) ?? 0;
+  if (used + data.byteLength > RETAINED_CANDIDATE_BUDGET) return;
+  let memo = appleMemberMemo.get(sourceId);
+  if (!memo) {
+    memo = new Map();
+    appleMemberMemo.set(sourceId, memo);
+  }
+  if (memo.has(memberName)) return;
+  memo.set(memberName, Promise.resolve(data));
+  retainedBytes.set(sourceId, used + data.byteLength);
+}
+
 // --- apple scan pool --------------------------------------------------------------
 //
 // A ftab carries ~58 independent CR banks; per bank, 99% of the scan work is
@@ -485,6 +529,11 @@ async function handleScan(msg) {
             : info.stage === "extract" ? "extracting" : "";
           post({ type: "progress", phase: "scan", source: file.name, done: fileIndex, total, currentFile: file.name, detail });
         },
+        // Step 3: retain the bytes the scan already read/hashed. Card open and
+        // export then resolve from these memos instead of re-reading the MBN,
+        // re-walking FAT/ext4, or re-extracting the container.
+        onCandidate: (record, blob) => seedCandidateBlob(sourceId, record, blob),
+        onAppleMember: (data, memberName) => seedAppleMember(sourceId, data, memberName),
       });
       if (cancelled.has(id)) break;
       post({ type: "records", fileIndex, records, warnings: warnings.slice(postedWarnings) });
@@ -602,6 +651,7 @@ function handleRelease() {
   containerMemo.clear();
   appleBankMemo.clear();
   appleMemberMemo.clear();
+  retainedBytes.clear();
   resetSession();
 }
 

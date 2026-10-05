@@ -31,9 +31,14 @@ const FT_DIR = 2;
 export class Ext4Image {
   constructor(source) {
     this.source = source;
+    // Step 3: walk() is a pure read over the read-only image after init();
+    // memoizing the entry list stops findFile from re-traversing the whole
+    // filesystem for every record. Cleared by init().
+    this.walkMemo = null;
   }
 
   async init() {
+    this.walkMemo = null;
     // Superblock lives 1024 bytes into the device.
     let sb;
     try {
@@ -174,6 +179,7 @@ export class Ext4Image {
   // as soon as it is seen; only files are yielded; paths start with "/".
   async walk() {
     this.#assertInit();
+    if (this.walkMemo) return this.walkMemo;
     bump("ext4Walk");
     const out = [];
     const visit = async (dirIno, parent) => {
@@ -206,6 +212,7 @@ export class Ext4Image {
       }
     };
     await visit(2, "");
+    this.walkMemo = out;
     return out;
   }
 

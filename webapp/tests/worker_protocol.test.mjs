@@ -75,9 +75,13 @@ globalThis.self = {
 
 const workerModule = await import(new URL("../js/worker.js", import.meta.url).href);
 
-function waitFor(predicate) {
-  const found = posted.find(predicate);
-  if (found) return Promise.resolve(found);
+function waitFor(predicate, start = 0) {
+  // Only consider messages posted at/after `start`: several tests post replies
+  // with the same shape (e.g. records with fileIndex 0), and an unscoped scan
+  // would match an earlier test's reply.
+  for (let i = start; i < posted.length; i++) {
+    if (predicate(posted[i])) return Promise.resolve(posted[i]);
+  }
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("timed out waiting for a worker reply")), 5000);
     waiters.push({
@@ -91,14 +95,15 @@ function waitFor(predicate) {
 }
 
 async function request(message, predicate) {
-  const pending = waitFor(predicate);
+  const start = posted.length;
+  const pending = waitFor(predicate, start);
   globalThis.self.onmessage({ data: message });
   return pending;
 }
 
 // --- tests ---------------------------------------------------------------------
 
-test("worker: a container is extracted once for two exports of the same sourceId", async () => {
+test("worker: scan artifacts mean two exports of one sourceId never re-extract", async () => {
   const sourceId = 101;
   const scan = await request(
     { type: "scan", id: 1, files: [{ sourceId, file: new File([TAR], "payload.tar") }] },
@@ -108,20 +113,26 @@ test("worker: a container is extracted once for two exports of the same sourceId
   const record = scan.records[0];
 
   const parseBefore = workerModule.getDebugCounters().parseModule;
+  // The scan seeds parseMemo with the exact candidate bytes (step 3), so neither
+  // export may run extractContainer again or invoke the parser.
+  const extractAfterScan = workerModule.getDebugCounters().extractContainer;
+
   const first = await request(
     { type: "export", id: 11, sourceId, fileIndex: 0, record, format: "mbn" },
     (m) => m.id === 11,
   );
   assert.deepEqual(new Uint8Array(first.files[0].bytes), MBN_BYTES);
-  const extractAfterFirst = workerModule.getDebugCounters().extractContainer;
 
   const second = await request(
     { type: "export", id: 12, sourceId, fileIndex: 0, record, format: "mbn" },
     (m) => m.id === 12,
   );
   assert.deepEqual(new Uint8Array(second.files[0].bytes), MBN_BYTES, "bytes must be identical");
-  const extractAfterSecond = workerModule.getDebugCounters().extractContainer;
-  assert.equal(extractAfterSecond, extractAfterFirst, "the second export must hit the container memo");
+  assert.equal(
+    workerModule.getDebugCounters().extractContainer,
+    extractAfterScan,
+    "seeded scan bytes must make both exports extraction-free",
+  );
   assert.equal(workerModule.getDebugCounters().parseModule, parseBefore, "a pure mbn export must never parse");
 });
 
@@ -150,8 +161,10 @@ test("worker: release drops the registered sources so later ops fail loudly", as
 test("worker: reopening the same card parses once (corpus-gated)", { skip: !corpusAvailable() }, async () => {
   const { readFile } = await import("node:fs/promises");
   const { join } = await import("node:path");
-  const bytes = await readFile(join(CORPUS_DIR, "17uCNOS4beta.img"));
-  const file = new File([bytes], "17uCNOS4beta.img");
+  // radio.img is the container image corpusAvailable() guarantees; its scan
+  // extracts once and step 3 seeds parseMemo, so reopen must not re-extract.
+  const bytes = await readFile(join(CORPUS_DIR, "radio.img"));
+  const file = new File([bytes], "radio.img");
   const sourceId = 303;
   const scan = await request(
     { type: "scan", id: 3, files: [{ sourceId, file }] },
@@ -159,6 +172,7 @@ test("worker: reopening the same card parses once (corpus-gated)", { skip: !corp
   );
   const record = scan.records[0];
   assert.ok(record, "the image must yield at least one card");
+  const extractAfterScan = workerModule.getDebugCounters().extractContainer;
 
   await request({ type: "parseCard", id: 31, sourceId, fileIndex: 0, record }, (m) => m.id === 31);
   const afterFirst = workerModule.getDebugCounters().parseModule;
@@ -167,5 +181,10 @@ test("worker: reopening the same card parses once (corpus-gated)", { skip: !corp
     workerModule.getDebugCounters().parseModule,
     afterFirst,
     "reopening a card must hit the per-source parse memo",
+  );
+  assert.equal(
+    workerModule.getDebugCounters().extractContainer,
+    extractAfterScan,
+    "seeded scan bytes must make card opens extraction-free",
   );
 });
