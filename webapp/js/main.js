@@ -81,11 +81,12 @@ const els = {
 
 const GENERATION_DISPLAY = { "DAT/protobuf": "XML DAT" }; // gui_version/main.py:480
 
-const cards = []; // { record, file, fileIndex, key }; file is THE source File
+const cards = []; // { record, sourceId, fileIndex, key }; sourceId identifies the File in the worker
 const cardKeys = new Set(); // name\0sha256 dedupe across imports (main.py:249-254)
 const checked = new Set(); // card keys (compare selection)
 const loadedFiles = []; // distinct source-file names, first appearance first (chips)
-let scanFiles = []; // FileList snapshot of the scan in flight/last completed
+let scanEntries = []; // [{ sourceId, file }] snapshot of the scan in flight/last completed
+let nextSourceId = 1; // monotonically increasing; NEVER reused (cards accumulate across imports)
 let sessionEpoch = 0; // bumped by Clear; worker replies from an earlier epoch are dropped
 let scanEpoch = 0; // epoch of the scan whose replies are currently arriving
 let currentScanId = 0;
@@ -357,7 +358,7 @@ function openCard(card) {
     // `fast` sends the open down the worker's parse lane (not serialized
     // behind the running scan) in the stacked layout only; desktop keeps the
     // fully serialized chain.
-    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, file: card.file, record: card.record, fast: isMobileLayout() });
+    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record, fast: isMobileLayout() });
   });
   return cached;
 }
@@ -384,7 +385,7 @@ async function openCompare() {
     if (!card) continue;
     const id = nextMessageId++;
     pendingReplies.set(id, card);
-    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, file: card.file, record: card.record, fast: isMobileLayout() });
+    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record, fast: isMobileLayout() });
   }
 }
 
@@ -455,7 +456,7 @@ function requestExport(card, format) {
     const id = nextMessageId++;
     pendingReplies.set(id, card);
     exportWaiters.set(id, { resolve, reject });
-    worker.postMessage({ type: "export", id, fileIndex: card.fileIndex, file: card.file, record: card.record, format });
+    worker.postMessage({ type: "export", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record, format });
   });
 }
 
@@ -574,7 +575,7 @@ function requestImportTexts(card) {
     const id = nextMessageId++;
     pendingReplies.set(id, card);
     exportWaiters.set(id, { resolve, reject });
-    worker.postMessage({ type: "importCards", id, fileIndex: card.fileIndex, file: card.file, record: card.record });
+    worker.postMessage({ type: "importCards", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record });
   });
 }
 
@@ -661,10 +662,14 @@ els.importParserBtn.addEventListener("click", () => {
 
 function importFiles(files) {
   if (!files.length) return;
-  scanFiles = [...files];
+  // Assign a stable sourceId per File (never reused: cards accumulate across
+  // imports). The worker registers each {sourceId, file} once during the scan
+  // and resolves every later parseCard/export/importCards from the id, which is
+  // what makes its per-source memos hit across messages.
+  scanEntries = [...files].map((file) => ({ sourceId: nextSourceId++, file }));
   // Chip row: one pill per distinct source file, first appearance wins —
   // re-importing the same file leaves the chips unchanged.
-  const names = uniqueFileNames([...loadedFiles, ...scanFiles.map((f) => f.name)]);
+  const names = uniqueFileNames([...loadedFiles, ...scanEntries.map((e) => e.file.name)]);
   loadedFiles.length = 0;
   loadedFiles.push(...names);
   renderLoadedFiles();
@@ -672,7 +677,7 @@ function importFiles(files) {
   scanEpoch = sessionEpoch;
   els.cancelBtn.hidden = false;
   setProgress(0, files.length, files[0].name);
-  worker.postMessage({ type: "scan", id: currentScanId, files: scanFiles });
+  worker.postMessage({ type: "scan", id: currentScanId, files: scanEntries });
 }
 
 // --- worker messages ----------------------------------------------------------------
@@ -691,10 +696,10 @@ worker.onmessage = (event) => {
         const key = cardKeyOf(record);
         if (cardKeys.has(key)) continue; // main.py:348-363 dedupe
         cardKeys.add(key);
-        // The File handle lives on the card: every parseCard/export sends it,
-        // so the worker resolves bytes from THIS file no matter how many
-        // scans ran since the import.
-        cards.push({ record, file: scanFiles[msg.fileIndex] ?? null, fileIndex: msg.fileIndex, key });
+        // The sourceId registered at scan time identifies the File inside the
+        // worker; every parseCard/export sends it, so the worker resolves bytes
+        // from THIS file no matter how many scans ran since the import.
+        cards.push({ record, sourceId: scanEntries[msg.fileIndex]?.sourceId ?? null, fileIndex: msg.fileIndex, key });
       }
       for (const warning of msg.warnings ?? []) {
         addWarning(warning.tool ?? "warning", warning.message, msg.source);
@@ -792,7 +797,7 @@ async function clearAll() {
   cards.length = 0;
   cardKeys.clear();
   checked.clear();
-  scanFiles = [];
+  scanEntries = [];
   loadedFiles.length = 0;
   pendingView = null;
   pendingCompare = null;
@@ -808,6 +813,9 @@ async function clearAll() {
   els.viewerHost.replaceChildren(els.viewerPlaceholder);
   renderCardList();
   renderLoadedFiles();
+  // Drop the worker's registered sources and memos. A new scan must NOT do this
+  // (cards accumulate and keep referencing older sourceIds); only Clear does.
+  worker.postMessage({ type: "release" });
   await cardCache.clearAll();
   exportStatus(`Cleared ${cardCount.toLocaleString("en-US")} card(s) and the parse cache.`);
 }
