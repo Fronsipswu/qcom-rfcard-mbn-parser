@@ -104,3 +104,27 @@ test("worker.js: every parseCard replies on the priority chain", async () => {
   assert.ok(source.includes('if (msg.type === "parseCard")'), "all parseCard opens take the lane");
   assert.ok(!source.includes("&& msg.fast"), "the fast flag is gone");
 });
+
+test("main.js card list appends rows incrementally behind delegated listeners", async () => {
+  const source = await readWebappFile("js", "main.js");
+  assert.ok(source.includes("const cardRows = new Map()"), "a keyed row map exists");
+  assert.ok(source.includes("if (cardRows.has(card.key)) continue;"), "only new cards get rows");
+  assert.ok(source.includes("function scheduleCardListRender()"), "progressive batches are batched");
+  assert.ok(source.includes("if (cardListRaf !== null) return;"), "the batch is rAF-coalesced");
+  assert.ok(source.includes('els.cardBody.addEventListener("change"'), "one delegated change listener");
+  assert.ok(source.includes('els.cardBody.addEventListener("click"'), "one delegated click listener");
+  assert.equal(source.split('checkbox.addEventListener("change"').length - 1, 0, "no per-row change listeners");
+  assert.equal(source.split('tr.addEventListener("click"').length - 1, 0, "no per-row click listeners");
+  // A layout flip is the only rebuild path (header + rows).
+  assert.ok(source.includes("els.cardHead.innerHTML = allApple ? CARDLIST_HEAD_APPLE : CARDLIST_HEAD_QCOM"));
+  assert.ok(source.includes("cardRows.clear();") && source.includes("els.cardBody.replaceChildren();"));
+  assert.ok(source.includes("cardsByKey.set(key, card)"), "row clicks resolve through the key map");
+});
+
+test("viewer.js search: lazy per-tab index + no-copy fast path", async () => {
+  const source = await readWebappFile("js", "viewer.js");
+  assert.ok(source.includes("export function createRowSearchIndex(rows)"), "a per-tab row index exists");
+  assert.ok(source.includes("if (hasQuery && !state.searchIndex) state.searchIndex = createRowSearchIndex(state.rows)"));
+  assert.ok(source.includes("if (!hasQuery && !hasColumnFilters)") && source.includes("state.filtered = state.rows;"), "no-predicate fast path aliases rows");
+  assert.ok(source.includes("filterRows(state.rows, query, hasQuery ? state.searchIndex : null)"));
+});

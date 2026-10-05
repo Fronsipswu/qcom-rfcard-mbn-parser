@@ -16,6 +16,8 @@ import { pyCasefold } from "./lib/modern_parser.js";
 import { toCsvText } from "./lib/analyzer.js";
 import { csvFilename, download } from "./exporter.js";
 
+const ASCII_DIGITS_RE = /^[0-9]+$/;
+
 export const TAB_DEFINITIONS = [
   ["LTE", "lte_ca"],
   ["NRCA", "nr_ca"],
@@ -46,6 +48,9 @@ export function bandSortKey(cell) {
 
 // int() over Nd digits (Python int() evaluates each Nd code point's value).
 function pyNdDigits(digits) {
+  // ASCII fast path: band tokens are ASCII in practice. Number() rounds like
+  // the BigInt -> Number conversion below, so the result is identical.
+  if (ASCII_DIGITS_RE.test(digits)) return Number(digits);
   let value = 0n;
   for (const ch of digits) {
     const cp = ch.codePointAt(0);
@@ -126,16 +131,41 @@ export function sortRows(rows, col, reverse = false) {
 
 // --- filter + count label (viewer.py:467-502) ------------------------------------
 
-export function filterRows(rows, rawQuery) {
+// Lazily computes each row's casefolded "all cells joined" text and its
+// no-space variant once per tab, so repeated typing over a large table does not
+// re-fold every cell on every keystroke (review A1: 1,236 rows x 16 cells).
+export function createRowSearchIndex(rows) {
+  const texts = new Array(rows.length);
+  const nospace = new Array(rows.length);
+  const ensure = (i) => {
+    if (texts[i] === undefined) {
+      const text = pyCasefold(Object.values(rows[i]).map((v) => String(v)).join(" "));
+      texts[i] = text;
+      nospace[i] = text.replaceAll(" ", "");
+    }
+  };
+  return {
+    text(i) {
+      ensure(i);
+      return texts[i];
+    },
+    nospace(i) {
+      ensure(i);
+      return nospace[i];
+    },
+  };
+}
+
+export function filterRows(rows, rawQuery, index = null) {
   const query = String(rawQuery ?? "").trim();
   const q = pyCasefold(query);
   if (!q) return [...rows];
   const qNospace = q.replaceAll(" ", "");
   const filtered = [];
-  for (const row of rows) {
-    const rowText = pyCasefold(Object.values(row).map((v) => String(v)).join(" "));
-    const rowNospace = rowText.replaceAll(" ", "");
-    if (rowText.includes(q) || rowNospace.includes(qNospace)) filtered.push(row);
+  for (let i = 0; i < rows.length; i++) {
+    const rowText = index ? index.text(i) : pyCasefold(Object.values(rows[i]).map((v) => String(v)).join(" "));
+    const rowNospace = index ? index.nospace(i) : rowText.replaceAll(" ", "");
+    if (rowText.includes(q) || rowNospace.includes(qNospace)) filtered.push(rows[i]);
   }
   return filtered;
 }
@@ -357,6 +387,7 @@ export class ComboViewer {
         colFilters: {},
         selected: new Set(),
         anchor: null,
+        searchIndex: null, // createRowSearchIndex(rows), built on first search
       });
     }
 
@@ -434,7 +465,17 @@ export class ComboViewer {
     const state = this.tab();
     if (!state) return;
     const query = this.searchEl.value;
-    state.filtered = applyColumnFilters(filterRows(state.rows, query), state.colFilters);
+    const hasQuery = query.trim() !== "";
+    const hasColumnFilters = Object.values(state.colFilters).some((v) => String(v ?? "").trim() !== "");
+    if (!hasQuery && !hasColumnFilters) {
+      // No predicate at all: state.rows is read-only (sorting replaces the
+      // filtered array with a new one), so alias it instead of copying twice.
+      state.filtered = state.rows;
+    } else {
+      if (hasQuery && !state.searchIndex) state.searchIndex = createRowSearchIndex(state.rows);
+      const searched = filterRows(state.rows, query, hasQuery ? state.searchIndex : null);
+      state.filtered = applyColumnFilters(searched, state.colFilters);
+    }
     state.selected = new Set();
     state.anchor = null;
     if (state.sortCol) {
@@ -444,7 +485,6 @@ export class ComboViewer {
     this.layoutColumns(state);
     this.resetScroll(state);
     this.renderTable(state);
-    const hasColumnFilters = Object.values(state.colFilters).some((v) => String(v ?? "").trim() !== "");
     this.countEl.textContent = countLabelText(query, state.filtered.length, state.rows.length, hasColumnFilters);
   }
 

@@ -874,7 +874,15 @@ const PY_CASEFOLD_DIFF = new Map([
   [0xfb17, "\u0574\u056d"],
 ]);
 
+const ASCII_TEXT_RE = /^[\x00-\x7f]*$/;
+const ASCII_DIGITS_RE = /^[0-9]+$/;
+
 export function pyCasefold(text) {
+  // ASCII fast path: Python str.casefold equals str.lower for ASCII, and JS
+  // toLowerCase is identical over ASCII (this is not the locale-sensitive
+  // toLocaleLowerCase). Generated table text is overwhelmingly ASCII, so this
+  // avoids the per-character Map lookup + concatenation.
+  if (ASCII_TEXT_RE.test(text)) return text.toLowerCase();
   let out = "";
   for (const ch of text) {
     const folded = PY_CASEFOLD_DIFF.get(ch.codePointAt(0));
@@ -910,6 +918,12 @@ const ND_RUN_STARTS = [
 ];
 
 export function pyNdInt(text) {
+  // ASCII fast path. <=15 digits is exactly representable as a double; longer
+  // ASCII runs take the exact BigInt route without the per-character Unicode
+  // block scan.
+  if (ASCII_DIGITS_RE.test(text)) {
+    return text.length <= 15 ? Number(text) : toExactNumber(BigInt(text));
+  }
   let value = 0n;
   for (const ch of text) {
     const cp = ch.codePointAt(0);
