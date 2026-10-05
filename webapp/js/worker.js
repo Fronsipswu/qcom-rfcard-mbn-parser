@@ -8,15 +8,17 @@
 //                                                   sourceId is a stable,
 //                                                   never-reused id assigned by
 //                                                   main.js per imported File
-//   { type: "parseCard", id, sourceId, fileIndex?, record, fast? }  sourceId
-//                                                   resolves bytes; fileIndex is
-//                                                   bookkeeping only; fast routes
-//                                                   to the parse lane (not queued
-//                                                   behind a running scan)
+//   { type: "parseCard", id, sourceId, fileIndex?, record }  sourceId resolves
+//                                                   bytes; fileIndex is
+//                                                   bookkeeping only; always
+//                                                   routed to the priority parse
+//                                                   lane (never queued behind a
+//                                                   running scan)
 //   { type: "export",    id, sourceId, fileIndex?, record, format }  mbn|json|csv|
 //                                                   webcsv|b0cd|b826
 //   { type: "importCards", id, sourceId, fileIndex?, record } -> both DIAG texts
 //   { type: "release" }  drop every registered source + memo (Clear button)
+//   { type: "clearCache" }  wipe the worker-side parsed-table cache
 //   { type: "cancel",    id }
 // worker -> main
 //   { type: "progress",  phase, source, done, total, currentFile, detail? }
@@ -96,6 +98,7 @@ import {
   resetDebugCounters,
   debugCounters,
 } from "./lib/debug.js";
+import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
 
 // Debug counters (Step 0 instrumentation): attached to every reply only when
 // enabled. Off by default so replies and timings are unchanged; toggle from the
@@ -181,6 +184,37 @@ function seedAppleMember(sourceId, data, memberName) {
   if (memo.has(memberName)) return;
   memo.set(memberName, Promise.resolve(data));
   retainedBytes.set(sourceId, used + data.byteLength);
+}
+
+// --- parsed-table cache + in-flight parse coalescing (Step 5) ----------------------
+//
+// The parsed-tables cache lives in the worker (IndexedDB here, memory fallback)
+// so a main-thread open no longer structured-clones a multi-MB table through
+// IndexedDB. handleParseCard checks it before parsing and answers from it on a
+// hit; reads/writes never block the reply.
+const tableCache = createCardCache(
+  typeof indexedDB !== "undefined" ? idbBackend() : memoryBackend(),
+);
+
+// (sourceId, record name, sha) -> Promise<entry>: in-flight parses. The
+// completed-result memo (entry.parsed) only coalesces after the first parse
+// finishes; this coalesces simultaneous requests (a fast-lane open racing a
+// chain export of the same card) so parseModule runs once.
+const parsedInflight = new Map();
+const parseJobKey = (sourceId, record) =>
+  `${sourceId}${String.fromCharCode(0)}${record.name}${String.fromCharCode(0)}${record.sha256 ?? ""}`;
+
+function parsedFor(sourceId, fileIndex, record) {
+  const key = parseJobKey(sourceId, record);
+  let pending = parsedInflight.get(key);
+  if (!pending) {
+    pending = record.apple ? ensureAppleParsed(sourceId, fileIndex, record) : ensureParsed(sourceId, fileIndex, record);
+    parsedInflight.set(key, pending);
+    pending.catch(() => {
+      if (parsedInflight.get(key) === pending) parsedInflight.delete(key);
+    });
+  }
+  return pending;
 }
 
 // --- apple scan pool --------------------------------------------------------------
@@ -453,7 +487,7 @@ async function exportAppleFiles(sourceId, fileIndex, record, format) {
     const { bank } = await ensureAppleBank(sourceId, fileIndex, record);
     return [{ filename: `${stem}.bin`, bytes: bank }];
   }
-  const { parsed } = await ensureAppleParsed(sourceId, fileIndex, record);
+  const { parsed } = await parsedFor(sourceId, fileIndex, record);
   if (format === "json") {
     const text =
       JSON.stringify({ name: record.name, profile_id: parsed.profile_id, tables: generateAppleTables(parsed) }, null, 2) + "\n";
@@ -550,19 +584,42 @@ async function handleScan(msg) {
 }
 
 async function handleParseCard(msg) {
-  if (msg.record.apple) {
-    // Apple CR bank: parse + audit + viewer tables (same reply shape as qcom;
-    // cardcache validates the shape the same way).
-    const { parsed } = await ensureAppleParsed(msg.sourceId, msg.fileIndex, msg.record);
-    bump("generateAppleTables");
-    const tables = generateAppleTables(parsed);
-    post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables });
+  // Superseded open: main.js posts {type:"cancel", id} synchronously when a newer
+  // open replaces this one, and cancel is handled immediately (never queued), so
+  // the id is already in `cancelled` by dequeue time. Drop the request without
+  // parsing and without a reply.
+  if (cancelled.has(msg.id)) {
+    cancelled.delete(msg.id);
     return;
   }
-  const { parsed } = await ensureParsed(msg.sourceId, msg.fileIndex, msg.record);
-  bump("generateWebTables");
-  const tables = generateWebTables(parsed.combinations, parsed.components);
+  // Persistent worker-side cache: a hit skips parsing AND table formatting.
+  const hit = await tableCache.get(msg.record);
+  if (cancelled.has(msg.id)) {
+    cancelled.delete(msg.id);
+    return;
+  }
+  if (hit) {
+    post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables: hit.tables });
+    return;
+  }
+  const tables = msg.record.apple
+    ? await (async () => {
+        const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
+        bump("generateAppleTables");
+        return generateAppleTables(parsed);
+      })()
+    : await (async () => {
+        const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
+        bump("generateWebTables");
+        return generateWebTables(parsed.combinations, parsed.components);
+      })();
+  if (cancelled.has(msg.id)) {
+    cancelled.delete(msg.id); // cancelled while parsing: no reply
+    return;
+  }
   post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables });
+  // Cache write is fire-and-forget: never block the reply on IndexedDB.
+  Promise.resolve(tableCache.put(msg.record, tables)).catch(() => {});
 }
 
 async function handleExport(msg) {
@@ -577,7 +634,9 @@ async function handleExport(msg) {
     const { blob } = await ensureBlob(msg.sourceId, msg.fileIndex, msg.record);
     files = [{ filename: msg.record.name, bytes: blob }];
   } else {
-    const { parsed } = await ensureParsed(msg.sourceId, msg.fileIndex, msg.record);
+    // Shares the in-flight parse with a concurrent card open (same sourceId +
+    // record), so an export batch and a click coalesce into one parseModule.
+    const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
     files = exportModule(msg.record, parsed, msg.format);
   }
   // One reply per export request: every file the format produced travels
@@ -619,7 +678,7 @@ async function handleImportCards(msg) {
       // lookups and the uecaps upload flow work unchanged for both.
       let produced;
       if (msg.record.apple) {
-        const { parsed } = await ensureAppleParsed(msg.sourceId, msg.fileIndex, msg.record);
+        const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
         produced = exportAppleDiag(parsed, format);
         // A bank with zero packets for this format yields a header-only text
         // (no "Payload:" blocks) — omit it, same rule as the qcom empty-set
@@ -627,7 +686,7 @@ async function handleImportCards(msg) {
         // must not change.)
         if (!produced.some((f) => f.text.includes("Payload:"))) continue;
       } else {
-        const { parsed } = await ensureParsed(msg.sourceId, msg.fileIndex, msg.record);
+        const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
         if (!Array.isArray(parsed.diag?.[format]) || parsed.diag[format].length === 0) {
           continue; // empty packet set — omit this format from the import payload
         }
@@ -661,7 +720,14 @@ function handleRelease() {
   appleBankMemo.clear();
   appleMemberMemo.clear();
   retainedBytes.clear();
+  parsedInflight.clear();
+  cancelled.clear(); // Clear invalidates every pending request anyway
   resetSession();
+}
+
+// Clear button, cache half: wipe the worker-side parsed-table cache.
+function handleClearCache() {
+  return tableCache.clearAll();
 }
 
 function handle(msg) {
@@ -670,6 +736,7 @@ function handle(msg) {
   if (msg.type === "export") return handleExport(msg);
   if (msg.type === "importCards") return handleImportCards(msg);
   if (msg.type === "release") return handleRelease();
+  if (msg.type === "clearCache") return handleClearCache();
   throw new Error(`unknown message type: ${msg.type}`);
 }
 
@@ -696,15 +763,14 @@ self.onmessage = (event) => {
     return;
   }
 
-  // Mobile fast lane (main.js sets `fast` in the stacked layout): a card open
-  // must not queue behind the running scan of the whole file batch — on a
-  // phone that is seconds x N files, which made clicks appear dead. parseCard
-  // is a pure read over the registered source + the per-sourceId memos (it never
-  // touches session state, the cancelled set or currentOp), so running it
-  // alongside the scan is safe; the lane is still serialized against other fast
-  // opens. Desktop omits `fast` and keeps the fully serialized chain
-  // byte-identical.
-  if (msg.type === "parseCard" && msg.fast) {
+  // Priority parse lane: a card open must not queue behind the running scan of
+  // the whole file batch — on a phone that is seconds x N files, which made
+  // clicks appear dead, and on desktop a batch import felt like slow parsing.
+  // parseCard is a pure read over the registered source + the per-sourceId
+  // memos (it never touches scan/session state or currentOp), so running it
+  // alongside the scan is safe. It is serialized only against other parseCard
+  // opens; exports stay on the main chain and share the in-flight parse memo.
+  if (msg.type === "parseCard") {
     const op = msg;
     parseChain = parseChain
       .then(() => handle(op))

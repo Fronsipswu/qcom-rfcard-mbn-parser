@@ -85,23 +85,22 @@ test("bandColorIndex and bandColor agree (class index renders the same color)", 
   }
 });
 
-test("main.js keeps the stacked layout flag + fast parse lane for both parseCard posts", async () => {
+test("main.js posts every card open through the priority lane (no fast flag)", async () => {
   const source = await readWebappFile("js", "main.js");
   assert.ok(
     source.includes("function isMobileLayout()") && source.includes("stackedMq && stackedMq.matches"),
     "the stacked media query is the single mobile signal",
   );
   assert.equal(source.split("{ mobile: isMobileLayout() }").length - 1, 1, "ComboViewer gets the mobile flag");
-  assert.equal(source.split("fast: isMobileLayout()").length - 1, 2, "both parseCard posts (view + compare) get fast");
+  assert.equal(source.split('type: "parseCard"').length - 1, 2, "both view + compare posts send parseCard");
+  assert.ok(!source.includes("fast: isMobileLayout()"), "the fast flag is dropped: every open is priority");
   assert.ok(source.includes("viewer.setMobile(stacked)"), "stacked transitions retarget the live viewer");
   assert.equal(STACKED_MEDIA_QUERY, "(max-width: 768px) and (orientation: portrait)");
 });
 
-test("worker.js: fast parseCard replies on its own chain", async () => {
+test("worker.js: every parseCard replies on the priority chain", async () => {
   const source = await readWebappFile("js", "worker.js");
-  assert.ok(source.includes("let parseChain = Promise.resolve();"), "parallel parse lane exists");
-  assert.ok(
-    source.includes('msg.type === "parseCard" && msg.fast'),
-    "only messages flagged fast take the responsive lane",
-  );
+  assert.ok(source.includes("let parseChain = Promise.resolve();"), "priority parse lane exists");
+  assert.ok(source.includes('if (msg.type === "parseCard")'), "all parseCard opens take the lane");
+  assert.ok(!source.includes("&& msg.fast"), "the fast flag is gone");
 });

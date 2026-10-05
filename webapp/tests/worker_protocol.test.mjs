@@ -101,6 +101,8 @@ async function request(message, predicate) {
   return pending;
 }
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // --- tests ---------------------------------------------------------------------
 
 test("worker: scan artifacts mean two exports of one sourceId never re-extract", async () => {
@@ -144,6 +146,25 @@ test("worker: an unknown sourceId errors with the request id instead of reading"
   assert.match(reply.message, /unknown sourceId/);
 });
 
+test("worker: a superseded open (cancel before dequeue) never parses or replies", async () => {
+  const sourceId = 404;
+  const scan = await request(
+    { type: "scan", id: 24, files: [{ sourceId, file: new File([TAR], "superseded.tar") }] },
+    (m) => m.type === "records" && m.fileIndex === 0,
+  );
+  const record = scan.records[0];
+  const before = workerModule.getDebugCounters().parseModule;
+  const mark = posted.length;
+  // Post the open and its cancel back-to-back: cancel is handled immediately, so
+  // the parse-lane handler sees the id in `cancelled` at dequeue time.
+  globalThis.self.onmessage({ data: { type: "parseCard", id: 901, sourceId, fileIndex: 0, record } });
+  globalThis.self.onmessage({ data: { type: "cancel", id: 901 } });
+  await delay(50);
+  const replies = posted.slice(mark).filter((m) => m.id === 901);
+  assert.equal(replies.length, 0, "a cancelled open must not reply");
+  assert.equal(workerModule.getDebugCounters().parseModule, before, "a cancelled open must not parse");
+});
+
 test("worker: release drops the registered sources so later ops fail loudly", async () => {
   const sourceId = 202;
   await request(
@@ -151,6 +172,7 @@ test("worker: release drops the registered sources so later ops fail loudly", as
     (m) => m.type === "records" && m.fileIndex === 0,
   );
   globalThis.self.onmessage({ data: { type: "release" } });
+  await delay(20); // release runs on the main chain; parseCard is now priority-lane
   const reply = await request(
     { type: "parseCard", id: 78, sourceId, fileIndex: 0, record: { name: "payload2.tar" } },
     (m) => m.type === "error" && m.id === 78,
@@ -175,7 +197,9 @@ test("worker: reopening the same card parses once (corpus-gated)", { skip: !corp
   const extractAfterScan = workerModule.getDebugCounters().extractContainer;
 
   await request({ type: "parseCard", id: 31, sourceId, fileIndex: 0, record }, (m) => m.id === 31);
+  await delay(30); // let the fire-and-forget cache put settle
   const afterFirst = workerModule.getDebugCounters().parseModule;
+  const tablesAfterFirst = workerModule.getDebugCounters().generateWebTables;
   await request({ type: "parseCard", id: 32, sourceId, fileIndex: 0, record }, (m) => m.id === 32);
   assert.equal(
     workerModule.getDebugCounters().parseModule,
@@ -186,5 +210,29 @@ test("worker: reopening the same card parses once (corpus-gated)", { skip: !corp
     workerModule.getDebugCounters().extractContainer,
     extractAfterScan,
     "seeded scan bytes must make card opens extraction-free",
+  );
+
+  // Worker-side table cache: a new sourceId for the same file (new scan) must
+  // serve the open from the cache without re-formatting the tables.
+  const sourceId2 = 304;
+  await request(
+    { type: "scan", id: 4, files: [{ sourceId: sourceId2, file }] },
+    (m) => m.type === "records" && m.fileIndex === 0,
+  );
+  await request({ type: "parseCard", id: 33, sourceId: sourceId2, fileIndex: 0, record }, (m) => m.id === 33);
+  assert.equal(
+    workerModule.getDebugCounters().generateWebTables,
+    tablesAfterFirst,
+    "a cache hit must skip table formatting",
+  );
+
+  // Clear wipes the worker cache, so the next open regenerates the tables.
+  globalThis.self.onmessage({ data: { type: "clearCache" } });
+  await delay(30);
+  await request({ type: "parseCard", id: 34, sourceId: sourceId2, fileIndex: 0, record }, (m) => m.id === 34);
+  assert.equal(
+    workerModule.getDebugCounters().generateWebTables,
+    tablesAfterFirst + 1,
+    "after clearCache the card is regenerated",
   );
 });

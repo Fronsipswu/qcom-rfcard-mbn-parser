@@ -3,7 +3,7 @@
 // backend itself is DOM-only; the pure part runs against a memory backend.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cacheKey, createCardCache, memoryBackend } from "../js/cardcache.js";
+import { CACHE_SCHEMA_VERSION, cacheKey, createCardCache, memoryBackend } from "../js/cardcache.js";
 
 const RECORD = {
   name: "1426_0_0_0170.mbn",
@@ -14,12 +14,13 @@ const RECORD = {
   nr_combos: "5+2855+0=2855",
 };
 
-test("cacheKey is keyed by sha256", () => {
-  assert.equal(cacheKey(RECORD), "tables:sha256:abc123");
-  assert.equal(cacheKey({ ...RECORD, sha256: "" }), "tables:name:1426_0_0_0170.mbn");
-  assert.equal(cacheKey({ ...RECORD, sha256: null }), "tables:name:1426_0_0_0170.mbn");
-  assert.equal(cacheKey({}), "tables:name:unknown");
-  assert.equal(cacheKey(null), "tables:name:unknown");
+test("cacheKey embeds the schema version and is keyed by sha256", () => {
+  assert.equal(cacheKey(RECORD), `tables:v${CACHE_SCHEMA_VERSION}:sha256:abc123`);
+  assert.equal(cacheKey({ ...RECORD, sha256: "" }), `tables:v${CACHE_SCHEMA_VERSION}:name:1426_0_0_0170.mbn`);
+  assert.equal(cacheKey({ ...RECORD, sha256: null }), `tables:v${CACHE_SCHEMA_VERSION}:name:1426_0_0_0170.mbn`);
+  assert.equal(cacheKey({}), `tables:v${CACHE_SCHEMA_VERSION}:name:unknown`);
+  assert.equal(cacheKey(null), `tables:v${CACHE_SCHEMA_VERSION}:name:unknown`);
+  assert.ok(cacheKey(RECORD).startsWith(`tables:v${CACHE_SCHEMA_VERSION}:`), "the key is version-prefixed");
 });
 
 test("createCardCache: get/put round-trip through the injected backend", async () => {
@@ -172,4 +173,65 @@ test("clearAll swallows a failing backend like get/put do", async () => {
     async clear() { throw new Error("idb broken"); },
   });
   await cache.clearAll(); // must not throw
+});
+
+// --- eviction (Step 5: bound the persistent cache) --------------------------------
+
+const tableWithRows = (rows) => ({
+  lte_ca: Array.from({ length: rows }, (_, i) => ({ "LTE DL": `B${i}` })),
+  nr_ca: [],
+  endc: [],
+  nrdc: [],
+});
+
+test("put stores cachedAt and an approximate row count", async () => {
+  const backend = memoryBackend();
+  const cache = createCardCache(backend);
+  await cache.put(RECORD, tableWithRows(7));
+  const stored = await backend.get(cacheKey(RECORD));
+  assert.equal(stored.rowCount, 7);
+  assert.equal(typeof stored.cachedAt, "number");
+});
+
+test("eviction drops the oldest entries beyond maxEntries", async () => {
+  const backend = memoryBackend();
+  const cache = createCardCache(backend, { maxEntries: 3, maxRows: 1e9 });
+  // Distinct cachedAt so the eviction order is deterministic.
+  const origNow = Date.now;
+  let clock = 1000;
+  Date.now = () => (clock += 1);
+  try {
+    for (let i = 0; i < 5; i++) {
+      await cache.put({ ...RECORD, name: `card${i}.mbn`, sha256: `sha${i}` }, tableWithRows(1));
+    }
+  } finally {
+    Date.now = origNow;
+  }
+  const keys = (await backend.list()).map((e) => e.key).sort();
+  assert.equal(keys.length, 3, "capped at maxEntries");
+  assert.ok(!keys.includes(cacheKey({ ...RECORD, sha256: "sha0" })), "oldest evicted");
+  assert.ok(!keys.includes(cacheKey({ ...RECORD, sha256: "sha1" })), "second oldest evicted");
+  assert.ok(keys.includes(cacheKey({ ...RECORD, sha256: "sha4" })), "newest retained");
+});
+
+test("eviction also caps total rows", async () => {
+  const backend = memoryBackend();
+  const cache = createCardCache(backend, { maxEntries: 100, maxRows: 10 });
+  const origNow = Date.now;
+  let clock = 2000;
+  Date.now = () => (clock += 1);
+  try {
+    for (let i = 0; i < 4; i++) {
+      await cache.put({ ...RECORD, name: `row${i}.mbn`, sha256: `rows${i}` }, tableWithRows(6));
+    }
+  } finally {
+    Date.now = origNow;
+  }
+  const rows = (await backend.list()).reduce((n, e) => n + (e.value?.rowCount ?? 0), 0);
+  assert.ok(rows <= 10, `row budget exceeded: ${rows}`);
+});
+
+test("a backend without list() simply never evicts", async () => {
+  const cache = createCardCache({ async get() { return null; }, async put() {}, async delete() {}, async clear() {} });
+  await cache.put(RECORD, tableWithRows(1)); // must not throw
 });

@@ -13,7 +13,6 @@ import {
   dedupeFilenames,
 } from "./exportplan.js";
 import { zipSync } from "../lib/vendor/fflate.js";
-import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
 import { uniqueFileNames } from "./loadedfiles.js";
 import { PARSER_BASE, buildImportEntries, resultUrl } from "./importparser.js";
 import {
@@ -37,12 +36,8 @@ if (typeof location !== "undefined" && new URLSearchParams(location.search).has(
   worker.postMessage({ type: "debug", enabled: true, reset: true });
 }
 
-// IndexedDB may be unavailable (private mode etc.); fall back to per-page memory.
-const cardCache = createCardCache(
-  typeof indexedDB !== "undefined"
-    ? idbBackend()
-    : memoryBackend(),
-);
+// IndexedDB no longer lives on the main thread: the worker owns the parsed-table
+// cache (Step 5) so multi-MB tables are never structured-cloned here.
 
 const els = {
   dropzone: document.getElementById("dropzone"),
@@ -111,10 +106,6 @@ let exportStatusTimer = null; // export bar flash hide timer
 
 function cardKeyOf(record) {
   return `${record.name}\u0000${record.sha256 ?? ""}`;
-}
-
-function cardByKey(key) {
-  return cards.find((c) => c.key === key) ?? null;
 }
 
 function addWarning(tool, message, source) {
@@ -346,21 +337,16 @@ function renderViewer(card, tables) {
 }
 
 function openCard(card) {
-  pendingView = { cardKey: card.key };
-  const cached = cardCache.get(card.record).then((hit) => {
-    if (!pendingView || pendingView.cardKey !== card.key) return;
-    if (hit) {
-      renderViewer(card, hit.tables);
-      return;
-    }
-    const id = nextMessageId++;
-    pendingReplies.set(id, card);
-    // `fast` sends the open down the worker's parse lane (not serialized
-    // behind the running scan) in the stacked layout only; desktop keeps the
-    // fully serialized chain.
-    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record, fast: isMobileLayout() });
-  });
-  return cached;
+  // A new open supersedes a still-pending one: cancel the old worker request so
+  // it does not parse or reply (the worker drops an id that was cancelled before
+  // its handler dequeues). Compare requests are never cancelled this way.
+  if (pendingView && pendingView.id !== undefined) {
+    worker.postMessage({ type: "cancel", id: pendingView.id });
+  }
+  const id = nextMessageId++;
+  pendingView = { cardKey: card.key, id };
+  pendingReplies.set(id, card);
+  worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record });
 }
 
 // --- compare view (compare.js) ----------------------------------------------------
@@ -368,24 +354,13 @@ function openCard(card) {
 async function openCompare() {
   const selected = cards.filter((c) => checked.has(c.key));
   if (selected.length < 2) return;
-  const have = [];
-  const missing = new Set();
+  // No main-thread cache to precheck: ask the worker for every selected card.
+  // Cache hits (worker-side) reply immediately; the rest parse once each.
+  pendingCompare = { want: selected.length, have: [], missing: new Set(selected.map((c) => c.key)) };
   for (const card of selected) {
-    const hit = await cardCache.get(card.record);
-    if (hit) have.push({ label: recordIdentity(card.record.name) || card.record.name, tables: hit.tables });
-    else missing.add(card.key);
-  }
-  if (!missing.size) {
-    renderCompare(have);
-    return;
-  }
-  pendingCompare = { want: selected.length, have, missing };
-  for (const key of missing) {
-    const card = cardByKey(key);
-    if (!card) continue;
     const id = nextMessageId++;
     pendingReplies.set(id, card);
-    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record, fast: isMobileLayout() });
+    worker.postMessage({ type: "parseCard", id, fileIndex: card.fileIndex, sourceId: card.sourceId, record: card.record });
   }
 }
 
@@ -711,8 +686,9 @@ worker.onmessage = (event) => {
       const card = pendingReplies.get(msg.id);
       if (!card) break; // unknown/stale request id
       pendingReplies.delete(msg.id);
-      cardCache.put(card.record, msg.tables);
-      if (pendingView && pendingView.cardKey === card.key) {
+      // Only the current pending view renders; a superseded open's late reply
+      // (id mismatch) is dropped. The worker already owns the cache.
+      if (pendingView && pendingView.cardKey === card.key && pendingView.id === msg.id) {
         pendingView = null;
         renderViewer(card, msg.tables);
       }
@@ -816,7 +792,8 @@ async function clearAll() {
   // Drop the worker's registered sources and memos. A new scan must NOT do this
   // (cards accumulate and keep referencing older sourceIds); only Clear does.
   worker.postMessage({ type: "release" });
-  await cardCache.clearAll();
+  // And wipe the worker-side parsed-table cache.
+  worker.postMessage({ type: "clearCache" });
   exportStatus(`Cleared ${cardCount.toLocaleString("en-US")} card(s) and the parse cache.`);
 }
 

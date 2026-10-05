@@ -1,12 +1,19 @@
-// IndexedDB cache of parsed card tables, keyed by record sha256 (Task 11
-// Step 5). The DB sits behind a two-method backend ({ get(key), put(key, value) })
-// so the keying + wrapper logic is testable without IndexedDB; idbBackend()
-// provides the real backend and memoryBackend() a per-page fallback.
+// IndexedDB cache of parsed card tables (Task 11 Step 5; Step 5 of the perf
+// review moves it into the worker). The DB sits behind a backend interface
+// ({ get, put, delete, clear, list? }) so the keying + wrapper logic is testable
+// without IndexedDB; idbBackend() provides the real backend and
+// memoryBackend() a per-page fallback (also used by Node tests).
+//
+// CACHE_SCHEMA_VERSION MUST be bumped whenever the table format or parser
+// output changes: the key embeds it, so a bump naturally misses every older
+// entry instead of serving a stale table shape.
+export const CACHE_SCHEMA_VERSION = 1;
+
 export function cacheKey(record) {
   const sha = record && record.sha256 ? record.sha256 : "";
-  if (sha) return `tables:sha256:${sha}`;
+  if (sha) return `tables:v${CACHE_SCHEMA_VERSION}:sha256:${sha}`;
   const name = record && record.name ? record.name : "unknown";
-  return `tables:name:${name}`;
+  return `tables:v${CACHE_SCHEMA_VERSION}:name:${name}`;
 }
 
 // The exact shape generateWebTables produces: all four table keys, each an
@@ -27,12 +34,41 @@ export function isValidTablesShape(tables) {
   return true;
 }
 
-export function createCardCache(backend) {
+function rowCountOf(tables) {
+  let n = 0;
+  for (const key of TABLE_KEYS) n += tables[key]?.length ?? 0;
+  return n;
+}
+
+// maxEntries / maxRows bound the persistent cache (Clear still wipes it). Row
+// count is the cheap size proxy; ~500k rows is roughly the 200 MB budget the
+// review suggested. Eviction runs after every put over backend.list() (a few
+// dozen entries), oldest cachedAt first.
+export function createCardCache(backend, { maxEntries = 40, maxRows = 500000 } = {}) {
   const drop = async (key) => {
     try {
       await backend.delete(key);
     } catch {
       // a backend without delete (or a failing one) still counts as a miss
+    }
+  };
+  const evict = async () => {
+    if (typeof backend.list !== "function") return;
+    let entries;
+    try {
+      entries = await backend.list();
+    } catch {
+      return;
+    }
+    if (!Array.isArray(entries)) return;
+    entries.sort((a, b) => (a.value?.cachedAt ?? 0) - (b.value?.cachedAt ?? 0));
+    let count = entries.length;
+    let rows = entries.reduce((n, e) => n + (e.value?.rowCount ?? 0), 0);
+    for (const entry of entries) {
+      if (count <= maxEntries && rows <= maxRows) break;
+      await drop(entry.key);
+      count -= 1;
+      rows -= entry.value?.rowCount ?? 0;
     }
   };
   return {
@@ -54,7 +90,13 @@ export function createCardCache(backend) {
     async put(record, tables) {
       if (!isValidTablesShape(tables)) return; // never poison the cache
       try {
-        await backend.put(cacheKey(record), { tables, recordName: record && record.name ? record.name : "", cachedAt: Date.now() });
+        await backend.put(cacheKey(record), {
+          tables,
+          recordName: record && record.name ? record.name : "",
+          cachedAt: Date.now(),
+          rowCount: rowCountOf(tables),
+        });
+        await evict();
       } catch {
         // quota/errors are non-fatal
       }
@@ -86,6 +128,9 @@ export function memoryBackend() {
     },
     async clear() {
       map.clear();
+    },
+    async list() {
+      return [...map.entries()].map(([key, value]) => ({ key, value }));
     },
   };
 }
@@ -142,6 +187,24 @@ export function idbBackend({ database = "rfcard-webapp", store = "tables" } = {}
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error);
+      });
+    },
+    // Full enumeration for eviction: { key, value } for every stored entry.
+    async list() {
+      const db = await open();
+      return new Promise((resolve, reject) => {
+        const out = [];
+        const req = db.transaction(store, "readonly").objectStore(store).openCursor();
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (cursor) {
+            out.push({ key: cursor.key, value: cursor.value });
+            cursor.continue();
+          } else {
+            resolve(out);
+          }
+        };
+        req.onerror = () => reject(req.error);
       });
     },
   };
