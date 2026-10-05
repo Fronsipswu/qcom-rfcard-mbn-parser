@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { BrowserFileSource } from "../js/lib/source.js";
-import { extractContainer, discoverCandidates, RFCARD_RE, SIDECAR_RES } from "../js/lib/extractor.js";
+import { extractContainer, discoverCandidates, headOf, RFCARD_RE, SIDECAR_RES, VFile } from "../js/lib/extractor.js";
 import { normalizeInnerPath } from "../js/lib/analyzer.js";
 import { hexToBytes } from "../js/lib/bytes.js";
 import { zipSync, strToU8 } from "../lib/vendor/fflate.js";
@@ -553,4 +553,50 @@ test("tar size field with leading spaces parses like tarfile.nti", async () => {
   const files = root.files();
   assert.deepEqual(files.map((f) => f.path), ["tar_0/spaced.bin"]);
   assert.equal(files[0].vfile.size, 640);
+});
+
+// --- header sniffing (Step 1: ranged readers never materialize a tree file) -----
+
+test("headOf prefers a ranged reader over the full-file loader", async () => {
+  const size = 0x4000;
+  const bytes = new Uint8Array(size);
+  for (let i = 0; i < size; i++) bytes[i] = (i * 5 + 1) & 0xff;
+  let fullLoads = 0;
+  let rangeCalls = 0;
+  const vfile = new VFile(
+    "tree.bin",
+    () => {
+      fullLoads += 1;
+      return bytes;
+    },
+    size,
+    null,
+    async (offset, length) => {
+      rangeCalls += 1;
+      assert.equal(offset, 0);
+      return bytes.subarray(offset, offset + length);
+    },
+  );
+  const head = await headOf(vfile);
+  assert.equal(head.length, 4096);
+  assert.deepEqual(head, bytes.subarray(0, 4096));
+  assert.equal(rangeCalls, 1, "the ranged reader must serve the sniff");
+  assert.equal(fullLoads, 0, "the whole-file loader must not run for a header sniff");
+});
+
+test("headOf falls back to a region window and then to the whole-file loader", async () => {
+  const size = 8192;
+  const bytes = new Uint8Array(size);
+  for (let i = 0; i < size; i++) bytes[i] = i & 0xff;
+  const base = {
+    size,
+    async read(offset, length) {
+      return bytes.subarray(offset, offset + length);
+    },
+  };
+  const regionFile = VFile.slice("region.bin", base, 1024, 4096);
+  assert.deepEqual(await headOf(regionFile), bytes.subarray(1024, 1024 + 4096));
+
+  const small = VFile.mem("small.bin", bytes.subarray(0, 100));
+  assert.deepEqual(await headOf(small), bytes.subarray(0, 100));
 });

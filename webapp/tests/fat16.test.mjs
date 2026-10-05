@@ -239,6 +239,54 @@ test("readClusters issues one read per non-adjacent run", async () => {
   assert.deepEqual(counting.reads[1], [clusterOffset(5), CLUSTER_SIZE]);
 });
 
+// --- ranged reads (Step 1: the container walker sniffs heads only) ------------
+
+test("readFileRange equals readFile().subarray() inside, across and at the end of cluster runs", async () => {
+  const fat = openFixture();
+  await fat.init();
+  const entries = await fat.walk();
+  // /rf_config_1306_0_0.mbn is a 3-cluster (3-4-5) contiguous chain, 5000 bytes;
+  // /RF_CARDS/615_0_0.MBN is a single cluster truncated to 100 bytes.
+  for (const path of ["/rf_config_1306_0_0.mbn", "/RF_CARDS/615_0_0.MBN"]) {
+    const entry = entries.find((e) => e.path === path);
+    const full = await fat.readFile(entry);
+    const probes = [
+      [0, 0],
+      [0, 1],
+      [0, Math.min(100, full.length)],
+      [CLUSTER_SIZE - 5, 20], // straddles the first cluster boundary
+      [CLUSTER_SIZE * 2 - 1, 2], // last byte of one run + first of the next
+      [Math.max(0, full.length - 3), 3], // at the very end
+      [1, Math.max(1, full.length - 2)], // most of the file in one call
+    ];
+    for (const [off, len] of probes) {
+      if (off < 0 || len < 0 || off + len > full.length) continue;
+      const got = await fat.readFileRange(entry, off, len);
+      assert.deepEqual(got, full.subarray(off, off + len), `${path} [${off}, ${len})`);
+    }
+  }
+});
+
+test("readFileRange reads only the needed bytes and rejects out-of-range/dir reads", async () => {
+  const counting = new CountingSource(new BrowserFileSource(new Blob([buildFat16Fixture()])));
+  const fat = new Fat16Image(counting);
+  await fat.init();
+  const entry = await fat.findFile("/rf_config_1306_0_0.mbn");
+  counting.reads.length = 0;
+  const head = await fat.readFileRange(entry, 0, 4096); // 2 clusters' worth
+  assert.equal(head.length, 4096);
+  assert.equal(counting.reads.length, 1, "a contiguous range is one coalesced read");
+  assert.deepEqual(counting.reads[0], [clusterOffset(3), 4096]);
+  for (let i = 0; i < 4096; i++) assert.equal(head[i], pattern(i));
+
+  await assert.rejects(() => fat.readFileRange(entry, entry.size - 2, 4), RangeError);
+  await assert.rejects(() => fat.readFileRange(entry, -1, 4), RangeError);
+  await assert.rejects(
+    () => fat.readFileRange({ path: "/RF_CARDS", firstCluster: 2, size: 0, isDir: true }, 0, 1),
+    /Path is a directory/,
+  );
+});
+
 // --- golden (corpus-gated) ---------------------------------------------------
 
 test("fat16 hardware entries match goldens", { skip: !corpusAvailable() }, async (t) => {

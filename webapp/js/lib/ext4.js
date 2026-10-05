@@ -228,4 +228,12 @@ export class Ext4Image {
     if (entry.size === 0) return new Uint8Array(0);
     return this.readInodeRange(entry.inode, 0, entry.size);
   }
+
+  // Ranged read over an entry, mirroring Fat16Image.readFileRange so the
+  // container walker (extractor.headOf) can sniff a file's 4 KB header without
+  // materializing it. Reads exactly through the extent map (holes read zeros).
+  async readFileRange(entry, offset, length) {
+    if (entry.isDir) throw new ParseError(`Path is a directory inside the ext4 filesystem: ${entry.path ?? entry.name}`);
+    return this.readInodeRange(entry.inode, offset, length);
+  }
 }

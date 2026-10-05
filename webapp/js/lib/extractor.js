@@ -48,12 +48,16 @@ export class ExtractionError extends Error {
 // by a region of a RandomAccessSource (zero-copy slices; large containers are
 // never materialized unless an extractor must own the bytes).
 export class VFile {
-  // load: () => Promise<Uint8Array>; region: { source, offset, size } | null
-  constructor(name, load, size, region = null) {
+  // load: () => Promise<Uint8Array>; region: { source, offset, size } | null;
+  // readRange: ((offset, length) => Promise<Uint8Array>) | null — a ranged
+  // reader over the backing filesystem (tree files), used by headOf so sniffing
+  // a file's magic never materializes the whole file.
+  constructor(name, load, size, region = null, readRange = null) {
     this.name = name;
     this.#load = load;
     this.size = size;
     this.region = region;
+    this.readRange = readRange;
   }
 
   #load;
@@ -213,6 +217,9 @@ export async function unwrap(vfile, ctx, depth = 0) {
 }
 
 async function maybeUnwrapChild(vfile, ctx, depth) {
+  // Files below the container floor cannot unwrap (unwrap would return at its
+  // size check) — skip the header read entirely.
+  if (vfile.size < MIN_CONTAINER_SIZE) return;
   // Only recurse into children whose magic clearly identifies a container.
   const tag = detect(await headOf(vfile), vfile.name);
   if (SUPPORTED_TAGS.has(tag) || UNSUPPORTED_TAGS[tag]) {
@@ -231,8 +238,15 @@ async function unwrapEmbeddedContainers(vfile, ctx, depth) {
   }
 }
 
-async function headOf(vfile) {
+// Exported for the header-sniffing unit test: headOf must use vfile.readRange
+// (tree-backed files) without ever calling the full-file loader.
+export async function headOf(vfile) {
   const n = Math.min(MAGIC_MAX, vfile.size);
+  if (n <= 0) return new Uint8Array(0);
+  // Prefer a ranged reader (tree-backed files): the 4 KB sniff must not read
+  // the whole file. Then a region window (zero-copy slice), then the whole-file
+  // fallback (mem/text files, e.g. extracted archive members).
+  if (typeof vfile.readRange === "function") return vfile.readRange(0, n);
   if (vfile.region) return vfile.region.source.read(vfile.region.offset, n);
   return (await vfile.read()).subarray(0, n);
 }
@@ -286,7 +300,19 @@ async function placeTree(dir, image, label, ctx) {
   try {
     await image.init();
     for (const entry of await image.walk()) {
-      dir.addFile(entry.path.replace(/^\//, ""), new VFile(entry.path.split("/").pop(), () => image.readFile(entry), entry.size));
+      // A ranged reader lets headOf sniff the magic without reading the file in
+      // full (both images expose readFileRange; the full readFile loader stays
+      // for actual content reads).
+      dir.addFile(
+        entry.path.replace(/^\//, ""),
+        new VFile(
+          entry.path.split("/").pop(),
+          () => image.readFile(entry),
+          entry.size,
+          null,
+          (offset, length) => image.readFileRange(entry, offset, length),
+        ),
+      );
     }
     return dir;
   } catch (err) {

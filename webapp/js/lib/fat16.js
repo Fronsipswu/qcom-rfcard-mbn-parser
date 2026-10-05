@@ -102,15 +102,38 @@ export class Fat16Image {
   // itself (qualcomm_rf_combo_analyzer.py:226), so callers own the truncation.
   async readClusters(firstCluster) {
     const chain = this.#clusterChain(firstCluster);
-    const out = new Uint8Array(chain.length * this.clusterSize);
-    let off = 0;
-    let i = 0;
-    while (i < chain.length) {
-      // Coalesce maximal runs of physically adjacent clusters into one read;
-      // corpus images store candidates contiguously, so this collapses the
-      // per-16KB-cluster read storm (78-99% fewer reads). On RangeError the
-      // run is replayed cluster-by-cluster so the first out-of-image cluster
-      // raises the exact same ParseError as the per-cluster loop did.
+    return this.#readChainRange(chain, 0, chain.length * this.clusterSize);
+  }
+
+  // Reads `length` bytes of a file starting at `offset` without materializing
+  // the whole chain: only the clusters covering [offset, offset+length) are read
+  // (still coalescing physically adjacent runs). Used by the container walker's
+  // 4 KB header sniff (extractor.headOf) so a tree file is never read in full
+  // just to detect its magic. Returns exactly `length` bytes; ranges beyond the
+  // declared file size raise RangeError like Ext4Image.readInodeRange.
+  async readFileRange(entry, offset, length) {
+    if (entry.isDir) {
+      throw new ParseError(`Path is a directory inside modem.img: ${entry.path ?? entry.name}`);
+    }
+    if (offset < 0 || length < 0 || offset + length > entry.size) {
+      throw new RangeError(`FAT16 read beyond file size: ${offset}+${length}/${entry.size}`);
+    }
+    if (length === 0) return new Uint8Array(0);
+    const chain = this.#clusterChain(entry.firstCluster);
+    return this.#readChainRange(chain, offset, length);
+  }
+
+  // Shared coalescing reader: `fileOffset` is an offset into the logical chain
+  // content, `length` the number of bytes wanted from there. Reads only the
+  // needed span of each physically adjacent run. On RangeError the run is
+  // replayed cluster-by-cluster so the first out-of-image cluster raises the
+  // exact same ParseError as the per-cluster loop did.
+  async #readChainRange(chain, fileOffset, length) {
+    const out = new Uint8Array(length);
+    let i = Math.floor(fileOffset / this.clusterSize);
+    let into = fileOffset - i * this.clusterSize;
+    let done = 0;
+    while (done < length && i < chain.length) {
       let runEnd = i + 1;
       while (
         runEnd < chain.length &&
@@ -118,27 +141,37 @@ export class Fat16Image {
       ) {
         runEnd += 1;
       }
-      const runClusters = runEnd - i;
-      const runBytes = runClusters * this.clusterSize;
+      const runBytes = (runEnd - i) * this.clusterSize;
+      const need = Math.min(runBytes - into, length - done);
       try {
-        const chunk = await this.source.read(this.#clusterOffset(chain[i]), runBytes);
-        out.set(chunk, off);
+        const chunk = await this.source.read(this.#clusterOffset(chain[i]) + into, need);
+        out.set(chunk, done);
+        done += need;
       } catch (err) {
         if (!(err instanceof RangeError)) throw err;
-        for (let k = i; k < runEnd; k += 1) {
+        // Replay the run cluster-by-cluster (skipping `into` bytes of the first
+        // cluster) so the first out-of-image cluster raises ParseError.
+        let k = i;
+        let skip = into;
+        while (done < length && k < runEnd) {
+          const n = Math.min(this.clusterSize - skip, length - done);
           let part;
           try {
-            part = await this.source.read(this.#clusterOffset(chain[k]), this.clusterSize);
+            part = await this.source.read(this.#clusterOffset(chain[k]) + skip, n);
           } catch (err2) {
             if (err2 instanceof RangeError) throw new ParseError("FAT16 cluster extends beyond the image.");
             throw err2;
           }
-          out.set(part, off + (k - i) * this.clusterSize);
+          out.set(part, done);
+          done += n;
+          k += 1;
+          skip = 0;
         }
       }
-      off += runBytes;
       i = runEnd;
+      into = 0;
     }
+    if (done < length) throw new ParseError("FAT16 file is truncated.");
     return out;
   }
 
