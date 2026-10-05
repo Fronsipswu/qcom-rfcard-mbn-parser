@@ -210,11 +210,40 @@ function parsedFor(sourceId, fileIndex, record) {
   if (!pending) {
     pending = record.apple ? ensureAppleParsed(sourceId, fileIndex, record) : ensureParsed(sourceId, fileIndex, record);
     parsedInflight.set(key, pending);
-    pending.catch(() => {
+    // In-flight only: drop the promise once it settles either way. Keeping a
+    // fulfilled promise would pin its parse forever and bypass the retention
+    // cap below (later hits go through the bounded memos instead).
+    const settled = () => {
       if (parsedInflight.get(key) === pending) parsedInflight.delete(key);
-    });
+    };
+    pending.then(settled, settled);
   }
   return pending;
+}
+
+// Bounded parse retention. A parsed card costs ~4-10 MB of worker heap
+// (measured: 83 MB for the 8 cards of modem_X-FLASH-ALL-B083.img) and an Apple
+// entry adds its ~5.7 MB decompressed bank. Only the most recently used parses
+// stay resident; older ones release their heavy part and re-parse on demand
+// from the retained (small) MBN bytes. Re-opening a card normally hits the
+// table cache anyway, so the parse is only needed again for exports/imports.
+// 2 covers every access pattern: batch export and import run card-major (all
+// formats of one card, then the next), and card opens hit the table cache.
+let maxRetainedParses = 2;
+// Node protocol tests shrink the cap to exercise eviction on a small corpus.
+export const setMaxRetainedParses = (n) => {
+  maxRetainedParses = n;
+};
+const retainedParses = new Map(); // parseJobKey -> release() (insertion = LRU order)
+
+function retainParse(key, release) {
+  retainedParses.delete(key);
+  retainedParses.set(key, release);
+  while (retainedParses.size > maxRetainedParses) {
+    const [oldest, drop] = retainedParses.entries().next().value;
+    retainedParses.delete(oldest);
+    drop();
+  }
 }
 
 // --- apple scan pool --------------------------------------------------------------
@@ -411,13 +440,19 @@ async function ensureBlob(sourceId, fileIndex, record) {
   return entry;
 }
 
+// Returns a snapshot ({blob, parsed}), not the memo entry: retainParse may
+// null entry.parsed while the caller's continuation is still queued.
 async function ensureParsed(sourceId, fileIndex, record) {
   const entry = await ensureBlob(sourceId, fileIndex, record);
   if (!entry.parsed) {
     bump("parseModule");
     entry.parsed = parseModule(record, entry.blob);
   }
-  return entry;
+  const { parsed } = entry;
+  retainParse(parseJobKey(sourceId, record), () => {
+    entry.parsed = null; // keep the small MBN bytes, drop the heavy parse
+  });
+  return { blob: entry.blob, parsed };
 }
 
 // --- Apple C-series card open / export ------------------------------------------
@@ -466,6 +501,12 @@ async function ensureAppleBank(sourceId, fileIndex, record) {
     entry = { bank, parsed: null };
     memo.set(key, entry);
   }
+  // The decompressed bank is the heavy part here (~5.7 MB): releasing drops the
+  // whole entry, and a later open re-decodes it from the compressed stream.
+  const retained = entry;
+  retainParse(parseJobKey(sourceId, record), () => {
+    if (memo.get(key) === retained) memo.delete(key);
+  });
   return entry;
 }
 
@@ -476,7 +517,7 @@ async function ensureAppleParsed(sourceId, fileIndex, record) {
     entry.parsed = parseAppleBank(entry.bank, record.inner_path);
     requireValidBank(entry.parsed); // main.py flow: parse_bank + require_valid_bank before any use
   }
-  return entry;
+  return { bank: entry.bank, parsed: entry.parsed };
 }
 
 // Export dispatch for apple records. mbn = the raw decompressed bank (pure
@@ -721,6 +762,7 @@ function handleRelease() {
   appleMemberMemo.clear();
   retainedBytes.clear();
   parsedInflight.clear();
+  retainedParses.clear();
   cancelled.clear(); // Clear invalidates every pending request anyway
   resetSession();
 }

@@ -236,3 +236,32 @@ test("worker: reopening the same card parses once (corpus-gated)", { skip: !corp
     "after clearCache the card is regenerated",
   );
 });
+
+test("worker: parse retention is bounded and evicted parses re-parse correctly (corpus-gated)", { skip: !corpusAvailable() }, async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const file = new File([await readFile(join(CORPUS_DIR, "radio.img"))], "radio.img");
+  const sourceId = 305;
+  const scan = await request(
+    { type: "scan", id: 5, files: [{ sourceId, file }] },
+    (m) => m.type === "records" && m.fileIndex === 0,
+  );
+  const [a, b] = scan.records;
+  assert.ok(a && b, "radio.img carries two cards");
+  workerModule.setMaxRetainedParses(1);
+  try {
+    const exportJson = async (id, record) =>
+      (await request({ type: "export", id, sourceId, fileIndex: 0, record, format: "json" }, (m) => m.id === id)).files;
+    const start = workerModule.getDebugCounters().parseModule;
+    const first = await exportJson(51, a);
+    await exportJson(52, b); // evicts a's parse (cap = 1)
+    assert.equal(workerModule.getDebugCounters().parseModule, start + 2);
+    const again = await exportJson(53, a);
+    assert.equal(workerModule.getDebugCounters().parseModule, start + 3, "an evicted parse is rebuilt on demand");
+    assert.deepEqual(again, first, "the rebuilt parse must export identically");
+    await exportJson(54, a);
+    assert.equal(workerModule.getDebugCounters().parseModule, start + 3, "the retained parse is reused");
+  } finally {
+    workerModule.setMaxRetainedParses(2);
+  }
+});

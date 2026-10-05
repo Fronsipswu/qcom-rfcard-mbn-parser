@@ -606,7 +606,8 @@ export class ComboViewer {
     // Measure the uniform row height once, then re-render with exact spacers.
     if (virtual && this.rowHeight === 0) {
       const tr = this.tbodyEl.querySelector("tr[data-i]");
-      const measured = tr ? tr.offsetHeight : 0;
+      // Fractional height (offsetHeight rounds), so spacer math matches layout.
+      const measured = tr ? tr.getBoundingClientRect().height : 0;
       if (measured > 0) {
         this.rowHeight = measured;
         this.renderRows(state);

@@ -1,20 +1,33 @@
 // IndexedDB cache of parsed card tables (Task 11 Step 5; Step 5 of the perf
 // review moves it into the worker). The DB sits behind a backend interface
-// ({ get, put, delete, clear, list? }) so the keying + wrapper logic is testable
-// without IndexedDB; idbBackend() provides the real backend and
-// memoryBackend() a per-page fallback (also used by Node tests).
+// ({ get, put, delete, clear, list?(prefix), keys? }) so the keying + wrapper
+// logic is testable without IndexedDB; idbBackend() provides the real backend
+// and memoryBackend() a per-page fallback (also used by Node tests).
 //
-// CACHE_SCHEMA_VERSION MUST be bumped whenever the table format or parser
-// output changes: the key embeds it, so a bump naturally misses every older
-// entry instead of serving a stale table shape.
-export const CACHE_SCHEMA_VERSION = 1;
+// CACHE_SCHEMA_VERSION MUST be bumped whenever the table format, parser output
+// or the storage layout changes: the key embeds it, so a bump naturally misses
+// every older entry instead of serving a stale table shape, and the one-time
+// sweep (see createCardCache) deletes the superseded entries.
+// v2: every table entry has a small `meta:` sibling used for eviction.
+export const CACHE_SCHEMA_VERSION = 2;
+
+const TABLES_PREFIX = `tables:v${CACHE_SCHEMA_VERSION}:`;
+const META_PREFIX = `meta:v${CACHE_SCHEMA_VERSION}:`;
 
 export function cacheKey(record) {
   const sha = record && record.sha256 ? record.sha256 : "";
-  if (sha) return `tables:v${CACHE_SCHEMA_VERSION}:sha256:${sha}`;
+  if (sha) return `${TABLES_PREFIX}sha256:${sha}`;
   const name = record && record.name ? record.name : "unknown";
-  return `tables:v${CACHE_SCHEMA_VERSION}:name:${name}`;
+  return `${TABLES_PREFIX}name:${name}`;
 }
+
+// Eviction bookkeeping lives in a tiny sibling entry so enumerating the cache
+// never deserializes the (multi-MB) tables themselves.
+export function metaKey(tablesKey) {
+  return META_PREFIX + tablesKey.slice(TABLES_PREFIX.length);
+}
+
+const tablesKeyOf = (key) => TABLES_PREFIX + key.slice(META_PREFIX.length);
 
 // The exact shape generateWebTables produces: all four table keys, each an
 // array of row objects (an explicit empty record is valid). Anything else is
@@ -42,8 +55,8 @@ function rowCountOf(tables) {
 
 // maxEntries / maxRows bound the persistent cache (Clear still wipes it). Row
 // count is the cheap size proxy; ~500k rows is roughly the 200 MB budget the
-// review suggested. Eviction runs after every put over backend.list() (a few
-// dozen entries), oldest cachedAt first.
+// review suggested. Eviction runs after every put over the `meta:` entries only
+// (a few dozen small records), oldest cachedAt first.
 export function createCardCache(backend, { maxEntries = 40, maxRows = 500000 } = {}) {
   const drop = async (key) => {
     try {
@@ -52,11 +65,29 @@ export function createCardCache(backend, { maxEntries = 40, maxRows = 500000 } =
       // a backend without delete (or a failing one) still counts as a miss
     }
   };
+  // Once per cache instance: delete every key outside the current schema
+  // (older versions, and v1-style entries that have no meta sibling and so
+  // could never be evicted). Keys only — no table is deserialized.
+  let swept = false;
+  const sweep = async () => {
+    if (swept || typeof backend.keys !== "function") return;
+    swept = true;
+    let keys;
+    try {
+      keys = await backend.keys();
+    } catch {
+      return;
+    }
+    for (const key of keys) {
+      if (typeof key !== "string" || (!key.startsWith(TABLES_PREFIX) && !key.startsWith(META_PREFIX))) await drop(key);
+    }
+  };
   const evict = async () => {
     if (typeof backend.list !== "function") return;
+    await sweep();
     let entries;
     try {
-      entries = await backend.list();
+      entries = await backend.list(META_PREFIX);
     } catch {
       return;
     }
@@ -66,6 +97,7 @@ export function createCardCache(backend, { maxEntries = 40, maxRows = 500000 } =
     let rows = entries.reduce((n, e) => n + (e.value?.rowCount ?? 0), 0);
     for (const entry of entries) {
       if (count <= maxEntries && rows <= maxRows) break;
+      await drop(tablesKeyOf(entry.key));
       await drop(entry.key);
       count -= 1;
       rows -= entry.value?.rowCount ?? 0;
@@ -80,6 +112,7 @@ export function createCardCache(backend, { maxEntries = 40, maxRows = 500000 } =
           !value || typeof value !== "object" || !isValidTablesShape(value.tables)
         ) {
           await drop(cacheKey(record)); // malformed entry -> miss + delete
+          await drop(metaKey(cacheKey(record)));
           return null;
         }
         return value;
@@ -90,12 +123,14 @@ export function createCardCache(backend, { maxEntries = 40, maxRows = 500000 } =
     async put(record, tables) {
       if (!isValidTablesShape(tables)) return; // never poison the cache
       try {
-        await backend.put(cacheKey(record), {
+        const key = cacheKey(record);
+        const meta = { cachedAt: Date.now(), rowCount: rowCountOf(tables) };
+        await backend.put(key, {
           tables,
           recordName: record && record.name ? record.name : "",
-          cachedAt: Date.now(),
-          rowCount: rowCountOf(tables),
+          ...meta,
         });
+        await backend.put(metaKey(key), meta);
         await evict();
       } catch {
         // quota/errors are non-fatal
@@ -129,8 +164,11 @@ export function memoryBackend() {
     async clear() {
       map.clear();
     },
-    async list() {
-      return [...map.entries()].map(([key, value]) => ({ key, value }));
+    async list(prefix = "") {
+      return [...map.entries()].filter(([key]) => key.startsWith(prefix)).map(([key, value]) => ({ key, value }));
+    },
+    async keys() {
+      return [...map.keys()];
     },
   };
 }
@@ -189,12 +227,14 @@ export function idbBackend({ database = "rfcard-webapp", store = "tables" } = {}
         tx.onabort = () => reject(tx.error);
       });
     },
-    // Full enumeration for eviction: { key, value } for every stored entry.
-    async list() {
+    // { key, value } for every entry whose key starts with `prefix` (eviction
+    // passes the meta prefix, so only the small meta records are read).
+    async list(prefix = "") {
       const db = await open();
       return new Promise((resolve, reject) => {
         const out = [];
-        const req = db.transaction(store, "readonly").objectStore(store).openCursor();
+        const range = prefix ? IDBKeyRange.bound(prefix, `${prefix}￿`) : undefined;
+        const req = db.transaction(store, "readonly").objectStore(store).openCursor(range);
         req.onsuccess = () => {
           const cursor = req.result;
           if (cursor) {
@@ -204,6 +244,15 @@ export function idbBackend({ database = "rfcard-webapp", store = "tables" } = {}
             resolve(out);
           }
         };
+        req.onerror = () => reject(req.error);
+      });
+    },
+    // Every key, without loading values (one-time stale-schema sweep).
+    async keys() {
+      const db = await open();
+      return new Promise((resolve, reject) => {
+        const req = db.transaction(store, "readonly").objectStore(store).getAllKeys();
+        req.onsuccess = () => resolve(req.result ?? []);
         req.onerror = () => reject(req.error);
       });
     },

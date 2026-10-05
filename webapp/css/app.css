@@ -466,6 +466,9 @@ body.dragging {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  /* The virtualized tbody is rebuilt on scroll; scroll anchoring must not
+     "correct" scrollTop against rows that were just replaced. */
+  overflow-anchor: none;
   border: 1px solid var(--border);
   border-radius: 0 6px 6px 6px;
 }

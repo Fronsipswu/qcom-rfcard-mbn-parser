@@ -3,7 +3,7 @@
 // backend itself is DOM-only; the pure part runs against a memory backend.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CACHE_SCHEMA_VERSION, cacheKey, createCardCache, memoryBackend } from "../js/cardcache.js";
+import { CACHE_SCHEMA_VERSION, cacheKey, createCardCache, memoryBackend, metaKey } from "../js/cardcache.js";
 
 const RECORD = {
   name: "1426_0_0_0170.mbn",
@@ -207,7 +207,7 @@ test("eviction drops the oldest entries beyond maxEntries", async () => {
   } finally {
     Date.now = origNow;
   }
-  const keys = (await backend.list()).map((e) => e.key).sort();
+  const keys = (await backend.list("tables:")).map((e) => e.key).sort();
   assert.equal(keys.length, 3, "capped at maxEntries");
   assert.ok(!keys.includes(cacheKey({ ...RECORD, sha256: "sha0" })), "oldest evicted");
   assert.ok(!keys.includes(cacheKey({ ...RECORD, sha256: "sha1" })), "second oldest evicted");
@@ -227,11 +227,51 @@ test("eviction also caps total rows", async () => {
   } finally {
     Date.now = origNow;
   }
-  const rows = (await backend.list()).reduce((n, e) => n + (e.value?.rowCount ?? 0), 0);
+  const rows = (await backend.list("meta:")).reduce((n, e) => n + (e.value?.rowCount ?? 0), 0);
   assert.ok(rows <= 10, `row budget exceeded: ${rows}`);
 });
 
 test("a backend without list() simply never evicts", async () => {
   const cache = createCardCache({ async get() { return null; }, async put() {}, async delete() {}, async clear() {} });
   await cache.put(RECORD, tableWithRows(1)); // must not throw
+});
+
+test("put writes a small meta sibling; eviction lists only meta entries", async () => {
+  const backend = memoryBackend();
+  const prefixes = [];
+  const spy = { ...backend, list: (prefix) => (prefixes.push(prefix), backend.list(prefix)) };
+  const cache = createCardCache(spy, { maxEntries: 2, maxRows: 1e9 });
+  await cache.put(RECORD, tableWithRows(3));
+  const meta = await backend.get(metaKey(cacheKey(RECORD)));
+  assert.deepEqual(Object.keys(meta).sort(), ["cachedAt", "rowCount"], "meta carries no tables");
+  assert.equal(meta.rowCount, 3);
+  assert.ok(prefixes.length > 0 && prefixes.every((p) => p.startsWith("meta:")), `eviction listed ${prefixes}`);
+});
+
+test("evicting an entry deletes both the tables and its meta sibling", async () => {
+  const backend = memoryBackend();
+  const cache = createCardCache(backend, { maxEntries: 1, maxRows: 1e9 });
+  const origNow = Date.now;
+  let clock = 3000;
+  Date.now = () => (clock += 1);
+  try {
+    await cache.put({ ...RECORD, sha256: "old" }, tableWithRows(1));
+    await cache.put({ ...RECORD, sha256: "new" }, tableWithRows(1));
+  } finally {
+    Date.now = origNow;
+  }
+  const oldKey = cacheKey({ ...RECORD, sha256: "old" });
+  assert.equal(await backend.get(oldKey), null);
+  assert.equal(await backend.get(metaKey(oldKey)), null);
+  assert.equal((await backend.keys()).length, 2, "only the newest tables + meta remain");
+});
+
+test("the first eviction sweeps keys from older cache schemas", async () => {
+  const backend = memoryBackend();
+  await backend.put("tables:sha256:legacy", { tables: tableWithRows(1) }); // pre-version key
+  await backend.put("tables:v1:sha256:orphan", { tables: tableWithRows(1) }); // v1: no meta sibling
+  const cache = createCardCache(backend);
+  await cache.put(RECORD, tableWithRows(1));
+  const keys = (await backend.keys()).sort();
+  assert.deepEqual(keys, [cacheKey(RECORD), metaKey(cacheKey(RECORD))].sort());
 });

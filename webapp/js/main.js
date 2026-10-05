@@ -399,6 +399,7 @@ function openCard(card) {
   // its handler dequeues). Compare requests are never cancelled this way.
   if (pendingView && pendingView.id !== undefined) {
     worker.postMessage({ type: "cancel", id: pendingView.id });
+    pendingReplies.delete(pendingView.id); // nothing waits on the superseded reply
   }
   const id = nextMessageId++;
   pendingView = { cardKey: card.key, id };
@@ -774,6 +775,10 @@ worker.onmessage = (event) => {
       break;
     }
     case "error": {
+      // An id-bearing error nobody is waiting for (a superseded open, or a
+      // request orphaned by Clear failing on its released source) is stale:
+      // surfacing it would put a warning into a view that no longer asked.
+      if (msg.id !== undefined && !pendingReplies.has(msg.id)) break;
       if (msg.id !== undefined) {
         pendingReplies.delete(msg.id);
         const waiter = exportWaiters.get(msg.id);
