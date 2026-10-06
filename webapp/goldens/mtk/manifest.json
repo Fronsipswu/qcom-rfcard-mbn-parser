@@ -1125,10 +1125,10 @@
      "EN-DC": 4367,
      "NRDC": 0
     },
-    "tables_sha256": "08557ba91ab702e5094c7c24b3d4d3c48ec1fad874f6985b474d6332ee2d3cf0",
+    "tables_sha256": "a58fdf54855a7d8cac667b7112c6a98a0de91776d7231fcd377abd16677e0923",
     "b0cd_sha256": "22f1d0bb492b5e265627c977375ccea896eed77024e0cfcf942205fc83212123",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "249f179519a84161bfbc59ea186a8c490b0d83eb1f5e713df8baf6cb5c8a54cf",
+    "b826_sha256": "a27cbc071ea6c8d9fb57bee33f3a358b28584aedf41b04f6667fb162f76d6383",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1150,10 +1150,10 @@
      "EN-DC": 4369,
      "NRDC": 0
     },
-    "tables_sha256": "5c364e414a15c84d2613a04fb4f8dd863a87211f243ca9d31d4067fb7c32f524",
+    "tables_sha256": "8a19692c71c652546cff7f10f13c5b0ffad091bca518cc04bf138d46c36575eb",
     "b0cd_sha256": "4a243eb3a20f7ca6ccff6e6fb683d5aab79336bc9b7f5edf65ebfeffdbdbe5c2",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "2bd099f2b5d29c335ee93cbef7c007f53aef87a3138f2f58915bb963b8dbeeab",
+    "b826_sha256": "0ce294cebfa2662ca55265b08ec18c4c96364ddb3a3867b27559a8f442c06fd3",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1175,10 +1175,10 @@
      "EN-DC": 2626,
      "NRDC": 0
     },
-    "tables_sha256": "bc780aa0b9dfa120080530185ad3bb8f121594165c5de7f37f792ef21ce529cc",
+    "tables_sha256": "396de9123b5f2ea7cb7027bbcc1dbc1ec73ac3e84c22218b5bea3cfa8094f0b9",
     "b0cd_sha256": "4a243eb3a20f7ca6ccff6e6fb683d5aab79336bc9b7f5edf65ebfeffdbdbe5c2",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "15f74471ca6e937d17838f255b31ca8b821493db3919b951b7f6228b56b61776",
+    "b826_sha256": "87386ec97af2c0df3797c46bd406484ec154a1f39dbd97c6ccc531b8615aedd8",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1200,10 +1200,10 @@
      "EN-DC": 4891,
      "NRDC": 0
     },
-    "tables_sha256": "b7b3a13bba56a7b38e6e8f7c658f47ac94bf327e7a3d8540e99b627e0f5985df",
+    "tables_sha256": "b7503e43a0b419c082b4f308e9fe49ea92b844dcdc9bf34fe74b216741fbccd8",
     "b0cd_sha256": "6cd714e2ac70c2221195a78d77dcd43766d8502a4ecc5537bcf9cb156f7a9189",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "17399e8b235f50673a8164be641ee16673e1a1c596d1d7cbf62ea833334e0af4",
+    "b826_sha256": "4262405ea6e2bc1660acc81f16f6bc8cfe14bdd5bee3a3d42e822f358e08ecf0",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1225,10 +1225,10 @@
      "EN-DC": 4891,
      "NRDC": 0
     },
-    "tables_sha256": "1f4010d520a9f68401a07451c30745ddd9d455a7ebc8f5c1d67593ac015888d6",
+    "tables_sha256": "9ece653aba4d2068876388e1b58c6eb31d650a3bcabe7e64bdd6a047453104c9",
     "b0cd_sha256": "28a46c33c7c27a51449feb997a08162088a6f8f2f3f4c7a3cd13ec684cd7eb72",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "17399e8b235f50673a8164be641ee16673e1a1c596d1d7cbf62ea833334e0af4",
+    "b826_sha256": "4262405ea6e2bc1660acc81f16f6bc8cfe14bdd5bee3a3d42e822f358e08ecf0",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1250,10 +1250,10 @@
      "EN-DC": 4891,
      "NRDC": 0
     },
-    "tables_sha256": "d6d7430275812067d1dc8d19f806883e2f03ca87cee0234b18fe32ac84f8dcc0",
+    "tables_sha256": "6ae06788ebadd72bd60fd13486cbc3ddc5ebb17b10e950972a3829eafe8d1ed6",
     "b0cd_sha256": "6cd714e2ac70c2221195a78d77dcd43766d8502a4ecc5537bcf9cb156f7a9189",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "cbf2ac02edf7cfa31bcec97505e23dba649cbcf32833d7f2b71e7e6156104cdf",
+    "b826_sha256": "6971d89c899cdd300dc65c87a52345d1eb00067a9fa96ab97cb951e448e9f1ad",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1275,10 +1275,10 @@
      "EN-DC": 6369,
      "NRDC": 0
     },
-    "tables_sha256": "63f5807f1eaf34260741108c6eed76a1d7d11c6a66d3dc10e9e1a11c7403f3ac",
+    "tables_sha256": "44890e5a5bd266b8e16d5d2cdd6bc8085c7f445da71be033e8dfcea5da725056",
     "b0cd_sha256": "a36f46feda781ca239abf876599f735399906d14523ba7bd59e245247024784b",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "16ffdd3e439048533da271fb8b5f331f277d012b672c22a7e1ba9cbf6b31d34d",
+    "b826_sha256": "c81c60879a9f003866169412d733078ba2fb124e28fe15c8a5b53ead66b6d0ca",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1300,10 +1300,10 @@
      "EN-DC": 4744,
      "NRDC": 0
     },
-    "tables_sha256": "e1732937ffa07d1b6ff24e008e3ba0bb010d5020ef27cafd84a953236fda9e08",
+    "tables_sha256": "a3df9ccf12db8fe0a5ae413870276a5733a614f1ad5fc46a17d6cb013968e3ca",
     "b0cd_sha256": "b2145978ef7abb6911c52fdd4dec8dc096be28e1844d8c7e84fb74fc31e462f9",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "1dc4da919d80cdd85e9a794efbaf03186f89841d42efab14acd03bec880d78d9",
+    "b826_sha256": "29c02217fe093218ad11f215280a3b4058ba726eb3cb8f37be9a3c3289d1edc3",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1325,10 +1325,10 @@
      "EN-DC": 0,
      "NRDC": 0
     },
-    "tables_sha256": "68654bdbe6e3f522c85f4e7f268958624ff1b61a963847f6f8e970ada44c7605",
+    "tables_sha256": "b7750215d78c0818eeecf7d7ae34019b7a2f998065111d8b72936d3176cf37f0",
     "b0cd_sha256": "415806d65aca4ee58e630d6251cc8a22f378452619e0ee9ca8db32d79e5e480c",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "de848c3734ae880adeed5e70d33d7b374c2806a54d37b7c3289a831d479562d2",
+    "b826_sha256": "4557694440b0153400bf460f66e7df8f36f35dec1d932d9a4edbd9a63a457073",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1350,10 +1350,10 @@
      "EN-DC": 57,
      "NRDC": 0
     },
-    "tables_sha256": "d5b772f56b4ee4d0b7c2b32ac2bf6c581a9d899783edbc467835e87a7a4290ee",
+    "tables_sha256": "426a90b5f74259e906a72216b77261cd50ecd2790d49a0c8c43bc76707263d09",
     "b0cd_sha256": "9b3f61f32bd3748bfe8f667a2d8729dea38b25075ad331916fe37f703b33d9c1",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "0084ec892c442f74314cbfa999b3e7b9b7bc4aac88a279738f63fc9a01f1ffdb",
+    "b826_sha256": "7cc7291072c6ef624bbd78792a66849960f21b97fd592d99e24536bf4eec50cf",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1375,10 +1375,10 @@
      "EN-DC": 9502,
      "NRDC": 0
     },
-    "tables_sha256": "a648af24ff3e72cbe8cb082584ba587d85d2611e8d02d484e763d5c8c34a8b81",
+    "tables_sha256": "0ee827ecc27325e1ae4960b78bfe0889e4f0a18a74190cbc14c09bc7db60863e",
     "b0cd_sha256": "4eb5db18d110756cac02da8a5083df011ec989b6b0a1b589cb01f60c01659810",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "653f938e745ce5c20df731d8b54ae58a3127a413fbcb2988b24ca2599fa5f939",
+    "b826_sha256": "80435e374ff88e4cf8f57af3628cbca1beae9b76fb804ac6cf561d578a43cff9",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1400,10 +1400,10 @@
      "EN-DC": 57,
      "NRDC": 0
     },
-    "tables_sha256": "70883126f3b3f48710a6ecf8dcec1c1bc2c781b6a594b1391c65688d278e7403",
+    "tables_sha256": "f503393b4d15b37b1870008b1ca16d816f932364e27b5e2911e7988e97014a69",
     "b0cd_sha256": "28a46c33c7c27a51449feb997a08162088a6f8f2f3f4c7a3cd13ec684cd7eb72",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "723ed3baa1793813105b9edf6984c82963ddd8e3289d4a99dd9be851e57a2d43",
+    "b826_sha256": "cc5617c4b9257f6031ce87e78482c0bcef146cc5f17ecae62ae859c6561938af",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    },
    {
@@ -1425,10 +1425,10 @@
      "EN-DC": 6369,
      "NRDC": 0
     },
-    "tables_sha256": "fa501b0512dc37a1d6f75f0a2dfdbf69e7a74f514788f64c425c1851518a2cad",
+    "tables_sha256": "1c56c18eb9a258cd8f13be640c598d07e47a26f85f1da378e4f633504e2d6e46",
     "b0cd_sha256": "28a46c33c7c27a51449feb997a08162088a6f8f2f3f4c7a3cd13ec684cd7eb72",
     "b0cd_name": "modem-verified_0xB0CD_v41.txt",
-    "b826_sha256": "8938d681489464b9302f756c18a0e5d83ea2ca461dbdbf63571385fd66894dd1",
+    "b826_sha256": "db709c1c82b7a5de6a27a3c081508e7926a40e053a2b5561478e007b3ce1dfe9",
     "b826_name": "modem-verified_0xB826_v21_combined.txt"
    }
   ]
@@ -1967,10 +1967,10 @@
      "EN-DC": 4367,
      "NRDC": 0
     },
-    "tables_sha256": "08557ba91ab702e5094c7c24b3d4d3c48ec1fad874f6985b474d6332ee2d3cf0",
+    "tables_sha256": "a58fdf54855a7d8cac667b7112c6a98a0de91776d7231fcd377abd16677e0923",
     "b0cd_sha256": "851a06b67bcdfbcf4fe9f845b95ddc14fc9f8be5e760453c1d3e9eb9e0aeaaea",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "71a6426cc2f6066b86860d2b790d87e18b4dbb7fab913db9f6471faad6b6778c",
+    "b826_sha256": "2fe02b85e9312637ea7684ba217668351af946354ee459768c8fcfc895c00344",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -1992,10 +1992,10 @@
      "EN-DC": 4369,
      "NRDC": 0
     },
-    "tables_sha256": "5c364e414a15c84d2613a04fb4f8dd863a87211f243ca9d31d4067fb7c32f524",
+    "tables_sha256": "8a19692c71c652546cff7f10f13c5b0ffad091bca518cc04bf138d46c36575eb",
     "b0cd_sha256": "7deb56745c99033d86b1e8350215c1ef25776a439466a87ec06a20bff23e10d8",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "d38499adb19cfe401ff7ff58a73b38243d8c4c7f39e21a8fc25e6539dc75c31c",
+    "b826_sha256": "8e331b35312d579fb6ea4c73632765fd90bbe2c0b2b1d862b73c389204b1f2bc",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2017,10 +2017,10 @@
      "EN-DC": 2626,
      "NRDC": 0
     },
-    "tables_sha256": "bc780aa0b9dfa120080530185ad3bb8f121594165c5de7f37f792ef21ce529cc",
+    "tables_sha256": "396de9123b5f2ea7cb7027bbcc1dbc1ec73ac3e84c22218b5bea3cfa8094f0b9",
     "b0cd_sha256": "7deb56745c99033d86b1e8350215c1ef25776a439466a87ec06a20bff23e10d8",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "82bb716dfe413183dee7cd675b1cd4a37c0b29c088c903acf66f8a5eae791a92",
+    "b826_sha256": "cb9bd5bdf8ff5420bb84a78ea53a4664ef9dba6bd0dee59eba77d2e094ed0b8d",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2042,10 +2042,10 @@
      "EN-DC": 4891,
      "NRDC": 0
     },
-    "tables_sha256": "b7b3a13bba56a7b38e6e8f7c658f47ac94bf327e7a3d8540e99b627e0f5985df",
+    "tables_sha256": "b7503e43a0b419c082b4f308e9fe49ea92b844dcdc9bf34fe74b216741fbccd8",
     "b0cd_sha256": "4d1c7557bd999b4f836a74094736826ee82b6b0fd9c5c23ae00c2e4cccb2d535",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "f18a37de3cc0668054f5d59c041c2327563c1ffea3c06d6367d3320524caf19d",
+    "b826_sha256": "697ef5193b83a971595cb4982a3e9a91b96211bcf89a819b4616551752769186",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2067,10 +2067,10 @@
      "EN-DC": 4891,
      "NRDC": 0
     },
-    "tables_sha256": "1f4010d520a9f68401a07451c30745ddd9d455a7ebc8f5c1d67593ac015888d6",
+    "tables_sha256": "9ece653aba4d2068876388e1b58c6eb31d650a3bcabe7e64bdd6a047453104c9",
     "b0cd_sha256": "1426a8f08ab1c4a010886c6e533046a721bc98555c1441b5220f233cbec5eff9",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "f18a37de3cc0668054f5d59c041c2327563c1ffea3c06d6367d3320524caf19d",
+    "b826_sha256": "697ef5193b83a971595cb4982a3e9a91b96211bcf89a819b4616551752769186",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2092,10 +2092,10 @@
      "EN-DC": 4891,
      "NRDC": 0
     },
-    "tables_sha256": "d6d7430275812067d1dc8d19f806883e2f03ca87cee0234b18fe32ac84f8dcc0",
+    "tables_sha256": "6ae06788ebadd72bd60fd13486cbc3ddc5ebb17b10e950972a3829eafe8d1ed6",
     "b0cd_sha256": "4d1c7557bd999b4f836a74094736826ee82b6b0fd9c5c23ae00c2e4cccb2d535",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "9b5d50f90ae7b4ab8acb31052be12d6c164e1e672bb2723ffc8f37c7b2b7c126",
+    "b826_sha256": "1688af9cbbbf53a0c2858103556bdea328ba0a4379c9cae24fdf7cf501a75b37",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2117,10 +2117,10 @@
      "EN-DC": 6369,
      "NRDC": 0
     },
-    "tables_sha256": "63f5807f1eaf34260741108c6eed76a1d7d11c6a66d3dc10e9e1a11c7403f3ac",
+    "tables_sha256": "44890e5a5bd266b8e16d5d2cdd6bc8085c7f445da71be033e8dfcea5da725056",
     "b0cd_sha256": "c43e9784911435dac0b2077a7878fc086d3383e3857ba3aafb3a82a5f276a266",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "86804431255e720c9735ab69a6eaee8b18cafd5ca76244fe3256cacfd33511e3",
+    "b826_sha256": "ab9ee70c7fd0be69208dffd2cd18c4ebf0333c179a9263184942261e38693378",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2142,10 +2142,10 @@
      "EN-DC": 4744,
      "NRDC": 0
     },
-    "tables_sha256": "e1732937ffa07d1b6ff24e008e3ba0bb010d5020ef27cafd84a953236fda9e08",
+    "tables_sha256": "a3df9ccf12db8fe0a5ae413870276a5733a614f1ad5fc46a17d6cb013968e3ca",
     "b0cd_sha256": "385ef2e176bd7239dfce7446c17b1655e73851a6430b010f7a5e579becc4823b",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "6768b27e6552123ee2101f3e1d76b031f36d01482af334652cc2141e20c69967",
+    "b826_sha256": "a548813ca0aeba12f49308dc0ac2fc3774ba40ba5f731f91e22ec7429334d3cd",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2167,10 +2167,10 @@
      "EN-DC": 0,
      "NRDC": 0
     },
-    "tables_sha256": "68654bdbe6e3f522c85f4e7f268958624ff1b61a963847f6f8e970ada44c7605",
+    "tables_sha256": "b7750215d78c0818eeecf7d7ae34019b7a2f998065111d8b72936d3176cf37f0",
     "b0cd_sha256": "4c4818f6b94af3e6b4a0c882b9e34ee32502577d52b0b3ee279ba0b7c045d78a",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "46220729c21de9d9f47117769f54381ba9652cbdc4c497608da19c70a59d293b",
+    "b826_sha256": "53dfc3c311af26790dcfaabc7472edda005e511d48a87126e1b6c83017e1c9b3",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2192,10 +2192,10 @@
      "EN-DC": 57,
      "NRDC": 0
     },
-    "tables_sha256": "d5b772f56b4ee4d0b7c2b32ac2bf6c581a9d899783edbc467835e87a7a4290ee",
+    "tables_sha256": "426a90b5f74259e906a72216b77261cd50ecd2790d49a0c8c43bc76707263d09",
     "b0cd_sha256": "7e6e7441e2f0c27c8c66144f2d161f1c8338b9e507c3d7eded100c180c8a4f39",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "eb813059e73b2166bfb8fa77474669887dde96ac2e7e4304e4703de5af32aced",
+    "b826_sha256": "25dc93b6ba4c558be330a7c8c00ae84a7e6b0674e8bd4fbbf49ea2b9524109c6",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2217,10 +2217,10 @@
      "EN-DC": 9502,
      "NRDC": 0
     },
-    "tables_sha256": "a648af24ff3e72cbe8cb082584ba587d85d2611e8d02d484e763d5c8c34a8b81",
+    "tables_sha256": "0ee827ecc27325e1ae4960b78bfe0889e4f0a18a74190cbc14c09bc7db60863e",
     "b0cd_sha256": "8796287251dcc7be30afa68bad62e158f8d0b0f690a375928f65210c95cb663a",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "2a3efbe1d3e1990480bc654aa14879ea205281465de6b04cb63ef5b615e9db6a",
+    "b826_sha256": "6b15cc38f15e54cf4653ec232797a758d0cd1b877255d704856c48b9ba3ef3eb",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2242,10 +2242,10 @@
      "EN-DC": 57,
      "NRDC": 0
     },
-    "tables_sha256": "70883126f3b3f48710a6ecf8dcec1c1bc2c781b6a594b1391c65688d278e7403",
+    "tables_sha256": "f503393b4d15b37b1870008b1ca16d816f932364e27b5e2911e7988e97014a69",
     "b0cd_sha256": "1426a8f08ab1c4a010886c6e533046a721bc98555c1441b5220f233cbec5eff9",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "b28f9135d43b6ef08a9df220c77ce55bec73e108ca9715f1a4871c663f3cce5f",
+    "b826_sha256": "63aee5e112fc2bce6756a0a424cba5cbe28c4fc4ff1550b3c46b1465b62776ca",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    },
    {
@@ -2267,10 +2267,10 @@
      "EN-DC": 6369,
      "NRDC": 0
     },
-    "tables_sha256": "fa501b0512dc37a1d6f75f0a2dfdbf69e7a74f514788f64c425c1851518a2cad",
+    "tables_sha256": "1c56c18eb9a258cd8f13be640c598d07e47a26f85f1da378e4f633504e2d6e46",
     "b0cd_sha256": "1426a8f08ab1c4a010886c6e533046a721bc98555c1441b5220f233cbec5eff9",
     "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
-    "b826_sha256": "f3ef745a73e811ab18d0a128ede5169e4518b128ee7a01a7d0c51a8427d6d126",
+    "b826_sha256": "bccf16eec3d6f5cc77f77c09a7847675123f12d39b355ee62193a76b894c761e",
     "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
    }
   ]

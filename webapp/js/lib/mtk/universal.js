@@ -21,6 +21,13 @@ export const BW_FAMILIES = {
   legacy14: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 90, 100, 200, 400],
   nr15_13: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 200, 400],
 };
+// Bandwidth dictionary for FeatureObj bw_code, per ROM family (mtk_universal.py
+// FEATURE_BW). The legacy14 list found in md1rom (90 inserted before 100) is
+// not the feature-code enum: MD800 feature objects use the 13-entry order
+// shared with NR15 (code 10 = 100 MHz). Proven on RG620T-EG against a captured
+// UE capability (n40/41/77/78/79 at 100 MHz, never 90); the MD800 absent
+// sentinel 03 0d 01 is one past a 13-entry enum, like modern 03 14 01.
+const FEATURE_BW = { legacy14: BW_FAMILIES.nr15_13 };
 const LTE_WEIGHT_PREFIX = [1, 2, 2, 3, 4, 5];
 const NR_WEIGHT_PREFIX = [1, 2, 2, 3, 4, 2, 3, 4, 5, 6, 7, 8];
 const LTE_WEIGHTS_EXPECTED = [1, 2, 2, 3, 4, 5];
@@ -240,7 +247,7 @@ export function discoverRomTables(rom, rep) {
     const mapOff = ordered[0];
     const bandmap = Array.from(rom.subarray(mapOff, mapOff + BANDMAP_LEN));
     rep.info("rom_tables", "discovered and validated ROM dictionaries", { bw_family: fam });
-    return new RomTables([...tbl], nrw, ltew, bandmap, bwOff, nrOff, lteOff, mapOff, fam);
+    return new RomTables([...(FEATURE_BW[fam] ?? tbl)], nrw, ltew, bandmap, bwOff, nrOff, lteOff, mapOff, fam);
   }
   throw new UniversalError(`no bandwidth-enum site produced a complete dictionary: ${errors.join("; ")}`);
 }
