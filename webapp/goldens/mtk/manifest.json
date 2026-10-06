@@ -1,0 +1,2761 @@
+{
+ "OppoFindX9Pro": {
+  "input": "OppoFindX9Pro",
+  "packaging": "single-drdi",
+  "layers": [
+   "directory"
+  ],
+  "loader": "grid",
+  "profiles": [
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 198,
+     "endc": 57,
+     "nr_sa": 19,
+     "nrca": 73,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 198,
+     "NR SA (1CC)": 19,
+     "NR-CA": 73,
+     "EN-DC": 57,
+     "NRDC": 0
+    },
+    "tables_sha256": "4f17eb4f2dbacef1a1179c734f113d1787ab7072438a02a616fec3c66df8140b",
+    "b0cd_sha256": "5954e0d5bda499256cb2eda367a471a39108b08614e657edb714e8c68ded8f30",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "d6b3a01fdb071ab90de364069d473c2e2025f7733380d13a99d5c2315a08ad45",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 1,
+    "counts": {
+     "lte": 23,
+     "endc": 2,
+     "nr_sa": 20,
+     "nrca": 5,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 23,
+     "NR SA (1CC)": 20,
+     "NR-CA": 5,
+     "EN-DC": 2,
+     "NRDC": 0
+    },
+    "tables_sha256": "d63f8c6bed9e914e36ede442b473dcfceb9790997a16c1ee7c52b9bee540ebd7",
+    "b0cd_sha256": "141b7a4a4b589e26d21e5a307607c57486264c74234fb04a46ec27a2ac8e0a4d",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "5d07ef4b29a720129efd7b46ab92c7806e19674075475999c04d7ee2b2d8aef4",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 2,
+    "counts": {
+     "lte": 148,
+     "endc": 57,
+     "nr_sa": 19,
+     "nrca": 103,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 148,
+     "NR SA (1CC)": 19,
+     "NR-CA": 103,
+     "EN-DC": 57,
+     "NRDC": 0
+    },
+    "tables_sha256": "79445d2e9a63f3066453443297b5a8c32c6d43277452f7ed23498eb9b2c2b4c2",
+    "b0cd_sha256": "7d83c67df6c01ef3df7ab20bb4a34324e4a37787df0aaa97db6d078c717c72ca",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "98f0b0778b8e27e81b3443e2330f6c089652594bb314ca62ce28423d067fe35e",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 3,
+    "counts": {
+     "lte": 2150,
+     "endc": 2905,
+     "nr_sa": 21,
+     "nrca": 986,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2150,
+     "NR SA (1CC)": 21,
+     "NR-CA": 986,
+     "EN-DC": 2905,
+     "NRDC": 0
+    },
+    "tables_sha256": "ea21c8dc2fecb19e91b7e49b890a6ad6936d8c4ebc5ca66d882c0230a26e7f2f",
+    "b0cd_sha256": "c54a29c474ddc5e8287eb601fce8248f5ec860ee00d1af29dc0bffd5df46cfc3",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "e647924434ead1388638fd3c1c160b7d6c973a5a2a9118e9b3801d6cbaee1f05",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 4,
+    "counts": {
+     "lte": 2821,
+     "endc": 2991,
+     "nr_sa": 18,
+     "nrca": 951,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2821,
+     "NR SA (1CC)": 18,
+     "NR-CA": 951,
+     "EN-DC": 2991,
+     "NRDC": 0
+    },
+    "tables_sha256": "bee7f070b76e1cf6e30981e170c002dc530cd3bbdbacbceb528d315b597c61c0",
+    "b0cd_sha256": "761fde8d9de505fc6cee4fbeb282e3945d091470cefc33e448b66d5d42c9a279",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "c5e445f8d49fc0451da0ff4cb0b6bf6021589fecbe2b09fff2b65aa5f1d2df2b",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 5,
+    "counts": {
+     "lte": 148,
+     "endc": 57,
+     "nr_sa": 22,
+     "nrca": 102,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 148,
+     "NR SA (1CC)": 22,
+     "NR-CA": 102,
+     "EN-DC": 57,
+     "NRDC": 0
+    },
+    "tables_sha256": "27425810439af7fac6a07bf5960669668c3dcda9dd29b9b50e9af049d322b8ff",
+    "b0cd_sha256": "7d83c67df6c01ef3df7ab20bb4a34324e4a37787df0aaa97db6d078c717c72ca",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "9ad7adda200173ec4f10341f6498d7c48d5a9b0a1a82a09a9d9cc0c4c4132cd9",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 6,
+    "counts": {
+     "lte": 2983,
+     "endc": 2947,
+     "nr_sa": 17,
+     "nrca": 835,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2983,
+     "NR SA (1CC)": 17,
+     "NR-CA": 835,
+     "EN-DC": 2947,
+     "NRDC": 0
+    },
+    "tables_sha256": "6d930c7705653031d56f23348002f556abb3591720e5884f5ad5a9916258387f",
+    "b0cd_sha256": "ba4f221740efe49fa3828ddddf9763907f0bb18e1ea9e0aa901c4e232dcff07e",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "1a459ad9d6d0345eed82eaf6a4972d7a2df1b3a5fe52f55a88df2ab87de53fa3",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 7,
+    "counts": {
+     "lte": 2151,
+     "endc": 3036,
+     "nr_sa": 22,
+     "nrca": 1017,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2151,
+     "NR SA (1CC)": 22,
+     "NR-CA": 1017,
+     "EN-DC": 3036,
+     "NRDC": 0
+    },
+    "tables_sha256": "da246b5d17b0d768511835849192533a7d4fd5f7aca4164160b6935374cb71b2",
+    "b0cd_sha256": "55d9880f6cc8631f06098dfb1ed2f4b49c9560b9dcb3642dc899ab34e48b03a8",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "3c16b9088f7e0f4dbf58f623bc484c3a0743597068f954099fc0c99b8739575c",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 8,
+    "counts": {
+     "lte": 2821,
+     "endc": 2989,
+     "nr_sa": 18,
+     "nrca": 951,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2821,
+     "NR SA (1CC)": 18,
+     "NR-CA": 951,
+     "EN-DC": 2989,
+     "NRDC": 0
+    },
+    "tables_sha256": "1da950aa663e17fb94db3239e7e777163845873888175291c395ad268ea68feb",
+    "b0cd_sha256": "761fde8d9de505fc6cee4fbeb282e3945d091470cefc33e448b66d5d42c9a279",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "e2b8f94aa1fe1b65059c23213df3ac3ef3e2e7abb6b1ef1ab76add21e375c156",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 9,
+    "counts": {
+     "lte": 2838,
+     "endc": 2945,
+     "nr_sa": 17,
+     "nrca": 837,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2838,
+     "NR SA (1CC)": 17,
+     "NR-CA": 837,
+     "EN-DC": 2945,
+     "NRDC": 0
+    },
+    "tables_sha256": "669c46b0544d480d275b2aa5cb4935685a53aeb2a8629c5e48c67a60db09a38e",
+    "b0cd_sha256": "22daf9778c95ca7a62164afef9aac67af645f288f71317c0c933c410319d051d",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "4b34e16f0424e9bf90706a66adcc862b63e5ed7e80be49eb3a06d84ff4a61c39",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 10,
+    "counts": {
+     "lte": 2821,
+     "endc": 2989,
+     "nr_sa": 18,
+     "nrca": 951,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2821,
+     "NR SA (1CC)": 18,
+     "NR-CA": 951,
+     "EN-DC": 2989,
+     "NRDC": 0
+    },
+    "tables_sha256": "1da950aa663e17fb94db3239e7e777163845873888175291c395ad268ea68feb",
+    "b0cd_sha256": "761fde8d9de505fc6cee4fbeb282e3945d091470cefc33e448b66d5d42c9a279",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "e2b8f94aa1fe1b65059c23213df3ac3ef3e2e7abb6b1ef1ab76add21e375c156",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 11,
+    "counts": {
+     "lte": 2838,
+     "endc": 2945,
+     "nr_sa": 17,
+     "nrca": 837,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2838,
+     "NR SA (1CC)": 17,
+     "NR-CA": 837,
+     "EN-DC": 2945,
+     "NRDC": 0
+    },
+    "tables_sha256": "669c46b0544d480d275b2aa5cb4935685a53aeb2a8629c5e48c67a60db09a38e",
+    "b0cd_sha256": "22daf9778c95ca7a62164afef9aac67af645f288f71317c0c933c410319d051d",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "4b34e16f0424e9bf90706a66adcc862b63e5ed7e80be49eb3a06d84ff4a61c39",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 12,
+    "counts": {
+     "lte": 2169,
+     "endc": 3099,
+     "nr_sa": 22,
+     "nrca": 1044,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2169,
+     "NR SA (1CC)": 22,
+     "NR-CA": 1044,
+     "EN-DC": 3099,
+     "NRDC": 0
+    },
+    "tables_sha256": "c8a6ba9ff0d2b775a33a8ae5070ef1fe64b0b8a8462580d0bb7f72f24aca1e3c",
+    "b0cd_sha256": "7d36157b0aa7000864a4632eda9516433aeef825a833632557af4400eed21358",
+    "b0cd_name": "OppoFindX9Pro_0xB0CD_v41.txt",
+    "b826_sha256": "860081ed7d69240df744faf4bd9d3e6f0b5e50d651cfafb6ee8adb626ac8455f",
+    "b826_name": "OppoFindX9Pro_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "Pixel11": {
+  "input": "Pixel11/modem.img",
+  "packaging": "tensor-split",
+  "layers": [
+   "ext4",
+   "gzip",
+   "hblr",
+   "hblr",
+   "hblr",
+   "hblr",
+   "gzip"
+  ],
+  "loader": "tensor",
+  "profiles": [
+   {
+    "bank": 5,
+    "profile": 0,
+    "counts": {
+     "lte": 2186,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2186,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "50c27b1abc1878d583b21f351e8ebae71a4e1556f65c24604dc127640bc08e18",
+    "b0cd_sha256": "fe8fdafd2b3f8b060f743517f320d81690bb0565d6239b2f60956f79fcad0591",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 1,
+    "counts": {
+     "lte": 1869,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1869,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "38bb4010d95ce7fa2e696137fbfee62e5171f088f6458fac2facca240305cd4e",
+    "b0cd_sha256": "360d76f0c471764f9a7502b317321d4341b868d8401e45796eb71c728776cbec",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 2,
+    "counts": {
+     "lte": 3368,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 3368,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "bea92bb7a9a99e4d437894633ee309a069afc67713382b754f5db3540a05899c",
+    "b0cd_sha256": "61d3382cfd34db5de4e870da68115d320b539badd1d66df640fe09d18a5be144",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 3,
+    "counts": {
+     "lte": 3888,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 3888,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "530348686dfb92dcb5d5b371d3309e47c77d08276753129e256afd1fcf442607",
+    "b0cd_sha256": "deffba59373228c38ae31a2dea914b97eca8040fd0f9f123243e1786e14ba2c8",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 4,
+    "counts": {
+     "lte": 2264,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2264,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "621e6b2d152641abdb4beb4599d9334858f909936ab8b885e4066a768d172769",
+    "b0cd_sha256": "4142be3a54d444f2e5b7480d67f3b78b2a920f96b1fd5e0ccf2fc5de8738fe54",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 5,
+    "counts": {
+     "lte": 3888,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 3888,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "d42b7907e4922016ca36f3e246e67fd189643925ded219446cb10577311a7a5b",
+    "b0cd_sha256": "98eaee7a49ff4663877fa5c132472841282e63cb540a8342460222972d758624",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 6,
+    "counts": {
+     "lte": 1875,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1875,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "7bc8a73306163d5cf06f0751dea6a9679e4208cfb2735dcc3c296e55f559305b",
+    "b0cd_sha256": "efcc80b17f8ba9f110dff41aa71b4be823344800b1b034e1a87687492227bc8e",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 7,
+    "counts": {
+     "lte": 3480,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 3480,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "f4c6d6da457686c5d7bdd11436ade506e691c60f8fb27bfd5ec664d019a5e914",
+    "b0cd_sha256": "bf70d36520af3aadc06869494e80eb478ce07595fc0d9d2c0ef613b37ed3fdd8",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 8,
+    "counts": {
+     "lte": 2186,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2186,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "50c27b1abc1878d583b21f351e8ebae71a4e1556f65c24604dc127640bc08e18",
+    "b0cd_sha256": "fe8fdafd2b3f8b060f743517f320d81690bb0565d6239b2f60956f79fcad0591",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 9,
+    "counts": {
+     "lte": 3480,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 3480,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "f4c6d6da457686c5d7bdd11436ade506e691c60f8fb27bfd5ec664d019a5e914",
+    "b0cd_sha256": "bf70d36520af3aadc06869494e80eb478ce07595fc0d9d2c0ef613b37ed3fdd8",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 10,
+    "counts": {
+     "lte": 3368,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 3368,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "bea92bb7a9a99e4d437894633ee309a069afc67713382b754f5db3540a05899c",
+    "b0cd_sha256": "61d3382cfd34db5de4e870da68115d320b539badd1d66df640fe09d18a5be144",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 11,
+    "counts": {
+     "lte": 16,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 16,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "2e4533c91ddbc8ec73b4e76ad59480589b094b3cb43e5450de97245589532ed3",
+    "b0cd_sha256": "882c83f97291bce0d93ec3d6378dbcb1267a9e7ef8596e6ed0d8bf47af1e862b",
+    "b0cd_name": "modem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 12,
+     "endc": 5426,
+     "nr_sa": 23,
+     "nrca": 6207,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 12,
+     "NR SA (1CC)": 23,
+     "NR-CA": 6207,
+     "EN-DC": 5426,
+     "NRDC": 0
+    },
+    "tables_sha256": "2a338fba34d0f9fca3835c4a2de820e71dfe0c9d513e61da65b92a311678a414",
+    "b0cd_sha256": "3cbfaa72d022909a6143aff10877962b979d716664b47141200b7d3ac49d7101",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "5c77dc7e496dac8e9e0dbbe1f63ab93c54edea73e8960ad3cc9e829dab505e13",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 1,
+    "counts": {
+     "lte": 10,
+     "endc": 3741,
+     "nr_sa": 23,
+     "nrca": 6164,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 23,
+     "NR-CA": 6164,
+     "EN-DC": 3741,
+     "NRDC": 0
+    },
+    "tables_sha256": "ac6e95884a33dd9ceea15085b2e6a2db81a9a8023df95f111a0ec330ba5b406a",
+    "b0cd_sha256": "7621ae2e372a7f28d3339855f0b9978da17d6149cade531b5901a7c537fa9b0c",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "6e9cb6a261b3922edff84c38c0a1332ff4b86e3adaed2cadb0927c01735ab6a4",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 2,
+    "counts": {
+     "lte": 10,
+     "endc": 3676,
+     "nr_sa": 19,
+     "nrca": 1781,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 19,
+     "NR-CA": 1781,
+     "EN-DC": 3676,
+     "NRDC": 0
+    },
+    "tables_sha256": "685e181378ca2e6aeacbb3145cc66e01d1cbeaff8b63158f049701914dc2f37b",
+    "b0cd_sha256": "b3eb1fcd1e0968de738e52047bf6b60237e7fdbf2cd27f597b82c457af8ecc86",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "03bf39c34ebf6011eb9c636fc8b791ae45e63d5e8951059f4e3194f852329a5f",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 3,
+    "counts": {
+     "lte": 14,
+     "endc": 6640,
+     "nr_sa": 26,
+     "nrca": 8008,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 14,
+     "NR SA (1CC)": 26,
+     "NR-CA": 8008,
+     "EN-DC": 6640,
+     "NRDC": 0
+    },
+    "tables_sha256": "21e09bc708c711f1e96c21f97a735df1cc8f858d3f201cff1cf360b114f5b076",
+    "b0cd_sha256": "07f02794c3e590137df794e308cb688f91cfe91188f616aa6691fccd1a64e769",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "ffc8b381c220d1d90fc1b1c182e657ce9b442f9017109ca104bdc3a36ff16db3",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 4,
+    "counts": {
+     "lte": 12,
+     "endc": 5726,
+     "nr_sa": 24,
+     "nrca": 7933,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 12,
+     "NR SA (1CC)": 24,
+     "NR-CA": 7933,
+     "EN-DC": 5726,
+     "NRDC": 0
+    },
+    "tables_sha256": "4adac9bbb39ca451f349084a9935b8448d6c120257da6336a1afa827824fd69c",
+    "b0cd_sha256": "f003e9ded73eeebf3f7abf1eced22c0a70296242ba3aeb9a43899ad8f6e752e4",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "f55aff10823c25f607cc63f17f1c24d7d72e7864fd1fd5193249e0211e5f87de",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 5,
+    "counts": {
+     "lte": 14,
+     "endc": 6623,
+     "nr_sa": 23,
+     "nrca": 6060,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 14,
+     "NR SA (1CC)": 23,
+     "NR-CA": 6060,
+     "EN-DC": 6623,
+     "NRDC": 0
+    },
+    "tables_sha256": "bdee2ab2389c65ae8b50e1c66640febdaf5a23bb5037a72a90a887a79c0180c4",
+    "b0cd_sha256": "07f02794c3e590137df794e308cb688f91cfe91188f616aa6691fccd1a64e769",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "aa9b75f1921593efb4e060d2bce92db83959f3f5b87d6bf60f692fde9e8e45f5",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 6,
+    "counts": {
+     "lte": 10,
+     "endc": 4102,
+     "nr_sa": 23,
+     "nrca": 7479,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 23,
+     "NR-CA": 7479,
+     "EN-DC": 4102,
+     "NRDC": 0
+    },
+    "tables_sha256": "5ec4047672b578ac95763902c9630d95704691ec0dc29846ce7e1ff864429483",
+    "b0cd_sha256": "bdd583f4d29613ae658210a915183a1efdd6a7b487127b1c0bde5b07db9d08e9",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "1daa13686b45e2883fb8db9321eb9365d8a99b33c19c336a96fe2b9b6701b691",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 7,
+    "counts": {
+     "lte": 14,
+     "endc": 6354,
+     "nr_sa": 24,
+     "nrca": 4892,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 14,
+     "NR SA (1CC)": 24,
+     "NR-CA": 4892,
+     "EN-DC": 6354,
+     "NRDC": 0
+    },
+    "tables_sha256": "8d2c9b316aa6702678659567517b2c1c0c3e165f60010dc58d34a97648853d19",
+    "b0cd_sha256": "07f02794c3e590137df794e308cb688f91cfe91188f616aa6691fccd1a64e769",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "e6b51b4c04b3c1caca7cc80d148909d0c414b46a7e5e439ad90729506a1a856f",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 8,
+    "counts": {
+     "lte": 12,
+     "endc": 5430,
+     "nr_sa": 23,
+     "nrca": 6915,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 12,
+     "NR SA (1CC)": 23,
+     "NR-CA": 6915,
+     "EN-DC": 5430,
+     "NRDC": 0
+    },
+    "tables_sha256": "eaec63cf833f55b9946a9774ab531bbfd2dbe42be33098636e355e342f43131b",
+    "b0cd_sha256": "3cbfaa72d022909a6143aff10877962b979d716664b47141200b7d3ac49d7101",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "95159d3c30fd9a57b87bf9415bb164c3f262210235af1332c675c2f38737627e",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 9,
+    "counts": {
+     "lte": 14,
+     "endc": 6354,
+     "nr_sa": 24,
+     "nrca": 4892,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 14,
+     "NR SA (1CC)": 24,
+     "NR-CA": 4892,
+     "EN-DC": 6354,
+     "NRDC": 0
+    },
+    "tables_sha256": "8d2c9b316aa6702678659567517b2c1c0c3e165f60010dc58d34a97648853d19",
+    "b0cd_sha256": "07f02794c3e590137df794e308cb688f91cfe91188f616aa6691fccd1a64e769",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "e6b51b4c04b3c1caca7cc80d148909d0c414b46a7e5e439ad90729506a1a856f",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 10,
+    "counts": {
+     "lte": 10,
+     "endc": 3662,
+     "nr_sa": 19,
+     "nrca": 1781,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 19,
+     "NR-CA": 1781,
+     "EN-DC": 3662,
+     "NRDC": 0
+    },
+    "tables_sha256": "44346f1cf25b5e39f188863bb277693f4293744daffb6d45525f613221fe87ce",
+    "b0cd_sha256": "d5d41e0720b4065af4926d747078cad14f2dac0985fe89c9408183b5fcaf513d",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "0b4a4df46e0a7af539e1e19e72e674f2bec1db5180fb16852e7d2e1c39509000",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 11,
+    "counts": {
+     "lte": 0,
+     "endc": 0,
+     "nr_sa": 10,
+     "nrca": 11,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 10,
+     "NR-CA": 11,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "ddc58faf34fbf09af482053a69e33474f8b9c0808050289d10ab4fcfe6feebb0",
+    "b826_sha256": "2468d54951399e4a49e2c05c0a77215efa6d0ac3f75c93ab2fbf256d4e3ab72b",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 8,
+    "profile": 0,
+    "counts": {
+     "lte": 4,
+     "endc": 8602,
+     "nr_sa": 0,
+     "nrca": 0,
+     "nrdc": 3191
+    },
+    "bank_only": true,
+    "secondary_bank": 8,
+    "tables": {
+     "LTE": 4,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 8602,
+     "NRDC": 3191
+    },
+    "tables_sha256": "041096292a3899c633698ba865e7860cbf87631382a14996783f0183a1317177",
+    "b0cd_sha256": "6bee5bb78d662d156f66f33af909e1f5c8388ad8242948ece5d6a88f2e532ed6",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "b144d823aabd3e82c8c79381f03e24c040e85c0f9754e57933f9001b2da79585",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 8,
+    "profile": 1,
+    "counts": {
+     "lte": 8,
+     "endc": 10997,
+     "nr_sa": 0,
+     "nrca": 0,
+     "nrdc": 3625
+    },
+    "bank_only": true,
+    "secondary_bank": 8,
+    "tables": {
+     "LTE": 8,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 10997,
+     "NRDC": 3625
+    },
+    "tables_sha256": "a2017453d0410c6539f559fe15516686a895bf750cdf6614740a687e8ff9353b",
+    "b0cd_sha256": "9181eb53ed79654c0d92830e97afcf35a5fdb1a16ac44eef0b729d5844df2d38",
+    "b0cd_name": "modem_0xB0CD_v41.txt",
+    "b826_sha256": "1250f0c6d1265e13c89c5986aadc53e883be9273a12322e053c8b460d9112a2e",
+    "b826_name": "modem_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "PocoX8": {
+  "input": "PocoX8",
+  "packaging": "single-drdi",
+  "layers": [
+   "directory",
+   "directory"
+  ],
+  "loader": "grid",
+  "profiles": [
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 135,
+     "endc": 0,
+     "nr_sa": 11,
+     "nrca": 133,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 135,
+     "NR SA (1CC)": 11,
+     "NR-CA": 133,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "24454809e4709e37ec7580efe0a5be004a492a13ab9c939dafd867f668b9fd02",
+    "b0cd_sha256": "46a635dd033a596289591f61c9760da7d2e228fc5eaee270106ebebc21f68f1e",
+    "b0cd_name": "PocoX8_0xB0CD_v41.txt",
+    "b826_sha256": "68b791cdb4b378afb3623c7552a3dd241a43f991cad517351d83f0e8c9907175",
+    "b826_name": "PocoX8_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 1,
+    "counts": {
+     "lte": 123,
+     "endc": 67,
+     "nr_sa": 17,
+     "nrca": 120,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 123,
+     "NR SA (1CC)": 17,
+     "NR-CA": 120,
+     "EN-DC": 67,
+     "NRDC": 0
+    },
+    "tables_sha256": "98bb887435ed9a6e7a37a4d4501331c5cfcd15922ba0191b613651946b77f0fe",
+    "b0cd_sha256": "d9d94b9e770832258ef4ad65679f195812cd66e23b322e52f2d92946f80ef3ca",
+    "b0cd_name": "PocoX8_0xB0CD_v41.txt",
+    "b826_sha256": "996725a239d7dcbda8360456aa8085bcea100e85bc8f8ff006ff389c80a0cee5",
+    "b826_name": "PocoX8_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 2,
+    "counts": {
+     "lte": 384,
+     "endc": 181,
+     "nr_sa": 17,
+     "nrca": 153,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 384,
+     "NR SA (1CC)": 17,
+     "NR-CA": 153,
+     "EN-DC": 181,
+     "NRDC": 0
+    },
+    "tables_sha256": "44927580054c602fa5ca12f1a20c8adc7c19ea9666602b5e49f759ce5f5d5074",
+    "b0cd_sha256": "d91bbab3c8552a6e02e83a1a064886c99dfb710d0a22d7eafc486b6610dcce28",
+    "b0cd_name": "PocoX8_0xB0CD_v41.txt",
+    "b826_sha256": "e4bc563b345dcf760769f9f7661e2c9eaa166adc392942f8d59f6529a8bc80c0",
+    "b826_name": "PocoX8_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 3,
+    "counts": {
+     "lte": 383,
+     "endc": 0,
+     "nr_sa": 13,
+     "nrca": 133,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 383,
+     "NR SA (1CC)": 13,
+     "NR-CA": 133,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "68c91ccac20de6c87b4cde73a16fa4d5e1e630e32f074f6eee60983a60020ef9",
+    "b0cd_sha256": "b01a03fe1e22a81b43626c8af0e7cbd623dfb11682d6789c7e79a584fe3ac8a1",
+    "b0cd_name": "PocoX8_0xB0CD_v41.txt",
+    "b826_sha256": "a3e6920daf465c44cf082c923b04b950698d7ed8cc1f421a91963ff26c97400c",
+    "b826_name": "PocoX8_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 4,
+    "counts": {
+     "lte": 10,
+     "endc": 339,
+     "nr_sa": 17,
+     "nrca": 153,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 17,
+     "NR-CA": 153,
+     "EN-DC": 339,
+     "NRDC": 0
+    },
+    "tables_sha256": "b7e00dde14b86d9d288dc9366ab7fadb2f5340dc712a2e7ed78e43f4ce97c58c",
+    "b0cd_sha256": "6b19d16b4f8543f009564295a3e34702e9cfe0853a724061cd2d8f349a9353e9",
+    "b0cd_name": "PocoX8_0xB0CD_v41.txt",
+    "b826_sha256": "37bfce1e5deaa7b23062427c9b3fa1ce58191d7f4671d1a0a3f0be96317ec564",
+    "b826_name": "PocoX8_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "RG620T-EG": {
+  "input": "RG620T-EG/modem-verified.img",
+  "packaging": "single-drdi",
+  "layers": [
+   "mtk"
+  ],
+  "loader": "flat",
+  "profiles": [
+   {
+    "bank": 0,
+    "profile": 0,
+    "counts": {
+     "lte": 2886,
+     "endc": 4367,
+     "nr_sa": 14,
+     "nrca": 721,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2886,
+     "NR SA (1CC)": 14,
+     "NR-CA": 721,
+     "EN-DC": 4367,
+     "NRDC": 0
+    },
+    "tables_sha256": "08557ba91ab702e5094c7c24b3d4d3c48ec1fad874f6985b474d6332ee2d3cf0",
+    "b0cd_sha256": "22f1d0bb492b5e265627c977375ccea896eed77024e0cfcf942205fc83212123",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "249f179519a84161bfbc59ea186a8c490b0d83eb1f5e713df8baf6cb5c8a54cf",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 2,
+    "counts": {
+     "lte": 1954,
+     "endc": 4369,
+     "nr_sa": 14,
+     "nrca": 435,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1954,
+     "NR SA (1CC)": 14,
+     "NR-CA": 435,
+     "EN-DC": 4369,
+     "NRDC": 0
+    },
+    "tables_sha256": "5c364e414a15c84d2613a04fb4f8dd863a87211f243ca9d31d4067fb7c32f524",
+    "b0cd_sha256": "4a243eb3a20f7ca6ccff6e6fb683d5aab79336bc9b7f5edf65ebfeffdbdbe5c2",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "2bd099f2b5d29c335ee93cbef7c007f53aef87a3138f2f58915bb963b8dbeeab",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 3,
+    "counts": {
+     "lte": 1954,
+     "endc": 2626,
+     "nr_sa": 7,
+     "nrca": 399,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1954,
+     "NR SA (1CC)": 7,
+     "NR-CA": 399,
+     "EN-DC": 2626,
+     "NRDC": 0
+    },
+    "tables_sha256": "bc780aa0b9dfa120080530185ad3bb8f121594165c5de7f37f792ef21ce529cc",
+    "b0cd_sha256": "4a243eb3a20f7ca6ccff6e6fb683d5aab79336bc9b7f5edf65ebfeffdbdbe5c2",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "15f74471ca6e937d17838f255b31ca8b821493db3919b951b7f6228b56b61776",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 4,
+    "counts": {
+     "lte": 1596,
+     "endc": 4891,
+     "nr_sa": 14,
+     "nrca": 1204,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1596,
+     "NR SA (1CC)": 14,
+     "NR-CA": 1204,
+     "EN-DC": 4891,
+     "NRDC": 0
+    },
+    "tables_sha256": "b7b3a13bba56a7b38e6e8f7c658f47ac94bf327e7a3d8540e99b627e0f5985df",
+    "b0cd_sha256": "6cd714e2ac70c2221195a78d77dcd43766d8502a4ecc5537bcf9cb156f7a9189",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "17399e8b235f50673a8164be641ee16673e1a1c596d1d7cbf62ea833334e0af4",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 13,
+    "counts": {
+     "lte": 0,
+     "endc": 4891,
+     "nr_sa": 14,
+     "nrca": 1204,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 14,
+     "NR-CA": 1204,
+     "EN-DC": 4891,
+     "NRDC": 0
+    },
+    "tables_sha256": "1f4010d520a9f68401a07451c30745ddd9d455a7ebc8f5c1d67593ac015888d6",
+    "b0cd_sha256": "28a46c33c7c27a51449feb997a08162088a6f8f2f3f4c7a3cd13ec684cd7eb72",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "17399e8b235f50673a8164be641ee16673e1a1c596d1d7cbf62ea833334e0af4",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 5,
+    "counts": {
+     "lte": 1596,
+     "endc": 4891,
+     "nr_sa": 14,
+     "nrca": 921,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1596,
+     "NR SA (1CC)": 14,
+     "NR-CA": 921,
+     "EN-DC": 4891,
+     "NRDC": 0
+    },
+    "tables_sha256": "d6d7430275812067d1dc8d19f806883e2f03ca87cee0234b18fe32ac84f8dcc0",
+    "b0cd_sha256": "6cd714e2ac70c2221195a78d77dcd43766d8502a4ecc5537bcf9cb156f7a9189",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "cbf2ac02edf7cfa31bcec97505e23dba649cbcf32833d7f2b71e7e6156104cdf",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 6,
+    "counts": {
+     "lte": 1582,
+     "endc": 6369,
+     "nr_sa": 13,
+     "nrca": 1592,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1582,
+     "NR SA (1CC)": 13,
+     "NR-CA": 1592,
+     "EN-DC": 6369,
+     "NRDC": 0
+    },
+    "tables_sha256": "63f5807f1eaf34260741108c6eed76a1d7d11c6a66d3dc10e9e1a11c7403f3ac",
+    "b0cd_sha256": "a36f46feda781ca239abf876599f735399906d14523ba7bd59e245247024784b",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "16ffdd3e439048533da271fb8b5f331f277d012b672c22a7e1ba9cbf6b31d34d",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 7,
+    "counts": {
+     "lte": 1428,
+     "endc": 4744,
+     "nr_sa": 13,
+     "nrca": 1171,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1428,
+     "NR SA (1CC)": 13,
+     "NR-CA": 1171,
+     "EN-DC": 4744,
+     "NRDC": 0
+    },
+    "tables_sha256": "e1732937ffa07d1b6ff24e008e3ba0bb010d5020ef27cafd84a953236fda9e08",
+    "b0cd_sha256": "b2145978ef7abb6911c52fdd4dec8dc096be28e1844d8c7e84fb74fc31e462f9",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "1dc4da919d80cdd85e9a794efbaf03186f89841d42efab14acd03bec880d78d9",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 8,
+    "counts": {
+     "lte": 1106,
+     "endc": 0,
+     "nr_sa": 6,
+     "nrca": 608,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1106,
+     "NR SA (1CC)": 6,
+     "NR-CA": 608,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "68654bdbe6e3f522c85f4e7f268958624ff1b61a963847f6f8e970ada44c7605",
+    "b0cd_sha256": "415806d65aca4ee58e630d6251cc8a22f378452619e0ee9ca8db32d79e5e480c",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "de848c3734ae880adeed5e70d33d7b374c2806a54d37b7c3289a831d479562d2",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 9,
+    "counts": {
+     "lte": 1057,
+     "endc": 57,
+     "nr_sa": 7,
+     "nrca": 1210,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1057,
+     "NR SA (1CC)": 7,
+     "NR-CA": 1210,
+     "EN-DC": 57,
+     "NRDC": 0
+    },
+    "tables_sha256": "d5b772f56b4ee4d0b7c2b32ac2bf6c581a9d899783edbc467835e87a7a4290ee",
+    "b0cd_sha256": "9b3f61f32bd3748bfe8f667a2d8729dea38b25075ad331916fe37f703b33d9c1",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "0084ec892c442f74314cbfa999b3e7b9b7bc4aac88a279738f63fc9a01f1ffdb",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 10,
+    "counts": {
+     "lte": 494,
+     "endc": 9502,
+     "nr_sa": 14,
+     "nrca": 1372,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 494,
+     "NR SA (1CC)": 14,
+     "NR-CA": 1372,
+     "EN-DC": 9502,
+     "NRDC": 0
+    },
+    "tables_sha256": "a648af24ff3e72cbe8cb082584ba587d85d2611e8d02d484e763d5c8c34a8b81",
+    "b0cd_sha256": "4eb5db18d110756cac02da8a5083df011ec989b6b0a1b589cb01f60c01659810",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "653f938e745ce5c20df731d8b54ae58a3127a413fbcb2988b24ca2599fa5f939",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 11,
+    "counts": {
+     "lte": 0,
+     "endc": 57,
+     "nr_sa": 7,
+     "nrca": 1215,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 7,
+     "NR-CA": 1215,
+     "EN-DC": 57,
+     "NRDC": 0
+    },
+    "tables_sha256": "70883126f3b3f48710a6ecf8dcec1c1bc2c781b6a594b1391c65688d278e7403",
+    "b0cd_sha256": "28a46c33c7c27a51449feb997a08162088a6f8f2f3f4c7a3cd13ec684cd7eb72",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "723ed3baa1793813105b9edf6984c82963ddd8e3289d4a99dd9be851e57a2d43",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 12,
+    "counts": {
+     "lte": 0,
+     "endc": 6369,
+     "nr_sa": 13,
+     "nrca": 1603,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 13,
+     "NR-CA": 1603,
+     "EN-DC": 6369,
+     "NRDC": 0
+    },
+    "tables_sha256": "fa501b0512dc37a1d6f75f0a2dfdbf69e7a74f514788f64c425c1851518a2cad",
+    "b0cd_sha256": "28a46c33c7c27a51449feb997a08162088a6f8f2f3f4c7a3cd13ec684cd7eb72",
+    "b0cd_name": "modem-verified_0xB0CD_v41.txt",
+    "b826_sha256": "8938d681489464b9302f756c18a0e5d83ea2ca461dbdbf63571385fd66894dd1",
+    "b826_name": "modem-verified_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "RedmiNote105G": {
+  "input": "RedmiNote105G/md1img.img",
+  "packaging": "single-drdi",
+  "layers": [
+   "mtk",
+   "gzip"
+  ],
+  "loader": "nr15",
+  "profiles": [
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 35,
+     "endc": 14,
+     "nr_sa": 6,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 35,
+     "NR SA (1CC)": 6,
+     "NR-CA": 0,
+     "EN-DC": 14,
+     "NRDC": 0
+    },
+    "tables_sha256": "55970e9cd899889ec6f6100d70c6c1800428e7b4988e75cee05f0aea6d6d1c23",
+    "b0cd_sha256": "7943b3ed4c6cc43a016d958ea5fda9c3ae3997f1792fa603cdeead7a7361e4f3",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "ea72bf7be19b50dbcf8c51b280c7adaa5971d05b1d34a1b0d8780c6d7e8c1073",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 1,
+    "counts": {
+     "lte": 93,
+     "endc": 330,
+     "nr_sa": 24,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 93,
+     "NR SA (1CC)": 24,
+     "NR-CA": 0,
+     "EN-DC": 330,
+     "NRDC": 0
+    },
+    "tables_sha256": "d2f59c677748807a4a5741796a2eea32e7ed32ed1efb1825df04b1b7d55d6056",
+    "b0cd_sha256": "7b4c0a8b79de0556fdd44a6fe9e4557ce98cd0a7fd3dccf5ed1f8b30823df146",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "454888cdfe2a23364e74f49c3985597949d2e6f9daef15140ca008ba36a1df0b",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 2,
+    "counts": {
+     "lte": 10,
+     "endc": 12,
+     "nr_sa": 10,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 10,
+     "NR-CA": 0,
+     "EN-DC": 12,
+     "NRDC": 0
+    },
+    "tables_sha256": "f49fa44afb23bd1a1201bac5aaac53549d15d10c508c4f46cb854893e3d581f7",
+    "b0cd_sha256": "6d697bf0d6d96ba63b8a56ba6589e65d129e5a02630fa21a5ba3f8af3ac2fed8",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "82451d26d309a040b4439071f55e011d266bb2ea03102cabbca23175e4850804",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "RedmiNote12Pro": {
+  "input": "RedmiNote12Pro/md1img.img",
+  "packaging": "single-drdi",
+  "layers": [
+   "mtk",
+   "gzip"
+  ],
+  "loader": "nr15",
+  "profiles": [
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 88,
+     "endc": 22,
+     "nr_sa": 18,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 88,
+     "NR SA (1CC)": 18,
+     "NR-CA": 148,
+     "EN-DC": 22,
+     "NRDC": 0
+    },
+    "tables_sha256": "633a5ee0225d080f94002c1f94a06579769b162ad57419aee54ebdae1c749456",
+    "b0cd_sha256": "6ac7c09000cf735d583c8c7861598abcfe80179d6fa925dc6158eb00fa0f54e0",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "0d197679c03ec5104c1fd1f18c791965087dd78d048d97a1199dcee1370616ed",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 1,
+    "counts": {
+     "lte": 871,
+     "endc": 1544,
+     "nr_sa": 26,
+     "nrca": 334,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 871,
+     "NR SA (1CC)": 26,
+     "NR-CA": 334,
+     "EN-DC": 1544,
+     "NRDC": 0
+    },
+    "tables_sha256": "a5a7118cbf60cf019742f11ea590c83c36ca60e34b5d6fda472235e366e9efc1",
+    "b0cd_sha256": "7bb4d3a72699528dbd1565863d3fb98f09aff3208a73948090856d2def6ff3e0",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "6942deb36b378bc166a608c18f4be073a8813f20f792f37dede8905f8ed00164",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 2,
+    "counts": {
+     "lte": 98,
+     "endc": 114,
+     "nr_sa": 20,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 98,
+     "NR SA (1CC)": 20,
+     "NR-CA": 148,
+     "EN-DC": 114,
+     "NRDC": 0
+    },
+    "tables_sha256": "00bed9ebe1f88b4d730cd20072a9ea7200a66de5e36fd92f228f22d230f44c1a",
+    "b0cd_sha256": "74c890b936c3720d8b44aa165250f51825cb251a2656f81ddb88cefa11f5debc",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "708da51ea0ba688d218c642c6889a19ad8999b89c797c8658bd4b31efcd25b2f",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 3,
+    "counts": {
+     "lte": 88,
+     "endc": 22,
+     "nr_sa": 18,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 88,
+     "NR SA (1CC)": 18,
+     "NR-CA": 148,
+     "EN-DC": 22,
+     "NRDC": 0
+    },
+    "tables_sha256": "633a5ee0225d080f94002c1f94a06579769b162ad57419aee54ebdae1c749456",
+    "b0cd_sha256": "6ac7c09000cf735d583c8c7861598abcfe80179d6fa925dc6158eb00fa0f54e0",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "0d197679c03ec5104c1fd1f18c791965087dd78d048d97a1199dcee1370616ed",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 4,
+    "counts": {
+     "lte": 871,
+     "endc": 1544,
+     "nr_sa": 26,
+     "nrca": 334,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 871,
+     "NR SA (1CC)": 26,
+     "NR-CA": 334,
+     "EN-DC": 1544,
+     "NRDC": 0
+    },
+    "tables_sha256": "a5a7118cbf60cf019742f11ea590c83c36ca60e34b5d6fda472235e366e9efc1",
+    "b0cd_sha256": "7bb4d3a72699528dbd1565863d3fb98f09aff3208a73948090856d2def6ff3e0",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "6942deb36b378bc166a608c18f4be073a8813f20f792f37dede8905f8ed00164",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 5,
+    "counts": {
+     "lte": 98,
+     "endc": 114,
+     "nr_sa": 20,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 98,
+     "NR SA (1CC)": 20,
+     "NR-CA": 148,
+     "EN-DC": 114,
+     "NRDC": 0
+    },
+    "tables_sha256": "00bed9ebe1f88b4d730cd20072a9ea7200a66de5e36fd92f228f22d230f44c1a",
+    "b0cd_sha256": "74c890b936c3720d8b44aa165250f51825cb251a2656f81ddb88cefa11f5debc",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "708da51ea0ba688d218c642c6889a19ad8999b89c797c8658bd4b31efcd25b2f",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 6,
+    "counts": {
+     "lte": 91,
+     "endc": 22,
+     "nr_sa": 18,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 91,
+     "NR SA (1CC)": 18,
+     "NR-CA": 148,
+     "EN-DC": 22,
+     "NRDC": 0
+    },
+    "tables_sha256": "f7a1f870cf0b403ef7ba48baaee2ff14217876267847036ba2ddcad88685af34",
+    "b0cd_sha256": "6ffbc07160b60d729d05ace304037152c98be72d0a2d7131b23e28b4420acf59",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "0d197679c03ec5104c1fd1f18c791965087dd78d048d97a1199dcee1370616ed",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 7,
+    "counts": {
+     "lte": 913,
+     "endc": 1534,
+     "nr_sa": 26,
+     "nrca": 334,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 913,
+     "NR SA (1CC)": 26,
+     "NR-CA": 334,
+     "EN-DC": 1534,
+     "NRDC": 0
+    },
+    "tables_sha256": "49a3e6041e8fe667d43eb987aeafa8ef81dee66145a2146adfc5adc399894654",
+    "b0cd_sha256": "23d305627a5495caf43d0367576cda6432250f36751ff13d38c0e51d4b8450ae",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "013ef7198f202a4021cefe66bcec5ff01707174d0f61291b596a937f1ce7dacd",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 8,
+    "counts": {
+     "lte": 100,
+     "endc": 114,
+     "nr_sa": 20,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 100,
+     "NR SA (1CC)": 20,
+     "NR-CA": 148,
+     "EN-DC": 114,
+     "NRDC": 0
+    },
+    "tables_sha256": "1f5f22ce91311393a4abf33f3d0b36504d28af43c6cf59421eb9250de1ca26c8",
+    "b0cd_sha256": "52d578840b6854f5ae2a76fbc0d74e9c85ce095eab7ef232520a44543077b7bc",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "708da51ea0ba688d218c642c6889a19ad8999b89c797c8658bd4b31efcd25b2f",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 9,
+    "counts": {
+     "lte": 91,
+     "endc": 22,
+     "nr_sa": 18,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 91,
+     "NR SA (1CC)": 18,
+     "NR-CA": 148,
+     "EN-DC": 22,
+     "NRDC": 0
+    },
+    "tables_sha256": "f7a1f870cf0b403ef7ba48baaee2ff14217876267847036ba2ddcad88685af34",
+    "b0cd_sha256": "6ffbc07160b60d729d05ace304037152c98be72d0a2d7131b23e28b4420acf59",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "0d197679c03ec5104c1fd1f18c791965087dd78d048d97a1199dcee1370616ed",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 10,
+    "counts": {
+     "lte": 913,
+     "endc": 1534,
+     "nr_sa": 26,
+     "nrca": 334,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 913,
+     "NR SA (1CC)": 26,
+     "NR-CA": 334,
+     "EN-DC": 1534,
+     "NRDC": 0
+    },
+    "tables_sha256": "49a3e6041e8fe667d43eb987aeafa8ef81dee66145a2146adfc5adc399894654",
+    "b0cd_sha256": "23d305627a5495caf43d0367576cda6432250f36751ff13d38c0e51d4b8450ae",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "013ef7198f202a4021cefe66bcec5ff01707174d0f61291b596a937f1ce7dacd",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 11,
+    "counts": {
+     "lte": 100,
+     "endc": 114,
+     "nr_sa": 20,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 100,
+     "NR SA (1CC)": 20,
+     "NR-CA": 148,
+     "EN-DC": 114,
+     "NRDC": 0
+    },
+    "tables_sha256": "1f5f22ce91311393a4abf33f3d0b36504d28af43c6cf59421eb9250de1ca26c8",
+    "b0cd_sha256": "52d578840b6854f5ae2a76fbc0d74e9c85ce095eab7ef232520a44543077b7bc",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "708da51ea0ba688d218c642c6889a19ad8999b89c797c8658bd4b31efcd25b2f",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 12,
+    "counts": {
+     "lte": 1146,
+     "endc": 1466,
+     "nr_sa": 26,
+     "nrca": 334,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1146,
+     "NR SA (1CC)": 26,
+     "NR-CA": 334,
+     "EN-DC": 1466,
+     "NRDC": 0
+    },
+    "tables_sha256": "a58f5cb1dd2a3b40f782b1ba6129b95b50b8913ec13f6b55caf10708684e07d2",
+    "b0cd_sha256": "63b5e2ac0723b00717c79a0cc9833244200ed602077b38cc35c21b6c6f9d0b6f",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "a581b11e905e3c4c0dc525ad967b64c27f55a61770e8a66d78f9af168892f6b3",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 13,
+    "counts": {
+     "lte": 1146,
+     "endc": 1466,
+     "nr_sa": 26,
+     "nrca": 334,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1146,
+     "NR SA (1CC)": 26,
+     "NR-CA": 334,
+     "EN-DC": 1466,
+     "NRDC": 0
+    },
+    "tables_sha256": "a58f5cb1dd2a3b40f782b1ba6129b95b50b8913ec13f6b55caf10708684e07d2",
+    "b0cd_sha256": "63b5e2ac0723b00717c79a0cc9833244200ed602077b38cc35c21b6c6f9d0b6f",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "a581b11e905e3c4c0dc525ad967b64c27f55a61770e8a66d78f9af168892f6b3",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 14,
+    "counts": {
+     "lte": 91,
+     "endc": 22,
+     "nr_sa": 18,
+     "nrca": 148,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 91,
+     "NR SA (1CC)": 18,
+     "NR-CA": 148,
+     "EN-DC": 22,
+     "NRDC": 0
+    },
+    "tables_sha256": "f7a1f870cf0b403ef7ba48baaee2ff14217876267847036ba2ddcad88685af34",
+    "b0cd_sha256": "6ffbc07160b60d729d05ace304037152c98be72d0a2d7131b23e28b4420acf59",
+    "b0cd_name": "md1img_0xB0CD_v41.txt",
+    "b826_sha256": "0d197679c03ec5104c1fd1f18c791965087dd78d048d97a1199dcee1370616ed",
+    "b826_name": "md1img_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "SM-X936B": {
+  "input": "SM-X936B",
+  "packaging": "single-drdi",
+  "layers": [
+   "directory"
+  ],
+  "loader": "grid",
+  "profiles": [
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 1748,
+     "endc": 3846,
+     "nr_sa": 19,
+     "nrca": 708,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1748,
+     "NR SA (1CC)": 19,
+     "NR-CA": 708,
+     "EN-DC": 3846,
+     "NRDC": 0
+    },
+    "tables_sha256": "68a0202198ac766b6f91e5bcd15410621b5eb05bbdb87fe5bb23b820a67aca01",
+    "b0cd_sha256": "d0b755cbcd3fca8a994eca089a8fa658db64735a97a70e4840859ab48353cfba",
+    "b0cd_name": "SM-X936B_0xB0CD_v41.txt",
+    "b826_sha256": "55af2a753614bab6c75c576c4516404eee18aa2a33b9f52b2879e606836c1b67",
+    "b826_name": "SM-X936B_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "VIVO-X300-MAX": {
+  "input": "VIVO-X300-MAX",
+  "packaging": "single-drdi",
+  "layers": [
+   "directory"
+  ],
+  "loader": "flat",
+  "profiles": [
+   {
+    "bank": 0,
+    "profile": 0,
+    "counts": {
+     "lte": 2886,
+     "endc": 4367,
+     "nr_sa": 14,
+     "nrca": 721,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 2886,
+     "NR SA (1CC)": 14,
+     "NR-CA": 721,
+     "EN-DC": 4367,
+     "NRDC": 0
+    },
+    "tables_sha256": "08557ba91ab702e5094c7c24b3d4d3c48ec1fad874f6985b474d6332ee2d3cf0",
+    "b0cd_sha256": "851a06b67bcdfbcf4fe9f845b95ddc14fc9f8be5e760453c1d3e9eb9e0aeaaea",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "71a6426cc2f6066b86860d2b790d87e18b4dbb7fab913db9f6471faad6b6778c",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 2,
+    "counts": {
+     "lte": 1954,
+     "endc": 4369,
+     "nr_sa": 14,
+     "nrca": 435,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1954,
+     "NR SA (1CC)": 14,
+     "NR-CA": 435,
+     "EN-DC": 4369,
+     "NRDC": 0
+    },
+    "tables_sha256": "5c364e414a15c84d2613a04fb4f8dd863a87211f243ca9d31d4067fb7c32f524",
+    "b0cd_sha256": "7deb56745c99033d86b1e8350215c1ef25776a439466a87ec06a20bff23e10d8",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "d38499adb19cfe401ff7ff58a73b38243d8c4c7f39e21a8fc25e6539dc75c31c",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 3,
+    "counts": {
+     "lte": 1954,
+     "endc": 2626,
+     "nr_sa": 7,
+     "nrca": 399,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1954,
+     "NR SA (1CC)": 7,
+     "NR-CA": 399,
+     "EN-DC": 2626,
+     "NRDC": 0
+    },
+    "tables_sha256": "bc780aa0b9dfa120080530185ad3bb8f121594165c5de7f37f792ef21ce529cc",
+    "b0cd_sha256": "7deb56745c99033d86b1e8350215c1ef25776a439466a87ec06a20bff23e10d8",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "82bb716dfe413183dee7cd675b1cd4a37c0b29c088c903acf66f8a5eae791a92",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 4,
+    "counts": {
+     "lte": 1596,
+     "endc": 4891,
+     "nr_sa": 14,
+     "nrca": 1204,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1596,
+     "NR SA (1CC)": 14,
+     "NR-CA": 1204,
+     "EN-DC": 4891,
+     "NRDC": 0
+    },
+    "tables_sha256": "b7b3a13bba56a7b38e6e8f7c658f47ac94bf327e7a3d8540e99b627e0f5985df",
+    "b0cd_sha256": "4d1c7557bd999b4f836a74094736826ee82b6b0fd9c5c23ae00c2e4cccb2d535",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "f18a37de3cc0668054f5d59c041c2327563c1ffea3c06d6367d3320524caf19d",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 13,
+    "counts": {
+     "lte": 0,
+     "endc": 4891,
+     "nr_sa": 14,
+     "nrca": 1204,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 14,
+     "NR-CA": 1204,
+     "EN-DC": 4891,
+     "NRDC": 0
+    },
+    "tables_sha256": "1f4010d520a9f68401a07451c30745ddd9d455a7ebc8f5c1d67593ac015888d6",
+    "b0cd_sha256": "1426a8f08ab1c4a010886c6e533046a721bc98555c1441b5220f233cbec5eff9",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "f18a37de3cc0668054f5d59c041c2327563c1ffea3c06d6367d3320524caf19d",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 5,
+    "counts": {
+     "lte": 1596,
+     "endc": 4891,
+     "nr_sa": 14,
+     "nrca": 921,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1596,
+     "NR SA (1CC)": 14,
+     "NR-CA": 921,
+     "EN-DC": 4891,
+     "NRDC": 0
+    },
+    "tables_sha256": "d6d7430275812067d1dc8d19f806883e2f03ca87cee0234b18fe32ac84f8dcc0",
+    "b0cd_sha256": "4d1c7557bd999b4f836a74094736826ee82b6b0fd9c5c23ae00c2e4cccb2d535",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "9b5d50f90ae7b4ab8acb31052be12d6c164e1e672bb2723ffc8f37c7b2b7c126",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 6,
+    "counts": {
+     "lte": 1582,
+     "endc": 6369,
+     "nr_sa": 13,
+     "nrca": 1592,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1582,
+     "NR SA (1CC)": 13,
+     "NR-CA": 1592,
+     "EN-DC": 6369,
+     "NRDC": 0
+    },
+    "tables_sha256": "63f5807f1eaf34260741108c6eed76a1d7d11c6a66d3dc10e9e1a11c7403f3ac",
+    "b0cd_sha256": "c43e9784911435dac0b2077a7878fc086d3383e3857ba3aafb3a82a5f276a266",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "86804431255e720c9735ab69a6eaee8b18cafd5ca76244fe3256cacfd33511e3",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 7,
+    "counts": {
+     "lte": 1428,
+     "endc": 4744,
+     "nr_sa": 13,
+     "nrca": 1171,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1428,
+     "NR SA (1CC)": 13,
+     "NR-CA": 1171,
+     "EN-DC": 4744,
+     "NRDC": 0
+    },
+    "tables_sha256": "e1732937ffa07d1b6ff24e008e3ba0bb010d5020ef27cafd84a953236fda9e08",
+    "b0cd_sha256": "385ef2e176bd7239dfce7446c17b1655e73851a6430b010f7a5e579becc4823b",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "6768b27e6552123ee2101f3e1d76b031f36d01482af334652cc2141e20c69967",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 8,
+    "counts": {
+     "lte": 1106,
+     "endc": 0,
+     "nr_sa": 6,
+     "nrca": 608,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1106,
+     "NR SA (1CC)": 6,
+     "NR-CA": 608,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "68654bdbe6e3f522c85f4e7f268958624ff1b61a963847f6f8e970ada44c7605",
+    "b0cd_sha256": "4c4818f6b94af3e6b4a0c882b9e34ee32502577d52b0b3ee279ba0b7c045d78a",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "46220729c21de9d9f47117769f54381ba9652cbdc4c497608da19c70a59d293b",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 9,
+    "counts": {
+     "lte": 1057,
+     "endc": 57,
+     "nr_sa": 7,
+     "nrca": 1210,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1057,
+     "NR SA (1CC)": 7,
+     "NR-CA": 1210,
+     "EN-DC": 57,
+     "NRDC": 0
+    },
+    "tables_sha256": "d5b772f56b4ee4d0b7c2b32ac2bf6c581a9d899783edbc467835e87a7a4290ee",
+    "b0cd_sha256": "7e6e7441e2f0c27c8c66144f2d161f1c8338b9e507c3d7eded100c180c8a4f39",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "eb813059e73b2166bfb8fa77474669887dde96ac2e7e4304e4703de5af32aced",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 10,
+    "counts": {
+     "lte": 494,
+     "endc": 9502,
+     "nr_sa": 14,
+     "nrca": 1372,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 494,
+     "NR SA (1CC)": 14,
+     "NR-CA": 1372,
+     "EN-DC": 9502,
+     "NRDC": 0
+    },
+    "tables_sha256": "a648af24ff3e72cbe8cb082584ba587d85d2611e8d02d484e763d5c8c34a8b81",
+    "b0cd_sha256": "8796287251dcc7be30afa68bad62e158f8d0b0f690a375928f65210c95cb663a",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "2a3efbe1d3e1990480bc654aa14879ea205281465de6b04cb63ef5b615e9db6a",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 11,
+    "counts": {
+     "lte": 0,
+     "endc": 57,
+     "nr_sa": 7,
+     "nrca": 1215,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 7,
+     "NR-CA": 1215,
+     "EN-DC": 57,
+     "NRDC": 0
+    },
+    "tables_sha256": "70883126f3b3f48710a6ecf8dcec1c1bc2c781b6a594b1391c65688d278e7403",
+    "b0cd_sha256": "1426a8f08ab1c4a010886c6e533046a721bc98555c1441b5220f233cbec5eff9",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "b28f9135d43b6ef08a9df220c77ce55bec73e108ca9715f1a4871c663f3cce5f",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 0,
+    "profile": 12,
+    "counts": {
+     "lte": 0,
+     "endc": 6369,
+     "nr_sa": 13,
+     "nrca": 1603,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 13,
+     "NR-CA": 1603,
+     "EN-DC": 6369,
+     "NRDC": 0
+    },
+    "tables_sha256": "fa501b0512dc37a1d6f75f0a2dfdbf69e7a74f514788f64c425c1851518a2cad",
+    "b0cd_sha256": "1426a8f08ab1c4a010886c6e533046a721bc98555c1441b5220f233cbec5eff9",
+    "b0cd_name": "VIVO-X300-MAX_0xB0CD_v41.txt",
+    "b826_sha256": "f3ef745a73e811ab18d0a128ede5169e4518b128ee7a01a7d0c51a8427d6d126",
+    "b826_name": "VIVO-X300-MAX_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "Xiaomi17T": {
+  "input": "Xiaomi17T",
+  "packaging": "single-drdi",
+  "layers": [
+   "directory"
+  ],
+  "loader": "grid",
+  "profiles": [
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 345,
+     "endc": 148,
+     "nr_sa": 21,
+     "nrca": 219,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 345,
+     "NR SA (1CC)": 21,
+     "NR-CA": 219,
+     "EN-DC": 148,
+     "NRDC": 0
+    },
+    "tables_sha256": "c44b51cbd422564dfddb520a16b2f2a4723b1770e7f63027df5fb0e6b579f5c8",
+    "b0cd_sha256": "0f0dc29d9ca1d930200b8aa746dd162f165449316e82b94b101059ad3cbc9701",
+    "b0cd_name": "Xiaomi17T_0xB0CD_v41.txt",
+    "b826_sha256": "06b5cfc8784346f8144f1007665004215b5176c2050d9c0f2b0c2afcf1a4afff",
+    "b826_name": "Xiaomi17T_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 1,
+    "counts": {
+     "lte": 1747,
+     "endc": 1824,
+     "nr_sa": 21,
+     "nrca": 373,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1747,
+     "NR SA (1CC)": 21,
+     "NR-CA": 373,
+     "EN-DC": 1824,
+     "NRDC": 0
+    },
+    "tables_sha256": "0f0a568269ac2031d8ec0742d619ae0ddd85e830afe566822be74a01a1e883be",
+    "b0cd_sha256": "d489e840625fec7755c841d77f3c32fe979191b35193d341e685b4711adcb663",
+    "b0cd_name": "Xiaomi17T_0xB0CD_v41.txt",
+    "b826_sha256": "fc42279113054bb376d4916c9b8b0980105306c59cdf68b09991648fb84c2e31",
+    "b826_name": "Xiaomi17T_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 2,
+    "counts": {
+     "lte": 1747,
+     "endc": 1824,
+     "nr_sa": 21,
+     "nrca": 377,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1747,
+     "NR SA (1CC)": 21,
+     "NR-CA": 377,
+     "EN-DC": 1824,
+     "NRDC": 0
+    },
+    "tables_sha256": "94ddf9f0f44d81eaa3b25404823bf62a193d44742cceda701204999600ee91cf",
+    "b0cd_sha256": "d489e840625fec7755c841d77f3c32fe979191b35193d341e685b4711adcb663",
+    "b0cd_name": "Xiaomi17T_0xB0CD_v41.txt",
+    "b826_sha256": "934cccf77c55d0c6ca75c45702c1e91a77967e77ea19c6e20d6f9a13f580a718",
+    "b826_name": "Xiaomi17T_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 3,
+    "counts": {
+     "lte": 1751,
+     "endc": 1843,
+     "nr_sa": 21,
+     "nrca": 426,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1751,
+     "NR SA (1CC)": 21,
+     "NR-CA": 426,
+     "EN-DC": 1843,
+     "NRDC": 0
+    },
+    "tables_sha256": "f02a9bc1690c5dc1ca10a16d07af63ed3fde0783da8715041c778e8c7d6df93d",
+    "b0cd_sha256": "cf32e9d35bb5d6f7f6d10c7694f08410950cea6619cb453666d7c60a39b0a346",
+    "b0cd_name": "Xiaomi17T_0xB0CD_v41.txt",
+    "b826_sha256": "2973cbad9d66b98f0e37df1fa16b6e25ed5a92db166f0e477dbc19d96d0c05ec",
+    "b826_name": "Xiaomi17T_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "Xiaomi17TPro": {
+  "input": "Xiaomi17TPro",
+  "packaging": "single-drdi",
+  "layers": [
+   "directory"
+  ],
+  "loader": "grid",
+  "profiles": [
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 807,
+     "endc": 216,
+     "nr_sa": 22,
+     "nrca": 382,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 807,
+     "NR SA (1CC)": 22,
+     "NR-CA": 382,
+     "EN-DC": 216,
+     "NRDC": 0
+    },
+    "tables_sha256": "60cd84b81a5012d8f3628803302e1e28e533a96d78605f22a028588c0e2ce015",
+    "b0cd_sha256": "aee20af81c1d6516b8ed4a5dd9d9d6898c142036aa79daee2a1d4a714c11684a",
+    "b0cd_name": "Xiaomi17TPro_0xB0CD_v41.txt",
+    "b826_sha256": "c9502e8ce8f7c990639403bbbd127e2f307b4ed08097782db6936536ac6352e0",
+    "b826_name": "Xiaomi17TPro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 1,
+    "counts": {
+     "lte": 1363,
+     "endc": 2567,
+     "nr_sa": 22,
+     "nrca": 518,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1363,
+     "NR SA (1CC)": 22,
+     "NR-CA": 518,
+     "EN-DC": 2567,
+     "NRDC": 0
+    },
+    "tables_sha256": "b0234a021154fa2b345e3bc8e56015ffa6b210c59a70282eac763e42da8f2b55",
+    "b0cd_sha256": "cc24e1cb39d0eb5b6fa2678bf8c215226add94adee843c0db776e23b1d5e6277",
+    "b0cd_name": "Xiaomi17TPro_0xB0CD_v41.txt",
+    "b826_sha256": "b15b4fc27e8966f2926f8bd7ba278509391badd91706b82d41e7ca994e845f67",
+    "b826_name": "Xiaomi17TPro_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 2,
+    "counts": {
+     "lte": 1369,
+     "endc": 2567,
+     "nr_sa": 22,
+     "nrca": 520,
+     "nrdc": 0
+    },
+    "bank_only": false,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 1369,
+     "NR SA (1CC)": 22,
+     "NR-CA": 520,
+     "EN-DC": 2567,
+     "NRDC": 0
+    },
+    "tables_sha256": "8266adaf554b2d9660beddd9bc1754cab4d3c5a5db2314ae0551d62ef8f3c89f",
+    "b0cd_sha256": "bd2537a05dc5455554fa11c972e4a6b2c81f5df7a9f9ecbab8812496f7da3128",
+    "b0cd_name": "Xiaomi17TPro_0xB0CD_v41.txt",
+    "b826_sha256": "574a635a712d07eb10db8d20397490ff7d8f06a1b833a0150142aae7e4930a25",
+    "b826_name": "Xiaomi17TPro_0xB826_v21_combined.txt"
+   }
+  ]
+ },
+ "Xiaomi18Fold": {
+  "input": "Xiaomi18Fold/tmodem.img",
+  "packaging": "tensor-split",
+  "layers": [
+   "ext4",
+   "gzip",
+   "hblr"
+  ],
+  "loader": "tensor",
+  "profiles": [
+   {
+    "bank": 5,
+    "profile": 0,
+    "counts": {
+     "lte": 4,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 4,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "73b159b234b55a2046452211c2cdea817e675d8f457870ebd9a8ffc6b5601015",
+    "b0cd_sha256": "12412ab66bf80c256d7ada93ebd8d93caebf24b07d58e2b1c8bfb78683c252a5",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 1,
+    "counts": {
+     "lte": 4,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 4,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "73b159b234b55a2046452211c2cdea817e675d8f457870ebd9a8ffc6b5601015",
+    "b0cd_sha256": "12412ab66bf80c256d7ada93ebd8d93caebf24b07d58e2b1c8bfb78683c252a5",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 2,
+    "counts": {
+     "lte": 4,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 4,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "73b159b234b55a2046452211c2cdea817e675d8f457870ebd9a8ffc6b5601015",
+    "b0cd_sha256": "12412ab66bf80c256d7ada93ebd8d93caebf24b07d58e2b1c8bfb78683c252a5",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 3,
+    "counts": {
+     "lte": 386,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 386,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "2c3920704ba13a79a7a921d62ae4bd98376a738712a57fee2f78433d5cfbc47d",
+    "b0cd_sha256": "8a8b75d086ccf28b23cbfd70c7e8da32d52a44d87d44a7baefc0833d033f2afa",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 4,
+    "counts": {
+     "lte": 393,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 393,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "a9f811f164f0b40480d6f4cf0fac6af98f2fce2b30d978b232cad9fdb223d520",
+    "b0cd_sha256": "84424d420d62c6d596ffe9ac30dca656bf8d54bd44da8cdbf31b51780a741234",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 5,
+    "profile": 5,
+    "counts": {
+     "lte": 348,
+     "endc": 0,
+     "nrca": 0,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 348,
+     "NR SA (1CC)": 0,
+     "NR-CA": 0,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "cf442612f7f6fbf75ce4b8220ab2576ca07a02e4fd9a555d63fb07fbd66ff0f7",
+    "b0cd_sha256": "ebecfcca93e06e07ae16bc08a93532660e57d24ec289b7bf913946beff1f8f31",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 0,
+    "counts": {
+     "lte": 0,
+     "endc": 1,
+     "nr_sa": 21,
+     "nrca": 7,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 21,
+     "NR-CA": 7,
+     "EN-DC": 1,
+     "NRDC": 0
+    },
+    "tables_sha256": "a4bf32e671461d76141b82e16120425f60555c755fd76828b6ced0a8cc1db82c",
+    "b826_sha256": "1237b35377c661d6519fb1fcb81931ab820ba490c82f3a030552073ecc95e26c",
+    "b826_name": "tmodem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 1,
+    "counts": {
+     "lte": 0,
+     "endc": 0,
+     "nr_sa": 22,
+     "nrca": 7,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 22,
+     "NR-CA": 7,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "8bfe530b79de62eb30e9210f5c675e2ad39ad20590f2f0bf433ead0f43724a74",
+    "b826_sha256": "a5f5f0f1594cd3dcf7bfe6965b76aa6f0b00bf55e3925672cb5c3754de0c9bf3",
+    "b826_name": "tmodem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 2,
+    "counts": {
+     "lte": 0,
+     "endc": 0,
+     "nr_sa": 23,
+     "nrca": 6,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 0,
+     "NR SA (1CC)": 23,
+     "NR-CA": 6,
+     "EN-DC": 0,
+     "NRDC": 0
+    },
+    "tables_sha256": "0840f61b22d6742f47691a3515edb5eb2a2b93dbafe3553bda108e4921ea049e",
+    "b826_sha256": "2f96e8c1335ae3d4cef0da76a8f4e18c514a5a15c44cdc03cf12f6cc34022c2f",
+    "b826_name": "tmodem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 3,
+    "counts": {
+     "lte": 10,
+     "endc": 254,
+     "nr_sa": 23,
+     "nrca": 191,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 23,
+     "NR-CA": 191,
+     "EN-DC": 254,
+     "NRDC": 0
+    },
+    "tables_sha256": "49c4184d13c2d69c2e8abaf2585af72c4d946a45e1f2019a32a8975ffb964f5c",
+    "b0cd_sha256": "e0c5316c8718579e4e5477434bec76b0558269de45c783f49be7dbf93983e501",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt",
+    "b826_sha256": "26d9a4d1b2e8e6baf556e1be7ba7bbd88fa3cf20fb4a6aeea2fa7c0e0c7bfd09",
+    "b826_name": "tmodem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 4,
+    "counts": {
+     "lte": 10,
+     "endc": 255,
+     "nr_sa": 23,
+     "nrca": 196,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 23,
+     "NR-CA": 196,
+     "EN-DC": 255,
+     "NRDC": 0
+    },
+    "tables_sha256": "fcfbc46af8114f2c6b64dac9aeeccc025012d9f3d2a9f56f6f39662b4740cfaf",
+    "b0cd_sha256": "e0c5316c8718579e4e5477434bec76b0558269de45c783f49be7dbf93983e501",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt",
+    "b826_sha256": "451558031f2c79abcd72b0ece1d64df58e369d4d1675dd38e3365ad5d5a70e1f",
+    "b826_name": "tmodem_0xB826_v21_combined.txt"
+   },
+   {
+    "bank": 6,
+    "profile": 5,
+    "counts": {
+     "lte": 10,
+     "endc": 255,
+     "nr_sa": 23,
+     "nrca": 196,
+     "nrdc": 0
+    },
+    "bank_only": true,
+    "secondary_bank": null,
+    "tables": {
+     "LTE": 10,
+     "NR SA (1CC)": 23,
+     "NR-CA": 196,
+     "EN-DC": 255,
+     "NRDC": 0
+    },
+    "tables_sha256": "0145072c5887df5c6e26d05e6e09efcdd8623479f07ebad90b03c455567e2fa3",
+    "b0cd_sha256": "3f4b1b7dbcfb4e11df33324253fd10015e863618c5e881374bc10a075770dc4e",
+    "b0cd_name": "tmodem_0xB0CD_v41.txt",
+    "b826_sha256": "45868050001f69ae06f380e7425c2121a8180fb12a180096fd9fb0942223a00c",
+    "b826_name": "tmodem_0xB826_v21_combined.txt"
+   }
+  ]
+ }
+}

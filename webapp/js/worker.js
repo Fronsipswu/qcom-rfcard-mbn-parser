@@ -99,6 +99,14 @@ import {
   debugCounters,
 } from "./lib/debug.js";
 import { createCardCache, idbBackend, memoryBackend } from "./cardcache.js";
+import {
+  mtkPartRole,
+  looksLikeMtk,
+  scanMtkFile,
+  scanMtkParts,
+  mtkTables,
+  mtkDiagFiles,
+} from "./lib/mtk/cards.js";
 
 // Debug counters (Step 0 instrumentation): attached to every reply only when
 // enabled. Off by default so replies and timings are unchanged; toggle from the
@@ -141,6 +149,10 @@ const containerMemo = new Map();
 // memoize the inflated ftab member they were sliced from.
 const appleBankMemo = new Map(); // sourceId -> Map<key, {bank, parsed}>
 const appleMemberMemo = new Map(); // sourceId -> Map<memberName, Promise<Uint8Array>>
+// MediaTek modems: sourceId (of the image, or of the first file of a parts set)
+// -> {parts, summary, stem}. The summary holds the proven loader and the
+// per-card combo snapshot, so card opens and exports never re-unwrap.
+const mtkMemo = new Map();
 
 // Step 3: retained scan-time candidate bytes. The scan already read (and
 // hashed) every candidate; seeding parseMemo with those exact bytes means the
@@ -344,6 +356,12 @@ function resetSession() {
 // every later request must reference the same id. A missing id means a stale or
 // malformed request — fail loudly so the reply carries an error instead of
 // silently reading the wrong bytes.
+function mtkFor(sourceId) {
+  const memo = mtkMemo.get(sourceId);
+  if (!memo) throw new Error("This MediaTek card's modem is no longer loaded; import the file again.");
+  return memo;
+}
+
 function sourceEntry(sourceId) {
   const entry = sources.get(sourceId);
   if (!entry) throw new Error(`unknown sourceId ${sourceId} (source was never registered)`);
@@ -559,8 +577,32 @@ async function handleScan(msg) {
   session = { scanId: msg.id };
   const { id, files } = msg;
   const total = files.length;
+  // MediaTek extracted parts (md1rom / md1drdi / md1drdi_hdr / md1drdi_data)
+  // only make sense together: they are scanned as one modem, posted under the
+  // first part's fileIndex, and skipped by the per-file loop below.
+  const mtkPartIndexes = [];
+  files.forEach((entry, i) => {
+    if (mtkPartRole(entry.file.name)) mtkPartIndexes.push(i);
+  });
+  for (const i of mtkPartIndexes) sources.set(files[i].sourceId, { file: files[i].file, source: new CachedSource(new BrowserFileSource(files[i].file)) });
+  if (mtkPartIndexes.length && !cancelled.has(id)) {
+    const first = mtkPartIndexes[0];
+    const label = files[first].file.name;
+    post({ type: "progress", phase: "scan", source: label, done: first, total, currentFile: label, detail: "MediaTek parts" });
+    try {
+      const result = await scanMtkParts(mtkPartIndexes.map((i) => ({
+        file: files[i].file,
+        dir: (files[i].file.webkitRelativePath || "").split("/").slice(0, -1).join("/"),
+      })));
+      mtkMemo.set(files[first].sourceId, result);
+      if (!cancelled.has(id)) post({ type: "records", fileIndex: first, records: result.records, warnings: [] });
+    } catch (err) {
+      if (!cancelled.has(id)) post({ type: "error", message: `MediaTek parts: ${err && err.message ? err.message : String(err)}`, source: label });
+    }
+  }
   for (let fileIndex = 0; fileIndex < total; fileIndex++) {
     if (cancelled.has(id)) break;
+    if (mtkPartIndexes.includes(fileIndex)) continue;
     // Registration: each entry is { sourceId, file }. The File is structured-
     // cloned once here and kept in `sources`; every later request carries only
     // the stable id, so the per-source memos actually hit across messages.
@@ -572,7 +614,19 @@ async function handleScan(msg) {
     try {
       let postedWarnings = 0; // partial batches already delivered these
       const source = sources.get(sourceId).source;
-      const { records, warnings } = await scanSource(source, file.name, {
+      // MediaTek images with an MTK partition header or HBLR bundle at offset 0
+      // go straight to the MTK path (the Qualcomm scan cannot find RF cards there).
+      const head = await source.read(0, Math.min(16, source.size));
+      if (looksLikeMtk(head)) {
+        post({ type: "progress", phase: "scan", source: file.name, done: fileIndex, total, currentFile: file.name, detail: "MediaTek modem" });
+        const mtk = await scanMtkFile(file);
+        if (mtk) {
+          mtkMemo.set(sourceId, mtk);
+          if (!cancelled.has(id)) post({ type: "records", fileIndex, records: mtk.records, warnings: [] });
+          continue;
+        }
+      }
+      let { records, warnings } = await scanSource(source, file.name, {
         shouldCancel: () => cancelled.has(id),
         // Fan the ftab's banks out to the scan pool (measured: 99% of apple
         // scan time is the per-bank LZFSE decode; sha256/inspect are ~1%).
@@ -611,6 +665,18 @@ async function handleScan(msg) {
         onAppleMember: (data, memberName) => seedAppleMember(sourceId, data, memberName),
       });
       if (cancelled.has(id)) break;
+      // No Qualcomm/Apple RF cards: try MediaTek packaging (ext4 / sparse /
+      // gzip around md1rom + md1drdi). A non-MTK file keeps the result above.
+      if (!records.length && !postedWarnings && !looksLikeMtk(head)) {
+        post({ type: "progress", phase: "scan", source: file.name, done: fileIndex, total, currentFile: file.name, detail: "checking MediaTek" });
+        const mtk = await scanMtkFile(file);
+        if (mtk) {
+          mtkMemo.set(sourceId, mtk);
+          records = mtk.records;
+          warnings = [];
+        }
+      }
+      if (cancelled.has(id)) break;
       post({ type: "records", fileIndex, records, warnings: warnings.slice(postedWarnings) });
     } catch (err) {
       if (err instanceof ScanCancelled || cancelled.has(id)) break;
@@ -643,7 +709,9 @@ async function handleParseCard(msg) {
     post({ type: "tables", id: msg.id, fileIndex: msg.fileIndex, recordName: msg.record.name, tables: hit.tables });
     return;
   }
-  const tables = msg.record.apple
+  const tables = msg.record.mtk
+    ? mtkTables(mtkFor(msg.sourceId), msg.record)
+    : msg.record.apple
     ? await (async () => {
         const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
         bump("generateAppleTables");
@@ -665,7 +733,13 @@ async function handleParseCard(msg) {
 
 async function handleExport(msg) {
   let files;
-  if (msg.record.apple) {
+  if (msg.record.mtk) {
+    // MediaTek cards export the two DIAG formats the MTK parser produces.
+    if (msg.format !== "b0cd" && msg.format !== "b826") {
+      throw new ToolError(`${msg.format.toUpperCase()} export is not available for MediaTek cards (supported: B0CD, B826)`);
+    }
+    files = await mtkDiagFiles(mtkFor(msg.sourceId), msg.record, msg.format);
+  } else if (msg.record.apple) {
     files = await exportAppleFiles(msg.sourceId, msg.fileIndex, msg.record, msg.format);
   } else if (msg.format === "mbn") {
     // Raw .mbn dump (Python export_module "mbn"): the untouched blob under
@@ -718,7 +792,12 @@ async function handleImportCards(msg) {
       // (`_0xB0CD_v41.txt` / `_0xB826_v22.txt`), so the main thread's textFor
       // lookups and the uecaps upload flow work unchanged for both.
       let produced;
-      if (msg.record.apple) {
+      if (msg.record.mtk) {
+        // MTK B826 is v21 (main.js accepts the _0xB826_v21 tail too); a family
+        // with no rows yields no file, so it is omitted like the empty sets below.
+        produced = await mtkDiagFiles(mtkFor(msg.sourceId), msg.record, format);
+        if (!produced.some((f) => f.text.includes("Payload:"))) continue;
+      } else if (msg.record.apple) {
         const { parsed } = await parsedFor(msg.sourceId, msg.fileIndex, msg.record);
         produced = exportAppleDiag(parsed, format);
         // A bank with zero packets for this format yields a header-only text
@@ -760,6 +839,7 @@ function handleRelease() {
   containerMemo.clear();
   appleBankMemo.clear();
   appleMemberMemo.clear();
+  mtkMemo.clear();
   retainedBytes.clear();
   parsedInflight.clear();
   retainedParses.clear();

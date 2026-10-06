@@ -338,7 +338,11 @@ test("apple integration: file input accept includes .bin (ftab pickable via brow
   const inputStart = html.indexOf('<input id="file-input"');
   assert.notEqual(inputStart, -1, "file-input missing");
   const inputTag = html.slice(inputStart, html.indexOf(">", inputStart) + 1);
-  const accept = /accept="([^"]*)"/.exec(inputTag)?.[1] ?? "";
+  const match = /accept="([^"]*)"/.exec(inputTag);
+  // No accept filter (needed for extensionless MediaTek parts) offers every
+  // file, ftab.bin and .bbfw included.
+  if (!match) return;
+  const accept = match[1];
   const exts = accept.split(",").map((e) => e.trim().toLowerCase());
   assert.ok(exts.includes(".bin"), `accept must include .bin (got: ${accept})`);
   assert.ok(exts.includes(".bbfw"), `accept must include .bbfw (got: ${accept})`);

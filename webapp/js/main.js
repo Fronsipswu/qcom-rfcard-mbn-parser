@@ -76,6 +76,13 @@ const els = {
 
 const GENERATION_DISPLAY = { "DAT/protobuf": "XML DAT" }; // gui_version/main.py:480
 
+// Identity column / viewer banner / compare label. MediaTek cards are profiles
+// of one modem, so their identity is the capability bank and profile.
+function cardIdentity(record) {
+  if (record.mtk) return `bank ${record.mtk.bank} / profile ${record.mtk.profile}`;
+  return recordIdentity(record.name);
+}
+
 const cards = []; // { record, sourceId, fileIndex, key }; sourceId identifies the File in the worker
 const cardKeys = new Set(); // name\0sha256 dedupe across imports (main.py:249-254)
 const cardsByKey = new Map(); // card key -> card (row clicks / dedupe)
@@ -217,7 +224,7 @@ function buildCardRow(card, layout) {
   const tr = document.createElement("tr");
   tr.className = card.key === (selectedCard && selectedCard.key) ? "selected" : "";
   tr.dataset.cardKey = card.key;
-  const identity = recordIdentity(record.name);
+  const identity = cardIdentity(record);
   const tdCheck = document.createElement("td");
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
@@ -259,7 +266,7 @@ function buildCardRow(card, layout) {
         [String(record.source_path ?? ""), "cell-nr"],
       ]
     : [
-        [record.name, "cell-name"],
+        [record.mtk ? record.source_path : record.name, "cell-name"],
         [identity, "cell-identity"],
         [GENERATION_DISPLAY[record.generation] ?? record.generation, "cell-generation"],
         // lte_combos is null while an apple CR card's counts are deferred to card
@@ -373,7 +380,7 @@ function destroyViewer() {
 function renderViewer(card, tables) {
   destroyViewer();
   const record = card.record;
-  const identity = recordIdentity(record.name);
+  const identity = cardIdentity(record);
   // Exports live in the export bar above the workbench now (Python GUI model);
   // the per-card header buttons were superseded by "Export ticked".
   const head = document.createElement("div");
@@ -653,7 +660,8 @@ async function importToParser() {
     const textFor = (suffix) => files.find((f) => f.filename && f.filename.endsWith(suffix))?.text;
     const { entries, files: importFiles } = buildImportEntries(
       textFor("_0xB0CD_v41.txt"),
-      textFor("_0xB826_v22.txt"),
+      // Qualcomm/Apple B826 is v22; MediaTek's is v21 (same QNR import type).
+      textFor("_0xB826_v22.txt") ?? textFor("_0xB826_v21_combined.txt"),
       card.record.name
     );
     const form = new FormData();
@@ -755,7 +763,7 @@ worker.onmessage = (event) => {
       }
       if (pendingCompare && pendingCompare.missing.has(card.key)) {
         pendingCompare.missing.delete(card.key);
-        pendingCompare.have.push({ label: recordIdentity(card.record.name) || card.record.name, tables: msg.tables });
+        pendingCompare.have.push({ label: (card.record.mtk ? card.record.name : recordIdentity(card.record.name)) || card.record.name, tables: msg.tables });
         if (!pendingCompare.missing.size) {
           const have = pendingCompare.have;
           pendingCompare = null;

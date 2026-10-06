@@ -13,8 +13,9 @@
         <strong>Import modem images / RF MBNs</strong>
         <span>Drop files here or</span>
         <button id="pick-btn" type="button">browse</button>
-        <input id="file-input" type="file" multiple
-               accept=".img,.mbn,.bin,.tar.md5,.zip,.ipsw,.bbfw,.gz" hidden>
+        <!-- No accept filter: MediaTek parts such as md1drdi_hdr / md1drdi_data
+             have no extension. Unrecognized files are reported by the scan. -->
+        <input id="file-input" type="file" multiple hidden>
       </div>
       <div id="progresswrap" hidden>
         <progress id="progress" value="0" max="1"></progress>
